@@ -65,6 +65,24 @@ bounty. If a future attempt at predators succeeds, it should show up as a passin
 `foodweb` recipe here. Keep the game core-DOM-free and deterministic for the same
 reasons the sim is.
 
+### Inference challenge + a design note
+
+`What Changed?` (`game/inference.js`) is a different challenge *type*: the game
+secretly multiplies one candidate knob by a factor (derived from a per-attempt
+nonce stored in the gitignored session) and the player must DEDUCE it by comparing
+the altered world to the default that runs beside it, then `guess --knob --value`.
+Validated end-to-end, and an agent solved it honestly to 3% error.
+
+Design note worth remembering: that agent identified the knob from its fingerprint,
+then *calibrated* the factor by sweeping the very same knob for free on the
+`pacifism` challenge (which exposes `biteDamage` as tunable) and inverting the
+curve. Clever and in-bounds — but it means the local "black box" is partly
+defeated by any OTHER challenge that exposes the same knob. A real black-box
+(server) build should either hold the inference candidate knobs out of every
+tunable set, or accept cross-challenge calibration as fair play. The local build
+leans on the honesty rule (don't read `.session.json` / `inference.js`); true
+secrecy needs the server, as noted up top.
+
 ## Tuning lives in `src/config.js`
 
 The whole "physics" is there. Lessons from tuning so far (don't relearn them):
