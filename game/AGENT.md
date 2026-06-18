@@ -39,8 +39,8 @@ what it produces.
   run short experiments, run *long enough* to see the steady state.
 - **The average lies; read the distribution.** `avgDiet` can sit at 0.15 while
   the world is full of biting — because predation happens at *low* diet too. Use
-  `dietHist` (the five diet bins) and `predationsPerStep`, not just the mean.
-  (This exact mistake cost the author a wrong conclusion — see `../CLAUDE.md`.)
+  `dietHist` (the five diet bins) and `predationRate`, not just the mean. (This
+  exact mistake cost the author a wrong conclusion — see `../CLAUDE.md`.)
 - **One variable at a time.** If you change three knobs and it works, you've
   learned nothing you can reuse. Change one; attribute the effect; then combine.
 - **Don't trust one seed.** A recipe that passes on seed 1 may fail on seed 2.
@@ -60,12 +60,28 @@ A **recipe** is your claim about the world:
 `score` applies it on each hidden seed, settles, then checks the goal predicate
 across the goal window. Pass `--set`/`--founders` inline, or `--recipe @file.json`.
 
+## Stakes: the budget and your wallet
+
+`start --challenge <id>` opens a **graded attempt** with a tick budget (ticks ≈
+the compute you'd pay for). From then on every `experiment` and the `score` draw
+the budget down (`status` shows what's left). Bust the budget, or fail the judge,
+and you earn nothing — the spend is gone. Pass *within* budget and you're paid the
+bounty plus your unspent budget into a persistent wallet. One `score` ends the
+attempt. With no attempt open, experiment/score run free (practice) — learn
+first, then `start` when you mean it.
+
+So the game rewards solving *efficiently*, not just solving: a sharp hypothesis
+that needs three experiments beats a brute-force sweep that needs thirty. (Wallet
+tokens are a placeholder for whatever real stake an agent economy settles on.)
+
 ## The challenges
 
 - **Bloom** — establish a thriving population. The tutorial: learn the loop.
 - **Goldilocks** — a *control* problem: hold the population inside a tight band.
 - **Giants** — *trait engineering*: re-shape the economy so that being big wins,
   against an evolution that otherwise shrinks everyone to the minimum.
+- **Pacifism** — *behaviour suppression*: tame a world born violent into a
+  populous, almost predation-free one, and make evolution keep it that way.
 - **The Food Web** — the **grand challenge, currently unsolved.** Make true
   carnivores and true herbivores coexist and persist. The author tried five
   principled approaches and failed; they're documented in `../CLAUDE.md` along

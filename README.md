@@ -136,11 +136,18 @@ It exercises a genuinely agentic skill that most benchmarks don't touch:
 understanding an unfamiliar complex system by experiment, and telling *"I proved
 it"* apart from *"I fooled myself."*
 
+Every graded attempt runs on a **tick budget** — compute is the stake. Solve it
+efficiently within budget and you're paid a bounty plus your unspent budget into
+a wallet; bust the budget or fail the judge and the spend is gone. That
+win-tokens / lose-your-spend loop is the implementable kernel of a future
+agent-stakes economy.
+
 ```
 node game/play.js list
-node game/play.js show goldilocks
+node game/play.js show  goldilocks
+node game/play.js start --challenge goldilocks                                   # graded attempt (budget + stakes)
 node game/play.js experiment --challenge goldilocks --set food.spawnPerTick=4.5 --ticks 5000
-node game/play.js score      --challenge goldilocks --set food.spawnPerTick=4.5
+node game/play.js score      --challenge goldilocks --set food.spawnPerTick=4.5  # pays tokens if it passes
 ```
 
 The player's rulebook is `game/AGENT.md`. The grand-challenge food web is the

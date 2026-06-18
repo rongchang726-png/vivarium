@@ -2,33 +2,45 @@ Vivarium — a science game for agents.
 
 You are handed an evolving world you do not fully understand. Understand it well
 enough to STEER it — and prove you understand it by submitting a recipe that
-hits a goal on seeds you have never seen.
+hits a goal on seeds you have never seen, within a budget.
 
 COMMANDS
   node game/play.js list
-      The challenges: id, goal, settle/window lengths, practice seeds, tunable knobs.
+      The challenges: id, goal, budget, bounty, settle/window, tunable knobs.
 
   node game/play.js show <challenge>
-      Full brief, goal, and recipe format for one challenge.
+      Full brief, goal, recipe format, budget and score cost for one challenge.
+
+  node game/play.js start --challenge <id>
+      Open a GRADED attempt: a tick budget with stakes (see ECONOMY below).
+
+  node game/play.js status            # budget spent / remaining + your wallet
+  node game/play.js wallet            # tokens earned, best per challenge
+  node game/play.js abandon           # forfeit the open attempt
 
   node game/play.js experiment --challenge <id> [--set k=v ...] [--founders @f.json] [--ticks N] [--seed N]
       YOUR LABORATORY. Run one world with your chosen rules + founders; get back a
-      trajectory of snapshots to reason over. Free; any seed. With a challenge you
-      also get a `goalPreview` for THAT seed.
+      trajectory of snapshots to reason over, plus a goalPreview for that seed.
 
   node game/play.js score --challenge <id> [--set k=v ...] [--founders @f.json]
       THE JUDGE. Replays your recipe on the challenge's HIDDEN scoring seeds and
       checks the goal on each. You pass only if it generalizes. (--recipe @r.json
       also works, with {config, founders, settleTicks}.)
 
+ECONOMY (the stakes)
+  With an attempt open (`start`), `experiment` and `score` draw down the tick
+  budget — ticks are the real cost (compute). Bust the budget or fail the judge:
+  you earn nothing, the spend is gone. Pass WITHIN budget: you're paid the bounty
+  plus your unspent budget, into your wallet. One `score` ends the attempt.
+  With no attempt open, experiment/score run free (practice).
+
 SETTING KNOBS
   --set dotted.path=value      (repeatable; numbers/true/false auto-detected)
-      e.g.  --set food.spawnPerTick=4.5 --set pop.softCap=300
+      e.g.  --set creature.biteDamage=1.5 --set creature.carnDigest=0.05
   Only a challenge's `tunable` knobs are allowed. No JSON quoting needed.
 
 FOUNDERS (optional starting creatures; random brains, genes you choose)
-  --founders @founders.json    where the file is e.g.
-      [ { "count": 30, "diet": 0.85, "radius": 7 } ]
+  --founders @founders.json     e.g.  [ { "count": 30, "diet": 0.85, "radius": 7 } ]
   Omit to start from the default random population.
 
 READING A SNAPSHOT
@@ -36,7 +48,7 @@ READING A SNAPSHOT
   avgDiet, dietHist[5]                   mean diet AND its distribution: <.2 .2-.4 .4-.6 .6-.8 >.8
   avgRadius, avgVision                   mean body size, mean sight range
   carnFrac                               fraction with diet>0.5
-  predationsPerStep, bitesPerStep        how much hunting is happening
+  predationRate, biteRate                kills and bites PER TICK (how violent the world is)
   genesisEvents                          times life had to be re-seeded (rising = NOT self-sustaining)
 
 See game/AGENT.md for how to actually play well.

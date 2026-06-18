@@ -52,7 +52,8 @@ function runRecipe(challenge, recipe, seed) {
     samples.push(api.snapshot(world));
   }
   const verdict = challenge.evaluate(samples);
-  return { seed, pass: verdict.pass, score: verdict.score, detail: verdict.detail, final: samples[samples.length - 1] };
+  const ticksUsed = settle + windowT;
+  return { seed, pass: verdict.pass, score: verdict.score, detail: verdict.detail, ticksUsed, final: samples[samples.length - 1] };
 }
 
 // The judge. Runs the recipe on every hidden scoring seed; you pass if enough
@@ -63,6 +64,7 @@ function score(challenge, recipe) {
   const passes = runs.filter((r) => r.pass).length;
   const need = Math.ceil(seeds.length * (challenge.passFraction || 0.6));
   const avgScore = runs.reduce((a, r) => a + (r.score || 0), 0) / runs.length;
+  const ticksUsed = runs.reduce((a, r) => a + (r.ticksUsed || 0), 0);
   return {
     challenge: challenge.id,
     title: challenge.title,
@@ -71,6 +73,7 @@ function score(challenge, recipe) {
     total: seeds.length,
     needed: need,
     avgScore: Math.round(avgScore * 1000) / 1000,
+    ticksUsed,
     runs: runs.map((r) => ({ seed: r.seed, pass: r.pass, score: Math.round((r.score || 0) * 1000) / 1000, detail: r.detail })),
   };
 }
@@ -93,7 +96,7 @@ function experiment(challenge, config, founders, ticks, seed) {
     trajectory.push(api.snapshot(world));
   }
 
-  const out = { seed, ticks, trajectory };
+  const out = { seed, ticks, ticksUsed: done, trajectory };
   if (challenge) {
     // Judge the goal predicate over the last `goalWindow` worth of samples.
     const windowSamples = Math.max(1, Math.round(challenge.goalWindow / every));

@@ -68,6 +68,7 @@ var __API = {
     }
     world.__stepPred = pred;
     world.__stepBites = bites;
+    world.__stepTicks = n;
   },
 
   // A reading the agent can reason about. Includes the diet *distribution*,
@@ -95,8 +96,8 @@ var __API = {
       lineages: s.lineages,
       avgEnergy: round(s.avgEnergy, 3),
       avgAge: Math.round(s.avgAge),
-      predationsPerStep: world.__stepPred || 0,
-      bitesPerStep: world.__stepBites || 0,
+      predationRate: round((world.__stepPred || 0) / (world.__stepTicks || 1), 3),
+      biteRate: round((world.__stepBites || 0) / (world.__stepTicks || 1), 1),
       genesisEvents: world.genesisEvents,
     };
   },

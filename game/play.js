@@ -3,19 +3,26 @@
  * Vivarium Game — command-line interface (the way an agent plays).
  *
  *   node game/play.js list
- *   node game/play.js show <challenge>
+ *   node game/play.js show  <challenge>
+ *   node game/play.js start --challenge <id>           # open a GRADED attempt (budget + stakes)
+ *   node game/play.js status                           # budget spent/remaining + wallet
  *   node game/play.js experiment --challenge <id> [--set k=v ...] [--founders @f.json] [--ticks N] [--seed N]
- *   node game/play.js score      --challenge <id> [--set k=v ...] [--founders @f.json]   (or --recipe @r.json)
+ *   node game/play.js score      --challenge <id> [--set k=v ...] [--founders @f.json]
+ *   node game/play.js abandon                          # forfeit the open attempt
+ *   node game/play.js wallet
  *
- * Config is given as repeatable `--set dotted.path=value` flags (shell-robust,
- * no JSON quoting needed). Complex inputs (founders, full recipes) can be passed
- * as `@file.json`. Everything prints JSON. See game/AGENT.md for the rules.
+ * Economy: with an attempt open (`start`), experiments and scoring draw down a
+ * tick budget (ticks ≈ the compute you'd pay for). Bust the budget or fail and
+ * you earn nothing — the spend is gone. Pass within budget and you're paid the
+ * bounty plus your unspent budget, into a wallet. With no attempt open,
+ * experiment/score run free (practice). See game/AGENT.md for the rules.
  */
 
 const fs = require("fs");
 const path = require("path");
 const { challenges } = require("./challenges");
 const engine = require("./engine");
+const session = require("./session");
 
 function parseArgs(argv) {
   const a = { _sets: [] };
@@ -51,15 +58,19 @@ function buildConfig(args) {
 function out(o) {
   console.log(JSON.stringify(o, null, 2));
 }
-// Enforce the challenge's knob whitelist, so a "solution" reflects understanding
-// of the exposed levers rather than reaching into arbitrary internals.
+function challengeOr(id) {
+  const c = challenges[id];
+  if (!c) throw new Error("unknown challenge '" + id + "'; try `list`");
+  return c;
+}
+function scoreCost(c) {
+  return c.scoringSeeds.length * (c.settleTicks + c.goalWindow);
+}
 function assertTunable(challenge, config) {
   const allowed = new Set(challenge.tunable);
   for (const k of Object.keys(config)) {
     if (!allowed.has(k)) {
-      throw new Error(
-        "knob '" + k + "' is not tunable for '" + challenge.id + "'. Allowed: " + challenge.tunable.join(", "),
-      );
+      throw new Error("knob '" + k + "' is not tunable for '" + challenge.id + "'. Allowed: " + challenge.tunable.join(", "));
     }
   }
 }
@@ -73,37 +84,91 @@ try {
   } else if (cmd === "list") {
     out(
       Object.values(challenges).map((c) => ({
-        id: c.id, title: c.title, goal: c.goal,
-        settleTicks: c.settleTicks, goalWindow: c.goalWindow,
-        practiceSeeds: c.practiceSeeds, tunable: c.tunable,
+        id: c.id, title: c.title, goal: c.goal, budget: c.budget, bounty: c.bounty,
+        settleTicks: c.settleTicks, goalWindow: c.goalWindow, tunable: c.tunable,
       })),
     );
   } else if (cmd === "show") {
-    const c = challenges[args.challenge || rest[0]];
-    if (!c) throw new Error("unknown challenge; try `list`");
+    const c = challengeOr(args.challenge || rest[0]);
     out({
       id: c.id, title: c.title, brief: c.brief, goal: c.goal,
+      budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c),
       settleTicks: c.settleTicks, goalWindow: c.goalWindow,
       tunable: c.tunable, practiceSeeds: c.practiceSeeds,
       recipeFormat: { config: { "dotted.path": "value" }, founders: [{ count: 20, diet: 0.85, radius: 7 }], settleTicks: "optional" },
     });
+  } else if (cmd === "start") {
+    const c = challengeOr(args.challenge);
+    session.startSession(c.id, c.budget);
+    out({
+      started: c.id, budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c), goal: c.goal,
+      note: "Graded attempt open. experiment + score now draw down your budget. One score ends the attempt; fail or bust = no reward.",
+    });
+  } else if (cmd === "status") {
+    const s = session.getSession();
+    out({
+      attempt: s ? { challenge: s.challenge, budget: s.budget, spent: s.spent, remaining: s.budget - s.spent, charges: s.charges.length } : null,
+      wallet: session.getWallet(),
+    });
+  } else if (cmd === "wallet") {
+    out(session.getWallet());
+  } else if (cmd === "abandon") {
+    session.endSession();
+    out({ abandoned: true });
   } else if (cmd === "experiment") {
-    const c = args.challenge ? challenges[args.challenge] : null;
-    if (args.challenge && !c) throw new Error("unknown challenge; try `list`");
+    const c = args.challenge ? challengeOr(args.challenge) : null;
     const config = buildConfig(args);
     const founders = readJson(args.founders) || null;
     const ticks = parseInt(args.ticks || "6000", 10);
     const seed = parseInt(args.seed || (c ? c.practiceSeeds[0] : 1), 10);
     if (c) assertTunable(c, config);
-    out(engine.experiment(c, config, founders, ticks, seed));
+    const sess = session.getSession();
+    const graded = !!(c && sess && sess.challenge === c.id);
+    if (graded) {
+      const remaining = sess.budget - sess.spent;
+      if (ticks > remaining) {
+        throw new Error("graded attempt: this experiment costs " + ticks + " ticks but only " + remaining + " remain. Use a shorter --ticks, `score`, or `abandon`.");
+      }
+    }
+    const result = engine.experiment(c, config, founders, ticks, seed);
+    if (graded) {
+      const s2 = session.charge("experiment", result.ticksUsed);
+      result.mode = "graded";
+      result.budget = { spent: s2.spent, remaining: sess.budget - s2.spent, of: sess.budget };
+    } else {
+      result.mode = "practice";
+    }
+    out(result);
   } else if (cmd === "score") {
-    const c = challenges[args.challenge];
-    if (!c) throw new Error("unknown challenge; try `list`");
+    const c = challengeOr(args.challenge);
     const recipe = args.recipe ? readJson(args.recipe) : { config: buildConfig(args), founders: readJson(args.founders) || null };
     assertTunable(c, recipe.config || {});
-    out(engine.score(c, recipe));
+    const sess = session.getSession();
+    const graded = !!(sess && sess.challenge === c.id);
+    const result = engine.score(c, recipe);
+    if (graded) {
+      const s2 = session.charge("score", result.ticksUsed);
+      const withinBudget = s2.spent <= sess.budget;
+      const reward = result.pass && withinBudget ? c.bounty + Math.floor((sess.budget - s2.spent) / 1000) : 0;
+      const wallet = reward > 0 ? session.creditWallet(c.id, reward) : session.getWallet();
+      session.endSession();
+      result.graded = true;
+      result.budget = sess.budget;
+      result.spent = s2.spent;
+      result.withinBudget = withinBudget;
+      result.reward = reward;
+      result.wallet = wallet;
+      result.verdict = result.pass && withinBudget
+        ? "PASS — earned " + reward + " tokens"
+        : result.pass
+          ? "PASS but OVER BUDGET — no reward"
+          : "FAIL — no reward";
+    } else {
+      result.mode = "practice (ungraded — run `start` first for a graded attempt with stakes)";
+    }
+    out(result);
   } else {
-    throw new Error("unknown command '" + cmd + "'. Try: list | show | experiment | score | help");
+    throw new Error("unknown command '" + cmd + "'. Try: list | show | start | status | experiment | score | abandon | wallet | help");
   }
 } catch (e) {
   console.error("ERROR: " + e.message);
