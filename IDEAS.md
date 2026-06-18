@@ -1,0 +1,120 @@
+# Vivarium — Ideas & Vision (the inspiration log)
+
+A living scratchpad for where this could go. Started 2026-06-19, at the user's
+suggestion, while building PvP. Anyone — future me, another agent — should append
+freely. Nothing here is committed-to; it's a place for sparks.
+
+---
+
+## ★ The north star: from a game to a PLATFORM
+
+Right now Vivarium is *a* game (a world + challenges + PvP). The real prize is to
+become a **platform where agents design, play, and compete** — where the content
+is made by agents, for agents.
+
+The pivot is treating a "challenge" as **shareable data**, not hard-coded JS: a
+goal predicate + the tunable knobs + the scoring seeds, in a portable format.
+Once a level is data, agents can author levels, publish them, download each
+other's, and rate them. Then **designing becomes the meta-game** — and the most
+interesting question on the platform is *"whose level best separates strong
+agents from weak ones?"*
+
+---
+
+## Sparks from the user (2026-06-19)
+
+- **Creative Workshop / UGC.** Let other agents' game designs be playable here.
+  "If we can really do that, we evolve into a platform."
+- **More than two sides.** PvP is currently red vs blue only. What about neutral
+  parties, third parties, random events? (Correct: none of these exist yet.)
+- **Go learn.** "We know very little about game design; we need to study it, even
+  cross-disciplinary knowledge." — Strongly agreed. See the learning plan below.
+
+---
+
+## My ideas (Claude)
+
+### Make PvP actually deep (fix the single-niche problem)
+PvP today is winner-take-all by competitive exclusion, and the world has **one**
+optimal niche (small efficient herbivore), so two strong players both play the
+Nash strategy (copy the optimum) and it's a coin flip. The fix is **niche
+diversity / non-transitivity**:
+- Multiple food types (plant A vs plant B, each needing a different digestion gene).
+- Spatial structure / terrain / barriers (local niches, territory).
+- Make predation viable (the open grand challenge) → herbivore/carnivore/omnivore
+  rock-paper-scissors → a real meta with no single dominant strategy.
+This is the deepest and hardest thread, and it loops back to the predator problem
+I never solved.
+
+### Modes
+- **N-way free-for-all** (clans 2,3,4,...). Cheap: `clan` is already an integer
+  tag; scoring just generalizes. Immediately richer (alliances, dogpiles).
+- **Co-op PvE.** Several agents collaborate against a hard objective (e.g.
+  *together* coax a food web into existing).
+- **Tournament / ELO ladder.** Submitted strategies climb a ladder by playing
+  each other; persistent ranking.
+- **Asymmetric starts / drafts.** Each side gets different starting constraints,
+  so they can't all converge on one optimum.
+
+### The Workshop (UGC) — the platform core
+- A standard **challenge-pack format** (goal predicate + knob whitelist + seeds +
+  budget) agents can author and share as a file.
+- A **registry / index**; agents browse, play, and **rate** each other's levels.
+- **Design-as-the-game:** score a *designer* by how well their level discriminates
+  agent skill, or how novel/elegant it is.
+
+### World richness (the substrate everything else needs)
+- **Seeded random events** — famine, plague, a new landmass, a cold snap.
+  Deterministic (seed decides what happens when), so still reproducible, but they
+  reward *adaptability* over a static optimum.
+- Multiple resources; seasons; corpses-as-food; day/night.
+
+### Spectacle & legibility
+- **Visual replay** of matches: reuse the browser renderer, tint by clan, scrub
+  the timeline. Auto-generate a battle narrative ("the red line split into a
+  carnivore branch at gen 40...").
+
+### Fairness & anti-cheat (required for a real platform)
+- A **server-authoritative judge** that holds secrets/seeds out of reach. The
+  local build leans on an honesty rule; strong agents already route around
+  interface limits (cross-challenge calibration; calling the engine directly to
+  simulate opponents) — fine locally, but a hosted arena needs true isolation.
+
+---
+
+## What we don't know yet — fields to learn (cross-disciplinary)
+
+Honest self-assessment: I've been a *practitioner* here — I reverse-engineered
+ecology by experiment (competitive exclusion, trophic levels), but I lack the
+*systematic* knowledge to design a deep platform. To do this well we should study:
+
+- **Game design** — core loops, flow, difficulty curves, what makes play "fun".
+- **Game theory & mechanism design** — Nash equilibria, non-transitivity, incentive
+  compatibility, fair matchmaking, anti-degeneracy.
+- **Ecology & evolutionary biology** — niches, competitive exclusion, trophic webs,
+  coevolution, the Red Queen. (Already learning by doing.)
+- **Multi-agent systems** — cooperation vs competition, emergence, communication
+  and negotiation protocols (needed for alliances).
+- **UGC platform design** — discovery, moderation, reputation, marketplaces.
+- **Artificial life & complex systems** — open-ended evolution, novelty search.
+
+→ **Plan:** a focused `deep-research` pass on "designing deep, non-degenerate
+multi-agent game mechanics" once we choose a direction.
+
+---
+
+## Current state vs gaps (honest)
+
+- PvP is **2-clan only** (plus a disabled "wildlife" neutral). N-way is a small change.
+- **One viable niche** (herbivore) → PvP meta is shallow (Nash = copy the optimum).
+- **No** neutral/third parties, **no** events, fully static rules.
+- **No** workshop / sharing / registry, **no** ladder, **no** replay visualization.
+
+## Candidate next steps (pick by appetite)
+
+1. **N-way free-for-all** — cheap, immediately richer dynamics.
+2. **Niche diversity** — the deep fix for PvP; hard (needs substrate work); loops
+   back to the predator grand challenge.
+3. **Workshop v0** — a shareable challenge-pack format + loader. The platform seed.
+4. **Seeded events** — adaptability over static optima.
+5. **deep-research the design knowledge** — before over-building on instinct.
