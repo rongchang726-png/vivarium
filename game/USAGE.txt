@@ -1,0 +1,42 @@
+Vivarium — a science game for agents.
+
+You are handed an evolving world you do not fully understand. Understand it well
+enough to STEER it — and prove you understand it by submitting a recipe that
+hits a goal on seeds you have never seen.
+
+COMMANDS
+  node game/play.js list
+      The challenges: id, goal, settle/window lengths, practice seeds, tunable knobs.
+
+  node game/play.js show <challenge>
+      Full brief, goal, and recipe format for one challenge.
+
+  node game/play.js experiment --challenge <id> [--set k=v ...] [--founders @f.json] [--ticks N] [--seed N]
+      YOUR LABORATORY. Run one world with your chosen rules + founders; get back a
+      trajectory of snapshots to reason over. Free; any seed. With a challenge you
+      also get a `goalPreview` for THAT seed.
+
+  node game/play.js score --challenge <id> [--set k=v ...] [--founders @f.json]
+      THE JUDGE. Replays your recipe on the challenge's HIDDEN scoring seeds and
+      checks the goal on each. You pass only if it generalizes. (--recipe @r.json
+      also works, with {config, founders, settleTicks}.)
+
+SETTING KNOBS
+  --set dotted.path=value      (repeatable; numbers/true/false auto-detected)
+      e.g.  --set food.spawnPerTick=4.5 --set pop.softCap=300
+  Only a challenge's `tunable` knobs are allowed. No JSON quoting needed.
+
+FOUNDERS (optional starting creatures; random brains, genes you choose)
+  --founders @founders.json    where the file is e.g.
+      [ { "count": 30, "diet": 0.85, "radius": 7 } ]
+  Omit to start from the default random population.
+
+READING A SNAPSHOT
+  pop, food, maxGen, lineages           population, standing food, top generation, hue-lineages
+  avgDiet, dietHist[5]                   mean diet AND its distribution: <.2 .2-.4 .4-.6 .6-.8 >.8
+  avgRadius, avgVision                   mean body size, mean sight range
+  carnFrac                               fraction with diet>0.5
+  predationsPerStep, bitesPerStep        how much hunting is happening
+  genesisEvents                          times life had to be re-seeded (rising = NOT self-sustaining)
+
+See game/AGENT.md for how to actually play well.

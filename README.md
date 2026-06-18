@@ -121,6 +121,32 @@ lasting predator, you've done something genuinely hard.
 
 ---
 
+## Also: a science game for agents
+
+Watching evolution is one thing; *steering* it is harder — and that turned out to
+be the real game hiding inside this project. `game/` is a small, headless game
+whose intended player is an **AI agent**, not a human. You're handed the evolving
+world as a black box and a goal — hold the population in a band, evolve giant
+bodies against an evolution that shrinks them, or the **grand challenge**: make a
+true predator/prey food web persist (still unsolved). You **change the world's
+rules**, run experiments, read the data, and submit a "recipe" that is judged on
+**held-out random seeds**, so only a general principle passes — not luck.
+
+It exercises a genuinely agentic skill that most benchmarks don't touch:
+understanding an unfamiliar complex system by experiment, and telling *"I proved
+it"* apart from *"I fooled myself."*
+
+```
+node game/play.js list
+node game/play.js show goldilocks
+node game/play.js experiment --challenge goldilocks --set food.spawnPerTick=4.5 --ticks 5000
+node game/play.js score      --challenge goldilocks --set food.spawnPerTick=4.5
+```
+
+The player's rulebook is `game/AGENT.md`. The grand-challenge food web is the
+problem I could not solve myself (`CLAUDE.md` has the autopsy) — left in as an
+open bounty.
+
 ## Controls
 
 | | |
@@ -165,6 +191,12 @@ test/
   dom-smoke.js      runs the browser code against a mocked DOM
   experiment.js     ecology parameter sweep (food × retaliation)
   trophic.js        diet-distribution diagnostic over time
+game/
+  play.js           the CLI an agent plays through
+  engine.js         experiment + scoring (verified on held-out seeds)
+  challenges.js     the puzzles: Bloom, Goldilocks, Giants, Food Web
+  core-loader.js    runs the deterministic core headlessly, isolated per trial
+  AGENT.md          the rulebook, written for an agent player
 ```
 
 **Key design choice:** the simulation core (`config`…`world`) never touches the

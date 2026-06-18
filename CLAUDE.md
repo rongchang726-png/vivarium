@@ -44,6 +44,27 @@ node test/experiment.js         # ecology sweep (informational, not pass/fail)
 Always run `sim.test.js` after touching the core, and `dom-smoke.js` after
 touching render/ui (it caught real bugs that `node --check` cannot).
 
+## The agent game (`game/`)
+
+A headless game whose player is an AI agent: it tunes the world's `CONFIG` and
+founders to hit a goal, judged on held-out seeds. Pieces:
+- `game/core-loader.js` — loads the DOM-free core into a **fresh, isolated `vm`
+  context per trial** (so each run has its own `CONFIG`; tuning one trial never
+  leaks into another) and exposes a small API (`setParam`, `newWorld`,
+  `seedFounders`, `step`, `snapshot`).
+- `game/challenges.js` — each challenge is a goal predicate over a window of
+  snapshots + a tunable-knob whitelist + practice/scoring seeds.
+- `game/engine.js` — `experiment` (a readable trajectory) and `score` (replays a
+  recipe on hidden seeds; pass = generalizes).
+- `game/play.js` — the CLI. Config via repeatable `--set k=v` (shell-robust;
+  PowerShell mangles inline JSON, so prefer `--set` / `@file`).
+- `game/AGENT.md` — rules for the agent player.
+
+This is the natural home of the predator grand challenge: `foodweb` is the open
+bounty. If a future attempt at predators succeeds, it should show up as a passing
+`foodweb` recipe here. Keep the game core-DOM-free and deterministic for the same
+reasons the sim is.
+
 ## Tuning lives in `src/config.js`
 
 The whole "physics" is there. Lessons from tuning so far (don't relearn them):

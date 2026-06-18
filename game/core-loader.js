@@ -1,0 +1,129 @@
+/*
+ * Vivarium Game — core loader
+ * ---------------------------
+ * The simulation core is written as classic browser scripts that share one
+ * global scope, so Node can't `require` it directly. This loader concatenates
+ * the DOM-free core into a single fresh `vm` context and exposes a small, clean
+ * API over it.
+ *
+ * Crucially, each call to loadCore() returns an ISOLATED context with its own
+ * CONFIG. That's what lets the game run many independent trials — different
+ * rule-sets, different seeds — without them stepping on each other. The game's
+ * whole premise (tune the rules, observe the consequences) depends on this
+ * isolation.
+ */
+
+const fs = require("fs");
+const path = require("path");
+const vm = require("vm");
+
+const SRC = path.resolve(__dirname, "..", "src");
+const CORE = ["config", "util", "genome", "brain", "food", "creature", "world"];
+
+// Appended after the core: defines a host-facing API using the in-context
+// classes. Plain ES5 so it evaluates cleanly in the vm. No template literals or
+// ${} inside (this whole string is itself a template literal).
+const EPILOGUE = `
+var __API = {
+  CONFIG: CONFIG,
+
+  // Set a dotted CONFIG path, e.g. setParam('creature.metabBase', 0.1).
+  setParam: function (dotted, value) {
+    var parts = dotted.split('.');
+    var o = CONFIG;
+    for (var i = 0; i < parts.length - 1; i++) o = o[parts[i]];
+    o[parts[parts.length - 1]] = value;
+  },
+
+  newWorld: function (seed) {
+    return new World({ seed: seed });
+  },
+  newEmptyWorld: function (seed) {
+    return new World({ seed: seed, creatures: 0 });
+  },
+
+  // Add 'count' founder creatures with optional gene overrides. Brains are
+  // random (the point is that behaviour must still be evolved/discovered).
+  seedFounders: function (world, count, spec) {
+    for (var i = 0; i < count; i++) {
+      var g = Genome.random(world.rng);
+      if (spec) {
+        if (spec.diet != null) g.genes.diet = spec.diet;
+        if (spec.radius != null) g.genes.radius = spec.radius;
+        if (spec.range != null) g.genes.range = spec.range;
+        if (spec.fov != null) g.genes.fov = spec.fov;
+        if (spec.hue != null) g.genes.hue = spec.hue;
+      }
+      world.spawnRandom(g);
+    }
+  },
+
+  // Advance the world, accumulating predation/bite counts over the batch.
+  step: function (world, n) {
+    var pred = 0, bites = 0;
+    for (var i = 0; i < n; i++) {
+      world.step();
+      pred += world.predationsThisTick;
+      bites += world.bitesThisTick;
+    }
+    world.__stepPred = pred;
+    world.__stepBites = bites;
+  },
+
+  // A reading the agent can reason about. Includes the diet *distribution*,
+  // because the population average diet hides trophic structure.
+  snapshot: function (world) {
+    world.computeStats();
+    var s = world.stats;
+    var hist = [0, 0, 0, 0, 0]; // diet bins: <.2 .2-.4 .4-.6 .6-.8 >.8
+    var cs = world.creatures;
+    for (var i = 0; i < cs.length; i++) {
+      var b = (cs[i].diet * 5) | 0;
+      if (b > 4) b = 4;
+      hist[b]++;
+    }
+    return {
+      tick: world.tick,
+      pop: s.pop,
+      food: s.food,
+      avgDiet: round(s.avgDiet, 3),
+      dietHist: hist,
+      avgRadius: round(s.avgRadius, 2),
+      avgVision: avgVision(world),
+      maxGen: s.maxGen,
+      carnFrac: round(s.carnFrac, 3),
+      lineages: s.lineages,
+      avgEnergy: round(s.avgEnergy, 3),
+      avgAge: Math.round(s.avgAge),
+      predationsPerStep: world.__stepPred || 0,
+      bitesPerStep: world.__stepBites || 0,
+      genesisEvents: world.genesisEvents,
+    };
+  },
+};
+
+function round(x, d) {
+  var m = Math.pow(10, d);
+  return Math.round(x * m) / m;
+}
+function avgVision(world) {
+  var cs = world.creatures;
+  if (!cs.length) return 0;
+  var s = 0;
+  for (var i = 0; i < cs.length; i++) s += cs[i].genes.range;
+  return Math.round(s / cs.length);
+}
+`;
+
+function loadCore() {
+  let src = "";
+  for (const f of CORE) src += fs.readFileSync(path.join(SRC, f + ".js"), "utf8") + "\n";
+  src += EPILOGUE;
+
+  const sandbox = { console };
+  vm.createContext(sandbox);
+  vm.runInContext(src, sandbox, { filename: "vivarium-core.js" });
+  return sandbox.__API;
+}
+
+module.exports = { loadCore };
