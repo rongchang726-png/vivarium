@@ -58,29 +58,55 @@ The whole "physics" is there. Lessons from tuning so far (don't relearn them):
   `food` pegged at max = population too sparse to graze (usually a bootstrap
   failure downstream).
 
-## Known behaviour: the predator problem
+## Known behaviour: the predator problem (investigated in depth, 2026-06-18)
 
-The reliable attractor is an **efficient herbivore monoculture** (bodies shrink
-to ~min radius, diet → ~0.07, ~100+ generations, fully self-sustaining). That's a
-real, honest evolutionary result and the default experience.
+The reliable attractor is an **efficient herbivore population** (bodies shrink
+toward min radius, diet → ~0.07, 100+ generations, fully self-sustaining). The
+seeded omnivores make the *opening* few thousand ticks genuinely violent (real
+hunting, ~250+ kills / 1000 ticks) before herbivores win out. That arc — early
+conflict settling into a grazer ecology — is the shipped default.
 
-**Predation rarely persists by default**, because evolving hunting *de novo*
-means crossing an adaptive valley (worse grazer before better hunter). I made the
-niche viable (`carcassFactor`, lethal `biteDamage`, `plantSuppression < 1` so
-carnivores can still graze) and seed ~18% omnivores at genesis, but selection
-still erodes them when plants are easy. `experiment.js` sweeps this. The lever
-that *should* favour predators is **food scarcity** (low `food.spawnPerTick`).
+**A stable *specialist* predator guild does not evolve here.** I tried hard; it's
+a robust negative result. The interventions and what each did (all measured
+headlessly), then all reverted:
 
-### Ideas if I want a livelier default food web (future work)
-- Make plants scarcer/patchier *and* keep bootstrap alive (narrow window — test
-  hard with `experiment.js`).
-- Coupling: give carnivore diet a small speed bonus (predators are fast) — cheap,
-  ecological, may make hunting catchable. Currently speed is purely size-based.
-- A maintained predator immigration (like the genesis floor but for carnivores) —
-  guarantees a food web but is a thumb on the scale; document it if used.
-- Sexual reproduction (crossover already exists in `genome.js`, unused) +
-  mate-finding → could enable speciation.
-- Corpses as food parcels; seasons; spatial barriers; a second plant type.
+1. *Viable niche* (`carcassFactor` biomass meals, lethal `biteDamage`, a
+   carnivore speed bonus): predators still fade by ~tick 1000.
+2. *Gentler digestion* (`plantSuppression < 1`, so carnivores can still graze):
+   fade.
+3. *Meat-floor* (a floor on meat digestion so biting pays even at diet 0): this
+   DID transform the world — into an **omnivore "cannibal soup"**: ~16000 bites
+   and ~430 kills / 1000 ticks, but NO specialization (diet stuck ~0.15).
+   **Metric lesson: `carn%` (diet>0.5) is misleading — predation can be rampant
+   as low-diet omnivory. Measure the predation *rate* and the diet *distribution*
+   (`test/trophic.js`), not the average diet.**
+4. *Convex diet trade-off* (`exp=2`, disruptive selection): the omnivore middle
+   was correctly emptied, but selection drove everyone onto the herbivore peak;
+   the carnivore peak (>0.8) hit zero by tick 1000.
+5. *Large founding predator guild* (~40%) + convex: carnivores still extinct by
+   tick 1000.
+
+**The barrier:** plants are easy, so the herbivore peak is a deep attractor; the
+carnivore peak needs *hunting behaviour*, which a random-brained founding guild
+can't evolve before it's out-competed and starves. It's a genuine
+adaptive-valley / major-transition problem — "just make predation rewarding"
+does not cross it. Diagnostics kept in the repo: `test/experiment.js`
+(food × retaliation sweep, reports kills/1000 ticks) and `test/trophic.js` (diet
+histogram over time).
+
+### If I want to try again (future work, roughly in order of promise)
+- **Protected refugium**: shield a carnivore sub-population from competition for
+  N generations so hunting can evolve, then release it. Most promising.
+- **Pre-evolved seed**: evolve hunters in a prey-rich training world, then
+  introduce them into the main world.
+- **Spatial structure**: patches/corridors so predators and prey aren't perfectly
+  mixed (the world is currently effectively well-mixed).
+- **Raise the carnivore peak**: defended/toxic plants make herbivory costly so
+  hunting is comparatively better — risks breaking the bootstrap; test hard.
+- **Reward partial hunting**: persistence or pack effects so incremental
+  predatory behaviour pays *before* a full kill.
+- Sexual reproduction (crossover exists in `genome.js`, unused) + mate choice →
+  speciation. Corpses as food parcels; seasons; a second plant type.
 
 ## Other roadmap ideas
 - Pan/zoom camera; follow-cam on the selected creature.
