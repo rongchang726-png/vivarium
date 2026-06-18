@@ -1,0 +1,359 @@
+/*
+ * Vivarium — styles
+ * A calm, dark, slightly bioluminescent look so the living colours carry the
+ * screen. The simulation canvas takes the room; the panel stays quiet.
+ */
+
+:root {
+  --bg: #05080c;
+  --panel: #0a121a;
+  --tile: #0f1c27;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #d2dde5;
+  --muted: #7e93a4;
+  --accent: #5ad1a0;
+  --accent-2: #78c8ff;
+  --radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* ---- stage (the world) ---- */
+.stage {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: #05080c;
+}
+#view {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  background: rgba(5, 8, 12, 0.55);
+  padding: 5px 12px;
+  border-radius: 20px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---- panel ---- */
+.panel {
+  width: 366px;
+  flex: none;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 20px 18px 28px;
+  background: linear-gradient(180deg, #0b141d, #080f16);
+  border-left: 1px solid var(--line);
+}
+.panel::-webkit-scrollbar {
+  width: 9px;
+}
+.panel::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.brand p {
+  margin: 3px 0 18px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ---- HUD ---- */
+.hud {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-bottom: 18px;
+}
+.tile {
+  background: var(--tile);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 6px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+.tile .k {
+  font-size: 9.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tile .v {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #eaf2f7;
+}
+
+/* ---- sections ---- */
+.section {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.btn {
+  flex: 1;
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #11202b;
+  color: var(--text);
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.13s, border-color 0.13s, transform 0.05s;
+  user-select: none;
+}
+.btn:hover {
+  background: #16303f;
+  border-color: rgba(120, 200, 255, 0.4);
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn.primary {
+  background: linear-gradient(180deg, #185f49, #124236);
+  border-color: rgba(90, 209, 160, 0.45);
+  color: #d8fff0;
+}
+.btn.primary:hover {
+  background: linear-gradient(180deg, #1d7257, #155041);
+}
+.btn.tiny {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  line-height: 1;
+  font-size: 14px;
+}
+
+.slider {
+  margin: 12px 0;
+}
+.slider label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.slider .lab {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 4px;
+  background: #1c2c39;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid #0a121a;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid #0a121a;
+}
+
+.toggles {
+  display: flex;
+  gap: 18px;
+  margin-top: 12px;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.toggle input {
+  accent-color: var(--accent);
+  width: 15px;
+  height: 15px;
+}
+
+/* ---- charts ---- */
+.chart-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 12px 0 6px;
+}
+.chart-head:first-child {
+  margin-top: 0;
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.chart {
+  width: 100%;
+  height: 78px;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+/* ---- inspector ---- */
+.insp-empty {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 6px 2px;
+}
+.insp-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+.swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  flex: none;
+}
+.insp-top h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+}
+.insp-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+  margin-bottom: 14px;
+}
+.kv {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.07);
+  padding-bottom: 3px;
+}
+.kv span {
+  color: var(--muted);
+}
+.kv b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.brain-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+.brain {
+  width: 100%;
+  height: 188px;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #070e15;
+}
+
+.foot {
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+/* ---- narrow screens: stack ---- */
+@media (max-width: 820px) {
+  .app {
+    flex-direction: column;
+    height: auto;
+  }
+  .stage {
+    height: 56vh;
+  }
+  .panel {
+    width: 100%;
+    height: auto;
+  }
+}

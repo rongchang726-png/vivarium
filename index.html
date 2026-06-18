@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vivarium — a small world that evolves on its own</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <main class="stage">
+        <canvas id="view"></canvas>
+        <div class="stage-hint">click a creature to inspect its body &amp; mind · space to pause</div>
+      </main>
+
+      <aside class="panel">
+        <header class="brand">
+          <h1>Vivarium</h1>
+          <p>a small world that evolves on its own</p>
+        </header>
+
+        <section class="hud">
+          <div class="tile"><span class="k">population</span><span class="v" id="stat-pop">0</span></div>
+          <div class="tile"><span class="k">food</span><span class="v" id="stat-food">0</span></div>
+          <div class="tile"><span class="k">generation</span><span class="v" id="stat-gen">0</span></div>
+          <div class="tile"><span class="k">lineages</span><span class="v" id="stat-lineages">0</span></div>
+          <div class="tile"><span class="k">carnivores</span><span class="v" id="stat-carn">0%</span></div>
+          <div class="tile"><span class="k">age</span><span class="v" id="stat-tick">0k</span></div>
+          <div class="tile"><span class="k">fps</span><span class="v" id="stat-fps">0</span></div>
+          <div class="tile"><span class="k">speed</span><span class="v" id="stat-speed">1×</span></div>
+        </section>
+
+        <section class="section">
+          <div class="btn-row">
+            <button id="btn-play" class="btn primary">⏸  Pause</button>
+            <button id="btn-reset" class="btn">↻  New world</button>
+          </div>
+          <div class="btn-row">
+            <button id="btn-save" class="btn">⭳  Save</button>
+            <label class="btn" for="file-load">⭱  Load</label>
+            <input id="file-load" type="file" accept="application/json,.json" hidden />
+          </div>
+
+          <div class="slider">
+            <label>speed <span class="lab" id="lab-speed">1×</span></label>
+            <input id="sl-speed" type="range" min="1" max="40" step="1" value="1" />
+          </div>
+          <div class="slider">
+            <label>food growth <span class="lab" id="lab-food">10.0/t</span></label>
+            <input id="sl-food" type="range" min="0" max="30" step="0.5" value="10" />
+          </div>
+          <div class="slider">
+            <label>mutation <span class="lab" id="lab-mut">11%</span></label>
+            <input id="sl-mut" type="range" min="0" max="0.4" step="0.01" value="0.11" />
+          </div>
+
+          <div class="toggles">
+            <label class="toggle"><input id="tg-trails" type="checkbox" /> trails</label>
+            <label class="toggle"><input id="tg-vision" type="checkbox" checked /> vision</label>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="chart-head">
+            <span>population</span>
+            <span class="legend">
+              <i class="dot" style="background:#5ad1a0"></i>life
+              <i class="dot" style="background:#78c8ff"></i>food
+            </span>
+          </div>
+          <canvas id="chart-pop" class="chart"></canvas>
+
+          <div class="chart-head">
+            <span>traits over time</span>
+            <span class="legend">
+              <i class="dot" style="background:#ff7b6b"></i>diet
+              <i class="dot" style="background:#ffd166"></i>carn%
+              <i class="dot" style="background:#9b8cff"></i>size
+            </span>
+          </div>
+          <canvas id="chart-traits" class="chart"></canvas>
+        </section>
+
+        <section class="section inspector">
+          <div id="insp-empty" class="insp-empty">
+            Select a creature to inspect its genome and watch its neural net think.
+          </div>
+          <div id="insp-card" class="insp-card" style="display: none">
+            <div class="insp-top">
+              <span class="swatch" id="insp-swatch"></span>
+              <h2 id="insp-title">Specimen</h2>
+              <button id="btn-deselect" class="btn tiny">✕</button>
+            </div>
+            <div id="insp-stats" class="insp-stats"></div>
+            <div class="brain-label">neural activity</div>
+            <canvas id="insp-brain" class="brain"></canvas>
+          </div>
+        </section>
+
+        <footer class="foot">
+          neural creatures · natural selection · no scripted behaviour
+        </footer>
+      </aside>
+    </div>
+
+    <script src="src/config.js"></script>
+    <script src="src/util.js"></script>
+    <script src="src/genome.js"></script>
+    <script src="src/brain.js"></script>
+    <script src="src/food.js"></script>
+    <script src="src/creature.js"></script>
+    <script src="src/world.js"></script>
+    <script src="src/render.js"></script>
+    <script src="src/charts.js"></script>
+    <script src="src/ui.js"></script>
+    <script src="src/main.js"></script>
+  </body>
+</html>
