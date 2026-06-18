@@ -163,7 +163,8 @@ test/
   sim.test.js       headless verification (run the core in a Node vm)
   driver.js         the assertions it runs
   dom-smoke.js      runs the browser code against a mocked DOM
-  experiment.js     ecology parameter sweep
+  experiment.js     ecology parameter sweep (food × retaliation)
+  trophic.js        diet-distribution diagnostic over time
 ```
 
 **Key design choice:** the simulation core (`config`…`world`) never touches the
@@ -176,7 +177,8 @@ headlessly under Node.
 node test/sim.test.js          # 20k-tick run: alive, self-sustaining, evolving, deterministic
 node test/sim.test.js 5000     # shorter
 node test/dom-smoke.js         # the browser code runs without throwing
-node test/experiment.js        # sweep food/predation and report the ecology
+node test/experiment.js        # sweep food/predation; report kills per 1000 ticks
+node test/trophic.js           # diet distribution over time (food-web structure)
 ```
 
 `sim.test.js` checks that a world bootstraps without life-support, turns over
