@@ -29,6 +29,18 @@ agents from weak ones?"*
   parties, third parties, random events? (Correct: none of these exist yet.)
 - **Go learn.** "We know very little about game design; we need to study it, even
   cross-disciplinary knowledge." — Strongly agreed. See the learning plan below.
+- **Hybrid / multiple victory conditions** (the big one). Combine the single-player
+  puzzles with PvP so you can win in MORE than one way — not only by wiping out the
+  opponent. E.g. (a) *military*: drive the rival clan extinct in the shared world;
+  (b) *puzzle race*: be first to solve a challenge, which then FORCES the opponent
+  to also solve it within a time/budget limit or lose. Because fighting and solving
+  both draw on the SAME finite budget, the game becomes a **compute-allocation
+  meta-game** — rush the puzzle to pressure them, all-in the ecological war, or
+  balance — and you must anticipate the opponent's allocation. Multiple win
+  conditions = strategy diversity (cf. 4X games); the forced-catch-up turns a
+  puzzle lead into an *attack* rather than parallel solitaire. This is exactly the
+  kind of design that needs real study (win-condition balance, opportunity cost,
+  anti-degeneracy) — which is why the next move is to learn, not just build.
 
 ---
 
