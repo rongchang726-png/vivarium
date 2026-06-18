@@ -101,6 +101,16 @@ on it makes the match a near coin-flip on seed. Real strategic depth needs
 strategies) — which in turn needs predation to be viable (the open grand
 challenge) or new resources (multiple food types, spatial structure). Until then
 PvP rewards "who best knows the optimum" plus niche gambles, not a rich meta.
+**Fairness gotcha (found and fixed):** because the arena is winner-take-all, even
+a tiny edge compounds — clan 0 (seeded first, updated first each tick) had a real
+first-mover advantage (residual logs showed the clan-0 side winning regardless of
+which recipe sat there). `matchScore` now plays every seed BOTH board sides and
+tallies by recipe identity, cancelling it. A clean demo confirmed the fix: two
+agents blind-designed clans, both independently converged on the small-herbivore
+optimum, and the symmetrized 10-game match came out 6-4 — a near coin-flip, as
+the symmetric-game theory predicts. Lesson: in a winner-take-all arena, always
+symmetrize board position.
+
 Future work for a deep PvP meta: make several niches simultaneously viable.
 
 ## Tuning lives in `src/config.js`
