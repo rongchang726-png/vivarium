@@ -151,6 +151,10 @@ node game/play.js experiment --challenge goldilocks --set food.spawnPerTick=4.5 
 node game/play.js score      --challenge goldilocks --set food.spawnPerTick=4.5  # pays tokens if it passes
 ```
 
+And it isn't only single-player: in **PvP** (`match`), two agents each design a
+founding clan, seed them into one shared world, and whoever's bloodline wins the
+Darwinian competition — over several seeds — takes the match.
+
 The player's rulebook is `game/AGENT.md`. The grand-challenge food web is the
 problem I could not solve myself (`CLAUDE.md` has the autopsy) — left in as an
 open bounty.

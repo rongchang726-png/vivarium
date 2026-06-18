@@ -165,4 +165,63 @@ function gradeGuess(mystery, guess, tolerance) {
   };
 }
 
-module.exports = { runRecipe, score, experiment, inferenceExperiment, gradeGuess };
+// --- PvP: two clans, one shared evolving world -----------------------------
+const ARENA = {
+  perClanCap: 120, // max founders a clan may field (anti-cheese)
+  settleTicks: 6000, // generations of shared evolution before judging
+  judgeWindow: 2000, // tail averaged into the verdict
+  sampleEvery: 250,
+  seeds: [11, 22, 33, 44, 55], // best-of across seeds: rewards robust strategy, not luck
+};
+
+function seedClan(api, world, founders, clan) {
+  let budget = ARENA.perClanCap;
+  for (const f of founders || []) {
+    if (budget <= 0) break;
+    const n = Math.min(Math.max(0, f.count | 0), budget);
+    if (n > 0) api.seedFounders(world, n, f, clan);
+    budget -= n;
+  }
+}
+
+// One match on one seed: seed both clans into a shared arena (no genesis floor,
+// so a clan can truly be wiped out), evolve, then judge by average clan
+// population over the tail, with biomass as the tie-breaker.
+function runMatch(recipeA, recipeB, seed) {
+  const api = loadCore();
+  const world = api.newArenaWorld(seed);
+  seedClan(api, world, recipeA.founders, 0);
+  seedClan(api, world, recipeB.founders, 1);
+
+  api.step(world, ARENA.settleTicks);
+  const samples = [];
+  for (let t = 0; t < ARENA.judgeWindow; t += ARENA.sampleEvery) {
+    api.step(world, ARENA.sampleEvery);
+    samples.push(api.clanSnapshot(world));
+  }
+  const avg = (k) => samples.reduce((s, x) => s + x[k], 0) / samples.length;
+  const popA = avg("popA"), popB = avg("popB"), bioA = avg("bioA"), bioB = avg("bioB");
+  let winner;
+  if (popA < 0.5 && popB < 0.5) winner = "draw";
+  else if (Math.abs(popA - popB) < 1) winner = bioA >= bioB ? "A" : "B";
+  else winner = popA > popB ? "A" : "B";
+  return {
+    seed, winner,
+    popA: Math.round(popA), popB: Math.round(popB),
+    bioA: Math.round(bioA), bioB: Math.round(bioB),
+  };
+}
+
+// Best-of across seeds: the winner is whoever takes more games.
+function matchScore(recipeA, recipeB) {
+  const games = ARENA.seeds.map((s) => runMatch(recipeA, recipeB, s));
+  const aWins = games.filter((g) => g.winner === "A").length;
+  const bWins = games.filter((g) => g.winner === "B").length;
+  const winner = aWins > bWins ? "A" : bWins > aWins ? "B" : "draw";
+  return {
+    winner, aWins, bWins, games,
+    arena: { settleTicks: ARENA.settleTicks, perClanCap: ARENA.perClanCap, seeds: ARENA.seeds.length },
+  };
+}
+
+module.exports = { runRecipe, score, experiment, inferenceExperiment, gradeGuess, runMatch, matchScore };

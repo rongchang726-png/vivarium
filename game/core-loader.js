@@ -44,7 +44,7 @@ var __API = {
 
   // Add 'count' founder creatures with optional gene overrides. Brains are
   // random (the point is that behaviour must still be evolved/discovered).
-  seedFounders: function (world, count, spec) {
+  seedFounders: function (world, count, spec, clan) {
     for (var i = 0; i < count; i++) {
       var g = Genome.random(world.rng);
       if (spec) {
@@ -54,7 +54,7 @@ var __API = {
         if (spec.fov != null) g.genes.fov = spec.fov;
         if (spec.hue != null) g.genes.hue = spec.hue;
       }
-      world.spawnRandom(g);
+      world.spawnRandom(g, clan || 0);
     }
   },
 
@@ -99,6 +99,31 @@ var __API = {
       predationRate: round((world.__stepPred || 0) / (world.__stepTicks || 1), 3),
       biteRate: round((world.__stepBites || 0) / (world.__stepTicks || 1), 1),
       genesisEvents: world.genesisEvents,
+    };
+  },
+
+  // PvP arena: an empty world that does NOT reseed wildlife, so a clan that is
+  // out-competed actually dies out and the match can have a winner.
+  newArenaWorld: function (seed) {
+    return new World({ seed: seed, creatures: 0, noGenesis: true });
+  },
+
+  // Per-clan scoreboard: population and biomass (summed body area) for clan 0 and
+  // clan 1; wildlife (clan -1) is reported separately and counts for neither.
+  clanSnapshot: function (world) {
+    var popA = 0, popB = 0, bioA = 0, bioB = 0, wild = 0;
+    var cs = world.creatures;
+    for (var i = 0; i < cs.length; i++) {
+      var c = cs[i];
+      if (c.clan === 0) { popA++; bioA += c.area; }
+      else if (c.clan === 1) { popB++; bioB += c.area; }
+      else wild++;
+    }
+    return {
+      tick: world.tick,
+      popA: popA, popB: popB,
+      bioA: Math.round(bioA), bioB: Math.round(bioB),
+      wild: wild,
     };
   },
 };

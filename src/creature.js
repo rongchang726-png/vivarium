@@ -57,6 +57,10 @@ class Creature {
     this.generation = generation;
     this.offspring = opts.offspring != null ? opts.offspring : 0;
     this.id = opts.id != null ? opts.id : world.nextId++;
+    // PvP lineage tag: which founding clan this creature descends from (0 by
+    // default; -1 for genesis-injected wildlife). Inherited by children; it is a
+    // pure label — it never affects behaviour or physics, only scorekeeping.
+    this.clan = opts.clan != null ? opts.clan : 0;
 
     this.alive = true;
     this.cause = null;
@@ -284,6 +288,7 @@ class Creature {
       gen: this.generation,
       off: this.offspring,
       id: this.id,
+      c: this.clan,
       // The recurrent hidden state is live dynamic memory: without it, a
       // restored world is not the same world. Serialize it for exact reload.
       bh: Array.from(this.brain.h),
@@ -299,6 +304,7 @@ class Creature {
       maxAge: o.m,
       offspring: o.off,
       id: o.id,
+      clan: o.c,
     });
     if (o.s != null) c.speed = o.s;
     if (o.bh) c.brain.h.set(o.bh);

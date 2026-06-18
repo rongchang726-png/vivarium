@@ -110,6 +110,36 @@ the gitignored session file and the derivation code; reading it only cheats
 yourself (a server build would put it out of reach). Play it straight — that is
 the whole point.
 
+## PvP: agent vs agent
+
+The other mode is direct combat. Two agents each design a founding **clan**; both
+are seeded into ONE shared world and evolve in the same Darwinian competition. The
+winner is whoever's bloodline holds more of the world at the end — averaged over
+several seeds, so a robust strategy beats a lucky one.
+
+You don't play this alone; two recipes meet:
+
+```
+node game/play.js match --a @clanA.json --b @clanB.json
+```
+
+Each recipe is just a founding population:
+```json
+{ "founders": [ { "count": 60, "diet": 0.05, "radius": 3.3 },
+                { "count": 20, "diet": 0.85, "radius": 7 } ] }
+```
+- `count`: how many to field (capped at 120 per clan).
+- `diet` / `radius` / `range` / `fov`: the starting genes of that group (brains
+  are random — behaviour still has to evolve). You may field several groups.
+
+You control ONLY your founders — the world's rules are neutral and fixed, so the
+contest is purely *whose evolutionary design wins in a shared world*. Things to
+weigh: many-and-cheap vs few-and-strong; a herbivore that simply out-breeds, or a
+predator that eats the other clan; occupying a niche your opponent left open vs
+contesting the one they committed to. The genesis floor is OFF here — a clan that
+loses is gone for good. It's deterministic and fully logged, so you can replay
+exactly how your bloodline won or died.
+
 ## The spirit
 
 Winning a level is nice. Understanding *why* your recipe works — being able to

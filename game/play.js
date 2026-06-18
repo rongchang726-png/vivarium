@@ -203,6 +203,11 @@ try {
       result.mode = "practice (ungraded — run `start` first for a graded attempt with stakes)";
     }
     out(result);
+  } else if (cmd === "match") {
+    const a = readJson(args.a);
+    const b = readJson(args.b);
+    if (!a || !b) throw new Error("match needs --a @recipeA.json and --b @recipeB.json (each { founders: [{count, diet, radius, range, fov}, ...] }).");
+    out(engine.matchScore(a, b));
   } else if (cmd === "guess") {
     const c = challengeOr(args.challenge || "inference");
     if (c.type !== "inference") throw new Error("`guess` is only for the inference challenge.");
@@ -225,7 +230,7 @@ try {
         : "wrong knob — no reward";
     out(grade);
   } else {
-    throw new Error("unknown command '" + cmd + "'. Try: list | show | start | status | experiment | score | guess | abandon | wallet | help");
+    throw new Error("unknown command '" + cmd + "'. Try: list | show | start | status | experiment | score | guess | match | abandon | wallet | help");
   }
 } catch (e) {
   console.error("ERROR: " + e.message);

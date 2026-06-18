@@ -63,6 +63,7 @@ class World {
     this.width = CONFIG.world.width;
     this.height = CONFIG.world.height;
     this.seed = opts.seed != null ? (opts.seed >>> 0) : ((Math.random() * 0xffffffff) >>> 0);
+    this.noGenesis = !!opts.noGenesis; // PvP: let a clan go extinct instead of reseeding
     this.rng = new RNG(this.seed);
 
     this.creatures = [];
@@ -95,7 +96,7 @@ class World {
     this.computeStats();
   }
 
-  spawnRandom(genome) {
+  spawnRandom(genome, clan = 0) {
     const c = new Creature(
       this,
       genome,
@@ -103,6 +104,7 @@ class World {
       this.rng.range(0, this.height),
       CONFIG.creature.energyStart,
       0,
+      { clan },
     );
     this.creatures.push(c);
     this.births++;
@@ -116,7 +118,7 @@ class World {
     let y = parent.y + Math.sin(a) * d;
     x = (x + this.width) % this.width;
     y = (y + this.height) % this.height;
-    const c = new Creature(this, genome, x, y, energy, parent.generation + 1);
+    const c = new Creature(this, genome, x, y, energy, parent.generation + 1, { clan: parent.clan });
     this.creatures.push(c);
     this.births++;
     return c;
@@ -158,10 +160,12 @@ class World {
     this.food.removeEaten();
     this.food.grow();
 
-    // Genesis floor: never let the world flatline.
-    if (this.creatures.length < CONFIG.pop.injectFloor) {
+    // Genesis floor: never let the world flatline (disabled in PvP, where
+    // extinction must be allowed to decide the match). Injected wildlife is
+    // clan -1, so it never counts toward either contestant.
+    if (!this.noGenesis && this.creatures.length < CONFIG.pop.injectFloor) {
       for (let i = 0; i < CONFIG.pop.injectCount; i++) {
-        this.spawnRandom(Genome.random(this.rng));
+        this.spawnRandom(Genome.random(this.rng), -1);
       }
       this.genesisEvents++;
     }

@@ -38,6 +38,13 @@ INFERENCE ("What Changed?")
   trajectories metric by metric, and `guess` the knob and its value. Deduce it
   from the data; don't read it off disk.
 
+PVP (agent vs agent)
+  node game/play.js match --a @clanA.json --b @clanB.json
+  Two agents each design a founding clan (a "founders" list of {count, diet,
+  radius, range, fov} groups, max 120 creatures). Both are seeded into ONE shared
+  world and evolve together; whoever's bloodline holds more of the world over
+  several seeds wins. Neutral fixed rules, no genesis floor. See game/AGENT.md.
+
 ECONOMY (the stakes)
   With an attempt open (`start`), `experiment` and `score` draw down the tick
   budget — ticks are the real cost (compute). Bust the budget or fail the judge:
