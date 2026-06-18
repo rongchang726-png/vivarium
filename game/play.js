@@ -23,6 +23,7 @@ const path = require("path");
 const { challenges } = require("./challenges");
 const engine = require("./engine");
 const session = require("./session");
+const inference = require("./inference");
 
 function parseArgs(argv) {
   const a = { _sets: [] };
@@ -90,20 +91,39 @@ try {
     );
   } else if (cmd === "show") {
     const c = challengeOr(args.challenge || rest[0]);
-    out({
-      id: c.id, title: c.title, brief: c.brief, goal: c.goal,
-      budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c),
-      settleTicks: c.settleTicks, goalWindow: c.goalWindow,
-      tunable: c.tunable, practiceSeeds: c.practiceSeeds,
-      recipeFormat: { config: { "dotted.path": "value" }, founders: [{ count: 20, diet: 0.85, radius: 7 }], settleTicks: "optional" },
-    });
+    if (c.type === "inference") {
+      out({
+        id: c.id, title: c.title, brief: c.brief, goal: c.goal,
+        budget: c.budget, bounty: c.bounty, tolerance: c.tolerance, practiceSeeds: c.practiceSeeds,
+        candidates: c.candidates,
+        howToPlay: "start -> experiment (compare baseline vs altered) -> guess --knob <name> --value <number>",
+      });
+    } else {
+      out({
+        id: c.id, title: c.title, brief: c.brief, goal: c.goal,
+        budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c),
+        settleTicks: c.settleTicks, goalWindow: c.goalWindow,
+        tunable: c.tunable, practiceSeeds: c.practiceSeeds,
+        recipeFormat: { config: { "dotted.path": "value" }, founders: [{ count: 20, diet: 0.85, radius: 7 }], settleTicks: "optional" },
+      });
+    }
   } else if (cmd === "start") {
     const c = challengeOr(args.challenge);
-    session.startSession(c.id, c.budget);
-    out({
-      started: c.id, budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c), goal: c.goal,
-      note: "Graded attempt open. experiment + score now draw down your budget. One score ends the attempt; fail or bust = no reward.",
-    });
+    if (c.type === "inference") {
+      const nonce = (Math.floor(Math.random() * 0xffffffff)) >>> 0;
+      session.startSession(c.id, c.budget, { nonce });
+      out({
+        started: c.id, budget: c.budget, bounty: c.bounty, goal: c.goal,
+        candidates: c.candidates.map((x) => x.knob),
+        note: "Graded attempt open. One rule below has been secretly moved. `experiment` draws down your budget (two worlds run, so it costs 2x ticks); `guess` ends the attempt. Deduce it from the data — don't read it off disk.",
+      });
+    } else {
+      session.startSession(c.id, c.budget);
+      out({
+        started: c.id, budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c), goal: c.goal,
+        note: "Graded attempt open. experiment + score now draw down your budget. One score ends the attempt; fail or bust = no reward.",
+      });
+    }
   } else if (cmd === "status") {
     const s = session.getSession();
     out({
@@ -117,28 +137,44 @@ try {
     out({ abandoned: true });
   } else if (cmd === "experiment") {
     const c = args.challenge ? challengeOr(args.challenge) : null;
-    const config = buildConfig(args);
-    const founders = readJson(args.founders) || null;
-    const ticks = parseInt(args.ticks || "6000", 10);
-    const seed = parseInt(args.seed || (c ? c.practiceSeeds[0] : 1), 10);
-    if (c) assertTunable(c, config);
-    const sess = session.getSession();
-    const graded = !!(c && sess && sess.challenge === c.id);
-    if (graded) {
+    if (c && c.type === "inference") {
+      const sess = session.getSession();
+      if (!sess || sess.challenge !== c.id) throw new Error("inference is graded-only: run `start --challenge inference` first.");
+      const ticks = parseInt(args.ticks || "5000", 10);
+      const seed = parseInt(args.seed || c.practiceSeeds[0], 10);
+      const cost = ticks * 2; // two worlds run side by side
       const remaining = sess.budget - sess.spent;
-      if (ticks > remaining) {
-        throw new Error("graded attempt: this experiment costs " + ticks + " ticks but only " + remaining + " remain. Use a shorter --ticks, `score`, or `abandon`.");
-      }
-    }
-    const result = engine.experiment(c, config, founders, ticks, seed);
-    if (graded) {
+      if (cost > remaining) throw new Error("inference experiment costs " + cost + " ticks (two worlds) but only " + remaining + " remain. Use a shorter --ticks, or `guess`.");
+      const mystery = inference.deriveMystery(sess.nonce);
+      const result = engine.inferenceExperiment(mystery, ticks, seed);
       const s2 = session.charge("experiment", result.ticksUsed);
       result.mode = "graded";
       result.budget = { spent: s2.spent, remaining: sess.budget - s2.spent, of: sess.budget };
+      out(result);
     } else {
-      result.mode = "practice";
+      const config = buildConfig(args);
+      const founders = readJson(args.founders) || null;
+      const ticks = parseInt(args.ticks || "6000", 10);
+      const seed = parseInt(args.seed || (c ? c.practiceSeeds[0] : 1), 10);
+      if (c) assertTunable(c, config);
+      const sess = session.getSession();
+      const graded = !!(c && sess && sess.challenge === c.id);
+      if (graded) {
+        const remaining = sess.budget - sess.spent;
+        if (ticks > remaining) {
+          throw new Error("graded attempt: this experiment costs " + ticks + " ticks but only " + remaining + " remain. Use a shorter --ticks, `score`, or `abandon`.");
+        }
+      }
+      const result = engine.experiment(c, config, founders, ticks, seed);
+      if (graded) {
+        const s2 = session.charge("experiment", result.ticksUsed);
+        result.mode = "graded";
+        result.budget = { spent: s2.spent, remaining: sess.budget - s2.spent, of: sess.budget };
+      } else {
+        result.mode = "practice";
+      }
+      out(result);
     }
-    out(result);
   } else if (cmd === "score") {
     const c = challengeOr(args.challenge);
     const recipe = args.recipe ? readJson(args.recipe) : { config: buildConfig(args), founders: readJson(args.founders) || null };
@@ -167,8 +203,29 @@ try {
       result.mode = "practice (ungraded — run `start` first for a graded attempt with stakes)";
     }
     out(result);
+  } else if (cmd === "guess") {
+    const c = challengeOr(args.challenge || "inference");
+    if (c.type !== "inference") throw new Error("`guess` is only for the inference challenge.");
+    const sess = session.getSession();
+    if (!sess || sess.challenge !== c.id) throw new Error("no inference attempt open; run `start --challenge inference` first.");
+    if (!args.knob || args.value == null) throw new Error("guess needs --knob <name> and --value <number>.");
+    const mystery = inference.deriveMystery(sess.nonce);
+    const grade = engine.gradeGuess(mystery, { knob: args.knob, value: parseFloat(args.value) }, c.tolerance);
+    const reward = grade.pass ? c.bounty + Math.floor((sess.budget - sess.spent) / 1000) : 0;
+    const wallet = reward > 0 ? session.creditWallet(c.id, reward) : session.getWallet();
+    session.endSession();
+    grade.spent = sess.spent;
+    grade.budget = sess.budget;
+    grade.reward = reward;
+    grade.wallet = wallet;
+    grade.verdict = grade.pass
+      ? "CORRECT — earned " + reward + " tokens"
+      : grade.knobCorrect
+        ? "right knob, but value off by " + (grade.relErr * 100).toFixed(0) + "% — no reward"
+        : "wrong knob — no reward";
+    out(grade);
   } else {
-    throw new Error("unknown command '" + cmd + "'. Try: list | show | start | status | experiment | score | abandon | wallet | help");
+    throw new Error("unknown command '" + cmd + "'. Try: list | show | start | status | experiment | score | guess | abandon | wallet | help");
   }
 } catch (e) {
   console.error("ERROR: " + e.message);

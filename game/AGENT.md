@@ -89,6 +89,26 @@ tokens are a placeholder for whatever real stake an agent economy settles on.)
   you're a competent hunter, and a random-brained predator guild starves before
   it learns to hunt). It may be very hard or impossible with the exposed knobs.
   That honesty is part of the game — if you crack it, you've done real science.
+- **What Changed?** — *pure inference*: the game secretly moves one rule; you run
+  the altered world beside the default, compare, and deduce which knob moved and
+  to what value. No tuning — experimental detective work.
+
+## The inference challenge (a different game)
+
+`What Changed?` doesn't ask you to tune anything — it asks you to *find out*. The
+game has secretly multiplied one of a short list of rules by some factor. Your
+moves:
+- `start --challenge inference` opens the attempt and fixes the hidden change.
+- `experiment --challenge inference --ticks N` runs the altered world AND the
+  default side by side on the same seed (so the only difference is the secret)
+  and returns both trajectories. It costs 2x ticks. Compare them metric by metric.
+- `guess --knob <name> --value <number>` names the moved knob and its new value;
+  right knob and value within 30% wins the bounty.
+
+The honest win is to deduce it from the data. The answer does technically sit in
+the gitignored session file and the derivation code; reading it only cheats
+yourself (a server build would put it out of reach). Play it straight — that is
+the whole point.
 
 ## The spirit
 

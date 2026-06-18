@@ -107,4 +107,62 @@ function experiment(challenge, config, founders, ticks, seed) {
   return out;
 }
 
-module.exports = { runRecipe, score, experiment };
+function readDefault(api, dotted) {
+  const parts = dotted.split(".");
+  let o = api.CONFIG;
+  for (const p of parts) o = o[p];
+  return o;
+}
+
+// Inference challenge: run the DEFAULT world and the SECRETLY-ALTERED world side
+// by side on the same seed, so the only difference between the two trajectories
+// is the hidden perturbation. The player compares them to deduce what moved.
+function inferenceExperiment(mystery, ticks, seed) {
+  const apiB = loadCore();
+  const apiP = loadCore();
+  const def = readDefault(apiP, mystery.knob);
+  apiP.setParam(mystery.knob, def * mystery.factor);
+
+  const wB = apiB.newWorld(seed);
+  const wP = apiP.newWorld(seed);
+
+  const every = Math.max(250, Math.floor(ticks / 10));
+  const baseline = [];
+  const altered = [];
+  let done = 0;
+  while (done < ticks) {
+    const chunk = Math.min(every, ticks - done);
+    apiB.step(wB, chunk);
+    apiP.step(wP, chunk);
+    done += chunk;
+    baseline.push(apiB.snapshot(wB));
+    altered.push(apiP.snapshot(wP));
+  }
+  return { seed, ticks, ticksUsed: done * 2, baseline, altered };
+}
+
+// Grade a guess of {knob, value} against the hidden truth.
+function gradeGuess(mystery, guess, tolerance) {
+  const api = loadCore();
+  const def = readDefault(api, mystery.knob);
+  const trueValue = def * mystery.factor;
+  const knobCorrect = guess.knob === mystery.knob;
+  let relErr = 1;
+  if (knobCorrect && Number.isFinite(guess.value)) {
+    relErr = Math.abs(guess.value - trueValue) / Math.abs(trueValue);
+  }
+  const tol = tolerance || 0.3;
+  return {
+    pass: knobCorrect && relErr <= tol,
+    score: knobCorrect ? Math.max(0, 1 - relErr) : 0,
+    knobCorrect,
+    relErr: Math.round(relErr * 1000) / 1000,
+    guessedKnob: guess.knob,
+    trueKnob: mystery.knob,
+    guessedValue: guess.value,
+    trueValue: Math.round(trueValue * 1000) / 1000,
+    trueFactor: Math.round(mystery.factor * 1000) / 1000,
+  };
+}
+
+module.exports = { runRecipe, score, experiment, inferenceExperiment, gradeGuess };

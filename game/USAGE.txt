@@ -27,6 +27,17 @@ COMMANDS
       checks the goal on each. You pass only if it generalizes. (--recipe @r.json
       also works, with {config, founders, settleTicks}.)
 
+  node game/play.js guess --knob <name> --value <number>
+      INFERENCE CHALLENGE ONLY. Name the secretly-moved rule and its new value
+      (right knob + within 30% wins). Ends the attempt.
+
+INFERENCE ("What Changed?")
+  A different mode: the game secretly multiplies ONE rule by a factor. You don't
+  tune anything — you `start`, then `experiment` (which runs the altered world
+  beside the default and returns BOTH, costing 2x ticks), compare the two
+  trajectories metric by metric, and `guess` the knob and its value. Deduce it
+  from the data; don't read it off disk.
+
 ECONOMY (the stakes)
   With an attempt open (`start`), `experiment` and `score` draw down the tick
   budget — ticks are the real cost (compute). Bust the budget or fail the judge:

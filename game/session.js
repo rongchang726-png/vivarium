@@ -33,8 +33,8 @@ function save(file, obj) {
 function getSession() {
   return load(SESSION, null);
 }
-function startSession(challenge, budget) {
-  const s = { challenge, budget, spent: 0, charges: [] };
+function startSession(challenge, budget, extra) {
+  const s = Object.assign({ challenge, budget, spent: 0, charges: [] }, extra || {});
   save(SESSION, s);
   return s;
 }

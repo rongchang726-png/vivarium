@@ -14,6 +14,8 @@
  *   founders: [{count, diet?, radius?, range?, fov?}], settleTicks? }.
  */
 
+const { CANDIDATES } = require("./inference");
+
 function mean(xs) {
   let s = 0;
   for (const x of xs) s += x;
@@ -155,6 +157,20 @@ const challenges = {
       const bestCarn = Math.max(0, ...samples.map(carnFrac));
       return { pass: ok >= 0.7, score: ok, detail: "coexistWindow=" + (ok * 100).toFixed(0) + "% peakCarn=" + (bestCarn * 100).toFixed(0) + "%" };
     },
+  },
+
+  inference: {
+    id: "inference",
+    title: "What Changed?  (inference)",
+    type: "inference",
+    brief:
+      "I have secretly multiplied exactly ONE of the rules below by some factor — you will never be told which, or by how much. Experiment on the altered world, compare it against the default that runs beside it, and DEDUCE the knob and its new value. Pure experimental science: the only honest win is to actually figure it out, not to read the answer off disk.",
+    goal: "Name the changed knob and its new value, to within 30%.",
+    candidates: CANDIDATES,
+    tolerance: 0.3,
+    budget: 70000,
+    bounty: 200,
+    practiceSeeds: [1, 2, 3],
   },
 };
 
