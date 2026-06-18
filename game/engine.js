@@ -212,15 +212,29 @@ function runMatch(recipeA, recipeB, seed) {
   };
 }
 
-// Best-of across seeds: the winner is whoever takes more games.
+// Tournament across seeds. Clan 0 is seeded first and updates first each tick —
+// a real early-race advantage in this winner-take-all world. To cancel that
+// position bias, every seed is played BOTH ways (each recipe takes the clan-0
+// slot once) and wins are tallied by RECIPE identity, not board position.
 function matchScore(recipeA, recipeB) {
-  const games = ARENA.seeds.map((s) => runMatch(recipeA, recipeB, s));
-  const aWins = games.filter((g) => g.winner === "A").length;
-  const bWins = games.filter((g) => g.winner === "B").length;
+  let aWins = 0, bWins = 0;
+  const games = [];
+  for (const s of ARENA.seeds) {
+    const g1 = runMatch(recipeA, recipeB, s); // A as clan 0
+    const g2 = runMatch(recipeB, recipeA, s); // B as clan 0
+    const r1 = g1.winner === "A" ? "A" : g1.winner === "B" ? "B" : "draw";
+    const r2 = g2.winner === "A" ? "B" : g2.winner === "B" ? "A" : "draw"; // remap to recipe identity
+    for (const r of [r1, r2]) {
+      if (r === "A") aWins++;
+      else if (r === "B") bWins++;
+    }
+    games.push({ seed: s, aAsClan0: r1, bAsClan0: r2 });
+  }
   const winner = aWins > bWins ? "A" : bWins > aWins ? "B" : "draw";
   return {
     winner, aWins, bWins, games,
-    arena: { settleTicks: ARENA.settleTicks, perClanCap: ARENA.perClanCap, seeds: ARENA.seeds.length },
+    note: "each seed played both board sides; wins tallied by recipe, so first-mover bias is cancelled",
+    arena: { settleTicks: ARENA.settleTicks, perClanCap: ARENA.perClanCap, seeds: ARENA.seeds.length, gamesPlayed: ARENA.seeds.length * 2 },
   };
 }
 

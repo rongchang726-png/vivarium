@@ -15,4 +15,4 @@ npm-debug.log*
 # Game session / wallet state (player progress, not code)
 game/.session.json
 game/.wallet.json
-game/_*.json
+game/_*
