@@ -83,6 +83,26 @@ tunable set, or accept cross-challenge calibration as fair play. The local build
 leans on the honesty rule (don't read `.session.json` / `inference.js`); true
 secrecy needs the server, as noted up top.
 
+### PvP (`match`)
+
+`match --a @A.json --b @B.json` seeds two founding clans into one shared arena
+world (`noGenesis: true`, so a clan can be wiped out) and judges by average clan
+population/biomass over a tail, best-of-5 seeds. The behaviour-neutral `clan` tag
+(core; on every creature, inherited, serialized) is how scoring tells the
+bloodlines apart; genesis wildlife is clan -1 and counts for neither.
+
+Dynamics observed: **winner-take-all by competitive exclusion (Gause).** Two
+clans sharing the single herbivore niche → the marginally fitter one drives the
+other extinct (even two near-identical grazers came out 389-to-0). Verdicts are
+clean, but a design tension worth recording: this world has essentially **one**
+optimal niche (small efficient herbivore), so two strong players both converging
+on it makes the match a near coin-flip on seed. Real strategic depth needs
+**niche diversity or non-transitivity** (rock-paper-scissors among diet
+strategies) — which in turn needs predation to be viable (the open grand
+challenge) or new resources (multiple food types, spatial structure). Until then
+PvP rewards "who best knows the optimum" plus niche gambles, not a rich meta.
+Future work for a deep PvP meta: make several niches simultaneously viable.
+
 ## Tuning lives in `src/config.js`
 
 The whole "physics" is there. Lessons from tuning so far (don't relearn them):
