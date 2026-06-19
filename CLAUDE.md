@@ -216,7 +216,14 @@ end effect on a LINEAR trait axis: the middle specialist reaches ALL three foods
 (own 1.0 + each neighbour 0.25 = 1.5D) while an end specialist reaches only two
 (1.25D), so the middle is globally best and swallows everything. Even N-way
 branching needs a SYMMETRIC (circular/periodic) trait space (cf. Doebeli &
-Dieckmann's resource-competition model) — future work. Summary: 2-way branching
+Dieckmann's resource-competition model). Tried it (`food.forageCircular`,
+`branching.js ... circular`): the ring DOES kill the end effect — the middle-niche
+monopoly collapses (bin2 from 82% to ~2%, the distribution spreads). So the
+geometry hypothesis holds *qualitatively*. But a clean symmetric 3-species split
+is NOT confirmed: niches come out unequal and wander, and a 5-bin histogram can't
+resolve 3 ring peaks — clean N-way coexistence needs a finer diagnostic / tuning
+(future work). (The branching.js pass/fail line is a LINEAR criterion; it
+mis-reports "success" on the ring — read the distribution by hand.) Summary: 2-way branching
 works (forage 0.5 is a valley); 3-way does NOT on a linear axis (0.5 is a peak
 with a reach advantage). Bed: `game/branching.js [ticks] [spec] [types] [spread]`.
 

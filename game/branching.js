@@ -20,12 +20,14 @@ const TICKS = parseInt(process.argv[2] || "30000", 10);
 const SPEC = parseFloat(process.argv[3] || "1"); // forageSpecialization: >1 = 凸 trade-off (branching 需要它)
 const TYPES = parseInt(process.argv[4] || "2", 10); // 食物种类数 = 可能的物种数上限
 const SPREAD = process.argv[5] === "spread"; // founder forage 随机铺满[0,1](覆盖所有峰的吸引域)
+const CIRC = process.argv.includes("circular"); // 环形 trait space(消端效应)
 const SAMPLE = 2500;
 const FOUNDERS = 60;
 
 const api = loadCore();
 api.setParam("food.types", TYPES);
 api.setParam("food.forageSpecialization", SPEC);
+if (CIRC) api.setParam("food.forageCircular", true);
 // 每种食物密度补到单食物 baseline(公平,不饿死) —— 总量随种类数缩放
 api.setParam("food.max", api.CONFIG.food.max * TYPES);
 api.setParam("food.spawnPerTick", api.CONFIG.food.spawnPerTick * TYPES);

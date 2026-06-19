@@ -257,11 +257,16 @@ class Creature {
         // coexist instead of competitively excluding. multi=false => bit-exact.
         let eff = herbEff;
         if (multi) {
-          // Food type normalised to [0,1] so forage (also [0,1]) can specialise
-          // on any of N types: type k of N -> k/(N-1). With 2 types this is 0/1
-          // exactly as before (bit-exact-preserving for the 2-type case).
-          const nt = f.type / (CONFIG.food.types - 1);
-          const m = 1 - spec * Math.abs(this.forage - nt);
+          // Food type normalised so forage (in [0,1]) can specialise on any of N
+          // types. Linear axis: type k -> k/(N-1) (2 types = 0/1, unchanged).
+          // Circular axis: type k -> k/N on a ring, distance wraps — no end
+          // effect, so even N-way branching is possible.
+          const N = CONFIG.food.types;
+          const circ = CONFIG.food.forageCircular;
+          const nt = circ ? f.type / N : f.type / (N - 1);
+          let d = Math.abs(this.forage - nt);
+          if (circ && d > 0.5) d = 1 - d;
+          const m = 1 - spec * d;
           if (m <= 0) return; // can't digest this type — leave it (no interference)
           eff *= m;
         }

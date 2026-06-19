@@ -64,6 +64,8 @@ const CONFIG = {
     // sets how sharp the trade-off is (1 = a specialist can't eat the other).
     types: 1,
     forageSpecialization: 1,
+    forageCircular: false, // N food types on a ring (equidistant, no end effect)
+                           // vs a linear axis. Needed for even N-way branching.
   },
 
   creature: {

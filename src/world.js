@@ -122,7 +122,12 @@ class World {
     // no RNG drawn). Drift lets a generalist population branch into specialists
     // under disruptive selection — emergent niche differentiation.
     let childForage = parent.forage;
-    if (CONFIG.food.types > 1) childForage = clamp(childForage + this.rng.gauss(0, CONFIG.mutation.forageStd), 0, 1);
+    if (CONFIG.food.types > 1) {
+      childForage += this.rng.gauss(0, CONFIG.mutation.forageStd);
+      // Circular trait space wraps [0,1); linear clamps. (Same RNG draw either
+      // way, so types=1 is untouched.)
+      childForage = CONFIG.food.forageCircular ? ((childForage % 1) + 1) % 1 : clamp(childForage, 0, 1);
+    }
     const c = new Creature(this, genome, x, y, energy, parent.generation + 1, { clan: parent.clan, forage: childForage });
     this.creatures.push(c);
     this.births++;
