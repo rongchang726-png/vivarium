@@ -294,6 +294,28 @@ does not cross it. Diagnostics kept in the repo: `test/experiment.js`
 (food × retaliation sweep, reports kills/1000 ticks) and `test/trophic.js` (diet
 histogram over time).
 
+### Re-attempt (2026-06-19), armed with the coexistence-theory framing
+
+After a full day building niche diversity, I reframed the predator problem with
+today's tools: it is the predation niche's *bootstrap / fixation collapse*
+(hunting isn't evolved before the carnivore starves). Re-measured the baseline
+(`test/trophic.js`, seed 7): carn>.8 zeroes by ~tick 1000, no bimodality —
+unchanged. First refugium attempt (`game/predator-train.js`): a hunting-EASY
+training world — 120 prey + 40 predators, retaliation 0.1, carcassFactor 1.5,
+biteDamage 30, plantSuppression 0.5 so predators can graze to bridge the
+bootstrap. FAILED: even with kills ~695/1000 ticks early, carn>.8 never
+establishes (0 for 15k ticks); diet drifts straight back to herbivory. The flaw
+is intrinsic and now diagnosed: the graze fallback that stops predators starving
+is exactly what lets diet slide back down the deep herbivore attractor —
+"don't starve" and "stay a hunter" are in tension in this design. 6th
+intervention, 6th negative — but a sharper "why". Next angle: NO graze fallback
+(high plantSuppression) + prey so dense/slow/weak a random brain still lands
+kills, OR the pre-evolved-seed route (evolve hunters where it's easy, then
+transplant). This deserves a fresh, context-rich session, not the tail of a long
+one. Also: PvP strategic depth (non-transitive RPS) is gated on THIS problem —
+resource niches give coexistence, but a克制-environment (predation) is what gives
+non-transitivity. So this is the keystone for the deep PvP meta.
+
 ### If I want to try again (future work, roughly in order of promise)
 - **Protected refugium**: shield a carnivore sub-population from competition for
   N generations so hunting can evolve, then release it. Most promising.
