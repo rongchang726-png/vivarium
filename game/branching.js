@@ -72,6 +72,16 @@ for (let t = 0; t <= TICKS; t += SAMPLE) {
 }
 
 console.log("");
+// 细分布(12 bins)直接读 creature.forage,绕开 snapshot 的 5-bin 粗粒度
+const FB = 12;
+const fine = new Array(FB).fill(0);
+for (const c of w.creatures) {
+  let b = Math.min(FB - 1, Math.max(0, Math.floor((c.forage || 0) * FB)));
+  fine[b]++;
+}
+const ftot = fine.reduce((a, b) => a + b, 0) || 1;
+console.log("末期细分布(" + FB + " bins, 环上3峰应在 ~bin0/4/8):");
+console.log("  " + fine.map((h) => String(Math.round((h / ftot) * 100)).padStart(3)).join(" "));
 const fh = last.forageHist;
 const tot = fh.reduce((a, b) => a + b, 0) || 1;
 const ends = (fh[0] + fh[4]) / tot;
