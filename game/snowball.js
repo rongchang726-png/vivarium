@@ -39,11 +39,13 @@ const FD = argval("--fd", 0); // pop.freqDependence(少数方庇护)
 const ASYM = process.argv.includes("--asym"); // 非对称: B 系统性劣势
 const WALL = process.argv.includes("--wall"); // 空间隔离: 中墙+corridor, 两 clan 各种一边
 const GAP = argval("--gap", 0.2); // corridor 占世界高度的比例(越小越隔离)
+const FOOD2 = process.argv.includes("--food2"); // 双食物 + 两 clan 特化(resource partitioning)
 
 const SEEDS = [11, 22, 33, 44, 55];
 const FOUNDERS_PER_CLAN = 45;
-const SPEC_A = { diet: 0.12, radius: 3.6 }; // 小型高效食草(优)
-const SPEC_B = ASYM ? { diet: 0.12, radius: 5.5 } : SPEC_A; // 非对称时 B 身体更大: 代谢高、效率低
+const SPEC_A = { diet: 0.12, radius: 3.6 }; // 小型高效食草
+const SPEC_B = { diet: 0.12, radius: ASYM ? 5.5 : 3.6 }; // 非对称时 B 身体更大(代谢高/效率低)
+if (FOOD2) { SPEC_A.forage = 0; SPEC_B.forage = 1; } // 各特化一种食物 => 生态位重叠 ρ→0
 const TICKS = 9000;
 const SAMPLE = 250;
 const DIVERGE_RATIO = 3; // 领先:落后 超过此值算雪球启动
@@ -56,6 +58,14 @@ function probe(seed) {
     api.setParam("food.densityRadius", DDR);
   }
   if (FD > 0) api.setParam("pop.freqDependence", FD);
+  if (FOOD2) {
+    api.setParam("food.types", 2);
+    // Keep each food type at single-resource density so a specialist clan's
+    // bootstrap matches baseline — a fair test of partitioning, not starvation.
+    api.setParam("food.max", api.CONFIG.food.max * 2);
+    api.setParam("food.spawnPerTick", api.CONFIG.food.spawnPerTick * 2);
+    api.setParam("food.startCount", api.CONFIG.food.startCount * 2);
+  }
   const W = api.CONFIG.world.width,
     H = api.CONFIG.world.height;
   if (WALL) api.setParam("world.wall", { gapLo: H * (0.5 - GAP / 2), gapHi: H * (0.5 + GAP / 2) });
@@ -110,7 +120,7 @@ function bar(a, b, width) {
 
 console.log("=== PvP 雪球诊断:灭绝动力学 ===");
 console.log("配方: A diet=" + SPEC_A.diet + " r=" + SPEC_A.radius + " | B diet=" + SPEC_B.diet + " r=" + SPEC_B.radius + (ASYM ? "  (非对称: B 系统性劣势)" : "  (对称)"));
-console.log("每方 " + FOUNDERS_PER_CLAN + " founders | " + TICKS + " ticks | dd=" + DD + " fd=" + FD + (WALL ? " | wall=on(gap=" + GAP + ")" : ""));
+console.log("每方 " + FOUNDERS_PER_CLAN + " founders | " + TICKS + " ticks | dd=" + DD + " fd=" + FD + (WALL ? " | wall=on(gap=" + GAP + ")" : "") + (FOOD2 ? " | food2(两 clan 特化)" : ""));
 console.log("");
 
 const results = [];
@@ -123,7 +133,7 @@ for (const seed of SEEDS) {
     const tag = "t=" + String(s.tick).padStart(4) + "  A=" + String(s.popA).padStart(3) + " B=" + String(s.popB).padStart(3) + "  ";
     console.log("  " + tag + bar(s.popA, s.popB, 40));
   }
-  const verdict = r.extinctTick != null ? "一方灭绝 @t=" + r.extinctTick + "(" + r.extinctClan + " 归零)" : "共存到底";
+  const verdict = r.finalA === 0 && r.finalB === 0 ? "世界崩溃(双亡)" : r.extinctTick != null ? "一方灭绝 @t=" + r.extinctTick + "(" + r.extinctClan + " 归零)" : "共存到底";
   console.log("  -> diverge@" + (r.divergeTick != null ? r.divergeTick : "—") + " | " + verdict + " | 终局 A=" + r.finalA + " B=" + r.finalB + " | 峰值总群 " + r.totalPeak);
   console.log("");
 }

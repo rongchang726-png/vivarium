@@ -174,7 +174,30 @@ move isn't another handicap but real *niche difference* (push ρ below 1): multi
 food types / resources. Next read: fixation probability (Moran process), the math
 of whether a small founding population establishes at all.
 
-Future work for a deep PvP meta: make several niches simultaneously viable.
+**Resource partitioning — the root fix the theory pointed to (`food.types`,
+2026-06-19).** Coexistence theory's verdict: the principled cure is real niche
+difference (ρ<1), not a handicap. So I built it. `food.types>1` spawns multiple
+plant types (meadows cluster by type); a creature's `forage` trait (creature-
+level like clan, NOT in the genome ⟹ single-food world stays bit-exact,
+determinism hash still 4244329615) eats a matching type well and the other
+poorly (`forageSpecialization`), and won't touch a type it can't digest (no
+interference — else a specialist destroys the rival's food for zero gain). Two
+clans each specialised on a different food (ρ→0) = `game/snowball.js --food2`.
+Result: **5/5 HEALTHY coexistence** (both clans ~350; `divergeTick` never even
+fires — the snowball never starts). Scoreboard of every mechanism tried:
+baseline 0/5, NFDS 0/5, wall 1/5, **partitioning 5/5** — the first robust,
+repeatable coexistence in the project, and an exact confirmation of the theory
+(ρ→0 makes `ρ<k1/k2<1/ρ` hold for ANY fitness ratio ⟹ coexistence guaranteed,
+not lucky). Gotcha found & fixed: at equal *total* food a specialist's effective
+food halves ⟹ both clans bootstrap-collapse (0:0, peak 90); `--food2` doubles
+per-type density so each specialist's bootstrap matches baseline (a fair test of
+partitioning, not starvation). Caveat: `forage` is founder-fixed here, not yet
+evolved.
+
+Future work for a deep PvP meta: niches are now demonstrably co-viable (resource
+partitioning, above). Next: let `forage` *evolve* (put it in the genome) so the
+partition emerges under disruptive selection, then build non-transitivity (RPS
+among diet/forage strategies) on top — that's the real strategic meta.
 
 ## Tuning lives in `src/config.js`
 

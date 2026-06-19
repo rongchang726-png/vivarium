@@ -96,7 +96,7 @@ class World {
     this.computeStats();
   }
 
-  spawnRandom(genome, clan = 0) {
+  spawnRandom(genome, clan = 0, forage) {
     const c = new Creature(
       this,
       genome,
@@ -104,7 +104,7 @@ class World {
       this.rng.range(0, this.height),
       CONFIG.creature.energyStart,
       0,
-      { clan },
+      { clan, forage },
     );
     this.creatures.push(c);
     this.births++;
@@ -118,7 +118,7 @@ class World {
     let y = parent.y + Math.sin(a) * d;
     x = (x + this.width) % this.width;
     y = (y + this.height) % this.height;
-    const c = new Creature(this, genome, x, y, energy, parent.generation + 1, { clan: parent.clan });
+    const c = new Creature(this, genome, x, y, energy, parent.generation + 1, { clan: parent.clan, forage: parent.forage });
     this.creatures.push(c);
     this.births++;
     return c;
@@ -262,7 +262,7 @@ class World {
       births: this.births,
       deaths: this.deaths,
       genesisEvents: this.genesisEvents,
-      food: this.food.list.map((f) => ({ x: f.x, y: f.y })),
+      food: this.food.list.map((f) => ({ x: f.x, y: f.y, t: f.type })),
       creatures: this.creatures.map((c) => c.toJSON()),
       history: this.history.serialize(),
     };
@@ -275,7 +275,7 @@ class World {
     w.births = data.births || 0;
     w.deaths = data.deaths || 0;
     w.genesisEvents = data.genesisEvents || 0;
-    w.food.list = (data.food || []).map((f) => ({ x: f.x, y: f.y, eaten: false }));
+    w.food.list = (data.food || []).map((f) => ({ x: f.x, y: f.y, eaten: false, type: f.t != null ? f.t : 0 }));
     w.food._acc = data.foodAcc || 0;
     w.creatures = (data.creatures || []).map((o) => Creature.fromJSON(w, o));
     if (data.history) w.history.load(data.history);

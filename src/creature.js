@@ -61,6 +61,11 @@ class Creature {
     // default; -1 for genesis-injected wildlife). Inherited by children; it is a
     // pure label — it never affects behaviour or physics, only scorekeeping.
     this.clan = opts.clan != null ? opts.clan : 0;
+    // Forage specialisation: 0/1 = specialise on food type 0/1, 0.5 = generalist.
+    // Inherited like clan (creature-level, NOT in the genome — so the default
+    // single-food world keeps its RNG stream bit-exact). Only bites when
+    // food.types > 1; see eatNearby.
+    this.forage = opts.forage != null ? opts.forage : 0.5;
 
     this.alive = true;
     this.cause = null;
@@ -239,13 +244,25 @@ class Creature {
       (1 - CONFIG.creature.plantSuppression * this.diet) * CONFIG.creature.herbDigest;
     const reach = this.radius + CONFIG.creature.eatRange;
     const reach2 = reach * reach;
+    const multi = CONFIG.food.types > 1; // resource partitioning active?
+    const spec = CONFIG.food.forageSpecialization;
     world.foodGrid.query(this.x, this.y, reach, (f) => {
       if (f.eaten) return;
       const dx = f.x - this.x,
         dy = f.y - this.y;
       if (dx * dx + dy * dy <= reach2) {
+        // Resource partitioning (food.types > 1): eat a plant whose type matches
+        // your `forage` specialisation efficiently, the other poorly. The
+        // trade-off opens two niches (rho < 1) so specialists on different foods
+        // coexist instead of competitively excluding. multi=false => bit-exact.
+        let eff = herbEff;
+        if (multi) {
+          const m = 1 - spec * Math.abs(this.forage - f.type);
+          if (m <= 0) return; // can't digest this type — leave it (no interference)
+          eff *= m;
+        }
         f.eaten = true;
-        const gain = CONFIG.food.energy * herbEff;
+        const gain = CONFIG.food.energy * eff;
         this.energy += gain;
         this.ateThisTick += gain;
         world.foodEatenThisTick++;
@@ -323,6 +340,7 @@ class Creature {
       off: this.offspring,
       id: this.id,
       c: this.clan,
+      f: this.forage,
       // The recurrent hidden state is live dynamic memory: without it, a
       // restored world is not the same world. Serialize it for exact reload.
       bh: Array.from(this.brain.h),
@@ -339,6 +357,7 @@ class Creature {
       offspring: o.off,
       id: o.id,
       clan: o.c,
+      forage: o.f,
     });
     if (o.s != null) c.speed = o.s;
     if (o.bh) c.brain.h.set(o.bh);

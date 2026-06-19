@@ -55,6 +55,7 @@ var __API = {
         if (spec.hue != null) g.genes.hue = spec.hue;
       }
       var c = world.spawnRandom(g, clan || 0);
+      if (spec && spec.forage != null) c.forage = spec.forage; // resource-partition specialisation
       // Optional: place founders in a sub-region (for the spatial-isolation
       // experiment — seed each clan on its own side of the wall).
       if (region) {

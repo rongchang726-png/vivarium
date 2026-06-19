@@ -56,6 +56,14 @@ const CONFIG = {
     // stream bit-exact with every existing save and test.
     densityDependence: 0,
     densityRadius: 40, // radius over which local crowding is measured
+    // Resource partitioning (niche difference). types=1 (default) = single
+    // resource, bit-exact. types>1 spawns multiple food types; a creature's
+    // `forage` trait then specialises it, opening distinct niches (rho<1) so
+    // competitors can coexist by eating different things — Chesson's resource
+    // partitioning, the textbook stabilizing mechanism. forageSpecialization
+    // sets how sharp the trade-off is (1 = a specialist can't eat the other).
+    types: 1,
+    forageSpecialization: 1,
   },
 
   creature: {

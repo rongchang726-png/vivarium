@@ -26,6 +26,7 @@ class FoodField {
       x: this.rng.range(0, this.world.width),
       y: this.rng.range(0, this.world.height),
       eaten: false,
+      type: CONFIG.food.types > 1 ? this.rng.int(CONFIG.food.types) : 0,
     };
     this.list.push(p);
     return p;
@@ -40,6 +41,7 @@ class FoodField {
       x: clamp(seed.x + Math.cos(a) * r, 0, this.world.width),
       y: clamp(seed.y + Math.sin(a) * r, 0, this.world.height),
       eaten: false,
+      type: seed.type != null ? seed.type : 0, // meadows cluster by type
     };
     this.list.push(p);
     return p;

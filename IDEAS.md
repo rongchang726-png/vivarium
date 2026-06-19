@@ -136,6 +136,14 @@ multi-agent game mechanics" once we choose a direction.
   - **遗留**:对称仍 5/5 灭绝(多为『开局崩盘』随机脑噪声,非竞争排斥),稳定
     共存待 future work(隔离开局噪声 / 反崩盘机制)。
 
+- **Resource partitioning → 稳定共存(niche diversity 第一块基石)**(2026-06-19)。
+  出门读了共存理论,带回判据:"造 ρ<1(真生态位差异)才是根本解,而非事后加
+  handicap"。当天就照判据动手:第二种食物 + creature 的 `forage` 特化(不进 genome,
+  保持 bit-exact),两个各吃一种的 clan(ρ→0)——**5/5 健康共存、雪球从未启动**
+  (baseline/NFDS 都 0/5,墙 1/5)。**理论预言被实验完美证实。** 这是"多生态位 PvP"
+  的第一块地基。下一步:让 `forage` 进 genome 演化 ⟹ niche 分化自然涌现 ⟹ 在其上
+  搭非传递(RPS)。详见 `CLAUDE.md` / `docs/coexistence-theory.md`。
+
 ## Candidate next steps (pick by appetite)
 
 1. **N-way free-for-all** — cheap, immediately richer dynamics.
