@@ -257,7 +257,11 @@ class Creature {
         // coexist instead of competitively excluding. multi=false => bit-exact.
         let eff = herbEff;
         if (multi) {
-          const m = 1 - spec * Math.abs(this.forage - f.type);
+          // Food type normalised to [0,1] so forage (also [0,1]) can specialise
+          // on any of N types: type k of N -> k/(N-1). With 2 types this is 0/1
+          // exactly as before (bit-exact-preserving for the 2-type case).
+          const nt = f.type / (CONFIG.food.types - 1);
+          const m = 1 - spec * Math.abs(this.forage - nt);
           if (m <= 0) return; // can't digest this type — leave it (no interference)
           eff *= m;
         }

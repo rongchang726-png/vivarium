@@ -209,7 +209,18 @@ species (type0 ~50% + type1 ~50%, ends 99%). First speciation in the project —
 niche differentiation arose on its own, not hand-placed. Cost: a convex trade-off
 makes generalists inefficient, so bootstrap is fragile (pop dipped to 25 early).
 Theory (docs/coexistence-theory.md) named both the required mechanism (convexity)
-and the outcome before the run. NOTE forage is still creature-level (evolving via
+and the outcome before the run. **N-type end effect (2026-06-19).** Pushed to 3 food types: it does NOT give 3
+species. Even seeding forage spread across [0,1] (`forageSpread`), the population
+collapses to the MIDDLE niche (type1 ~82%, ends 0% for 40k ticks). Reason — an
+end effect on a LINEAR trait axis: the middle specialist reaches ALL three foods
+(own 1.0 + each neighbour 0.25 = 1.5D) while an end specialist reaches only two
+(1.25D), so the middle is globally best and swallows everything. Even N-way
+branching needs a SYMMETRIC (circular/periodic) trait space (cf. Doebeli &
+Dieckmann's resource-competition model) — future work. Summary: 2-way branching
+works (forage 0.5 is a valley); 3-way does NOT on a linear axis (0.5 is a peak
+with a reach advantage). Bed: `game/branching.js [ticks] [spec] [types] [spread]`.
+
+NOTE forage is still creature-level (evolving via
 a spawnChild hook), not a genome gene — fine, but if it ever needs crossover or
 genetic-distance speciation metrics, promote it into `genome.genes`.
 

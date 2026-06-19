@@ -18,22 +18,24 @@ const { loadCore } = require("./core-loader");
 const SEED = 11;
 const TICKS = parseInt(process.argv[2] || "30000", 10);
 const SPEC = parseFloat(process.argv[3] || "1"); // forageSpecialization: >1 = 凸 trade-off (branching 需要它)
+const TYPES = parseInt(process.argv[4] || "2", 10); // 食物种类数 = 可能的物种数上限
+const SPREAD = process.argv[5] === "spread"; // founder forage 随机铺满[0,1](覆盖所有峰的吸引域)
 const SAMPLE = 2500;
 const FOUNDERS = 60;
 
 const api = loadCore();
-api.setParam("food.types", 2);
+api.setParam("food.types", TYPES);
 api.setParam("food.forageSpecialization", SPEC);
-// 每种食物密度补到单食物 baseline(公平,不饿死)
-api.setParam("food.max", api.CONFIG.food.max * 2);
-api.setParam("food.spawnPerTick", api.CONFIG.food.spawnPerTick * 2);
-api.setParam("food.startCount", api.CONFIG.food.startCount * 2);
+// 每种食物密度补到单食物 baseline(公平,不饿死) —— 总量随种类数缩放
+api.setParam("food.max", api.CONFIG.food.max * TYPES);
+api.setParam("food.spawnPerTick", api.CONFIG.food.spawnPerTick * TYPES);
+api.setParam("food.startCount", api.CONFIG.food.startCount * TYPES);
 
 const w = api.newEmptyWorld(SEED);
-api.seedFounders(w, FOUNDERS, { diet: 0.1, radius: 3.6, forage: 0.5 }, 0); // 全是通才
+api.seedFounders(w, FOUNDERS, SPREAD ? { diet: 0.1, radius: 3.6, forageSpread: true } : { diet: 0.1, radius: 3.6, forage: 0.5 }, 0);
 
 console.log("=== Evolutionary branching: 通才(forage=0.5)能否自发分裂成两个特化物种 ===");
-console.log("food.types=2 | spec=" + SPEC + " | " + FOUNDERS + " 通才 founders | " + TICKS + " ticks | forageStd=" + api.CONFIG.mutation.forageStd);
+console.log("food.types=" + TYPES + " | spec=" + SPEC + " | " + FOUNDERS + " 通才 founders | " + TICKS + " ticks | forageStd=" + api.CONFIG.mutation.forageStd);
 console.log("");
 console.log("forage 分布 (5 bins): 特化type0 <-> 通才 <-> 特化type1");
 console.log("");
