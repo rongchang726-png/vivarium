@@ -84,11 +84,16 @@ var __API = {
     world.computeStats();
     var s = world.stats;
     var hist = [0, 0, 0, 0, 0]; // diet bins: <.2 .2-.4 .4-.6 .6-.8 >.8
+    var fhist = [0, 0, 0, 0, 0]; // forage bins (resource specialisation 0..1)
     var cs = world.creatures;
     for (var i = 0; i < cs.length; i++) {
       var b = (cs[i].diet * 5) | 0;
       if (b > 4) b = 4;
       hist[b]++;
+      var fb = (cs[i].forage * 5) | 0;
+      if (fb > 4) fb = 4;
+      else if (fb < 0) fb = 0;
+      fhist[fb]++;
     }
     return {
       tick: world.tick,
@@ -96,6 +101,7 @@ var __API = {
       food: s.food,
       avgDiet: round(s.avgDiet, 3),
       dietHist: hist,
+      forageHist: fhist,
       avgRadius: round(s.avgRadius, 2),
       avgVision: avgVision(world),
       maxGen: s.maxGen,

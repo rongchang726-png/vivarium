@@ -141,6 +141,7 @@ const CONFIG = {
     dietStd: 0.045,
     fovStd: 0.05,
     rangeStd: 0.06,
+    forageStd: 0.03, // forage specialisation drift on reproduction (only when food.types > 1)
   },
 
   // Default runtime knobs (the UI can change these live).

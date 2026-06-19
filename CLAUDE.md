@@ -194,10 +194,28 @@ per-type density so each specialist's bootstrap matches baseline (a fair test of
 partitioning, not starvation). Caveat: `forage` is founder-fixed here, not yet
 evolved.
 
-Future work for a deep PvP meta: niches are now demonstrably co-viable (resource
-partitioning, above). Next: let `forage` *evolve* (put it in the genome) so the
-partition emerges under disruptive selection, then build non-transitivity (RPS
-among diet/forage strategies) on top — that's the real strategic meta.
+**Evolutionary branching — niche differentiation now *emerges* (`mutation.forageStd`,
+2026-06-19).** Made `forage` evolve: it drifts on reproduction, but ONLY when
+food.types>1, so types=1 stays bit-exact (hash still 4244329615).
+`game/branching.js [ticks] [spec]` seeds 60 GENERALISTS (forage=0.5) into one
+multi-food world and watches the forage distribution. Result is exactly what
+adaptive dynamics predicts, and it hinges on the trade-off SHAPE: with a LINEAR
+trade-off (forageSpecialization=1) a generalist and the two specialists have
+equal foraging rates — it's neutral, so forage just drifts around 0.5 and never
+splits (generalist stays ~50% for 30k ticks). With a CONVEX trade-off (spec=1.5,
+generalist strictly worse) disruptive selection empties the middle: by t=15000
+the generalist peak is GONE (0%) and the population has split into two specialist
+species (type0 ~50% + type1 ~50%, ends 99%). First speciation in the project —
+niche differentiation arose on its own, not hand-placed. Cost: a convex trade-off
+makes generalists inefficient, so bootstrap is fragile (pop dipped to 25 early).
+Theory (docs/coexistence-theory.md) named both the required mechanism (convexity)
+and the outcome before the run. NOTE forage is still creature-level (evolving via
+a spawnChild hook), not a genome gene — fine, but if it ever needs crossover or
+genetic-distance speciation metrics, promote it into `genome.genes`.
+
+Future work for a deep PvP meta: niches are now co-viable (resource partitioning)
+AND self-organising (branching under a convex trade-off). Next: non-transitivity
+(RPS among strategies) for a real strategic meta.
 
 ## Tuning lives in `src/config.js`
 
