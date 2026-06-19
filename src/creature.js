@@ -257,6 +257,24 @@ class Creature {
   maybeReproduce(world) {
     if (this.age < CONFIG.creature.maturity) return;
     if (world.creatures.length >= CONFIG.pop.softCap) return;
+    // Anti-snowball: a clan that already dominates the contestant pool brakes
+    // its own breeding, so an early lead can't snowball to a wipeout. Zero drag
+    // at or below parity (50% share) — a systematic edge still wins, only a
+    // runaway random lead is pulled back. Off (and RNG-neutral) unless enabled.
+    const fd = CONFIG.pop.freqDependence || 0;
+    if (fd > 0 && this.clan >= 0) {
+      const mine = world._clanCounts[this.clan] || 0;
+      const total = world._contestantTotal || 0;
+      // Brake only while a rival is actually present. Once you're the sole
+      // surviving clan (mine === total), lift the brake — otherwise a lone
+      // winner throttles its own breeding to extinction and the world dies 0:0
+      // (exactly what fd=1.0 did before this guard).
+      if (total > mine) {
+        const share = mine / total;
+        const suppress = fd * (share - 0.5) * 2; // 0 at parity, up to fd near-monopoly
+        if (suppress > 0 && world.rng.next() < suppress) return;
+      }
+    }
     if (this.energy < CONFIG.creature.reproduceThreshold * this.capacity) return;
     const cost = CONFIG.creature.reproduceCost * this.capacity;
     this.energy -= cost;

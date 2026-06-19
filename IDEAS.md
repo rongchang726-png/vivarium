@@ -122,6 +122,20 @@ multi-agent game mechanics" once we choose a direction.
 - **No** neutral/third parties, **no** events, fully static rules.
 - **No** workshop / sharing / registry, **no** ladder, **no** replay visualization.
 
+## 已落地 (shipped)
+
+- **反雪球 homeostasis v1**(2026-06-19)。PvP 的"赢者通吃 → 一局定生死"是本
+  log 的 #1 痛点(也是 `docs/game-design.md` 研究的 #1)。动手验证而非纸上谈兵:
+  造尺子 `game/snowball.js` 量灭绝动力学,先**证伪**一招(`food.densityDependence`
+  局部密度制约食物——直觉很生态学,实测降 K 反而加速排斥),再**做成**一招
+  (`pop.freqDependence` 少数方庇护,fd=0.5):对称灭绝 +46%、守住世界、零崩溃、
+  秒杀变 9000-tick 拉锯;非对称下真优势仍 4/5 取胜(**不**强制共存)。已接入
+  arena 默认。完整复盘见 `CLAUDE.md` 的 PvP 小节。
+  - **教训印证**:第一招"听着很对"却被尺子当场证伪——纸上原则全靠实测落地,
+    这正是"学了一轮 ≠ 大师"。
+  - **遗留**:对称仍 5/5 灭绝(多为『开局崩盘』随机脑噪声,非竞争排斥),稳定
+    共存待 future work(隔离开局噪声 / 反崩盘机制)。
+
 ## Candidate next steps (pick by appetite)
 
 1. **N-way free-for-all** — cheap, immediately richer dynamics.

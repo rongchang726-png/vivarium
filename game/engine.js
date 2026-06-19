@@ -172,6 +172,12 @@ const ARENA = {
   judgeWindow: 2000, // tail averaged into the verdict
   sampleEvery: 250,
   seeds: [11, 22, 33, 44, 55], // best-of across seeds: rewards robust strategy, not luck
+  // Anti-snowball homeostasis: frequency-dependent reproduction (少数方庇护).
+  // A clan that dominates the arena brakes its own breeding, so one early edge
+  // can't snowball a rival to instant extinction — turning a coin-flip wipeout
+  // into a drawn-out contest, while a *systematic* edge still wins (validated
+  // in game/snowball.js: symmetric extinction +46%, asymmetric A still 4/5).
+  freqDependence: 0.5,
 };
 
 function seedClan(api, world, founders, clan) {
@@ -190,6 +196,7 @@ function seedClan(api, world, founders, clan) {
 function runMatch(recipeA, recipeB, seed) {
   const api = loadCore();
   const world = api.newArenaWorld(seed);
+  if (ARENA.freqDependence > 0) api.setParam("pop.freqDependence", ARENA.freqDependence);
   seedClan(api, world, recipeA.founders, 0);
   seedClan(api, world, recipeB.founders, 1);
 

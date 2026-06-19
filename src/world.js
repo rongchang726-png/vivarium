@@ -133,12 +133,29 @@ class World {
     for (let i = 0; i < fs.length; i++) this.foodGrid.insert(fs[i].x, fs[i].y, fs[i]);
   }
 
+  // Per-clan census for frequency-dependent reproduction (anti-snowball). Only
+  // computed when the knob is on, so the default path is untouched. Contestant
+  // total excludes wildlife (clan -1).
+  _countClans() {
+    const counts = {};
+    let contestants = 0;
+    const cs = this.creatures;
+    for (let i = 0; i < cs.length; i++) {
+      const k = cs[i].clan;
+      counts[k] = (counts[k] || 0) + 1;
+      if (k >= 0) contestants++;
+    }
+    this._clanCounts = counts;
+    this._contestantTotal = contestants;
+  }
+
   step() {
     this.foodEatenThisTick = 0;
     this.bitesThisTick = 0;
     this.predationsThisTick = 0;
 
     this.rebuildGrids();
+    if (CONFIG.pop.freqDependence > 0) this._countClans();
 
     // Only creatures alive at the start of the tick act; newborns appended by
     // reproduction wait until next tick.

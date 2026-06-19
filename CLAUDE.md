@@ -111,6 +111,43 @@ optimum, and the symmetrized 10-game match came out 6-4 — a near coin-flip, as
 the symmetric-game theory predicts. Lesson: in a winner-take-all arena, always
 symmetrize board position.
 
+**Anti-snowball homeostasis (`pop.freqDependence`, fd=0.5, 2026-06-19).** The
+arena was winner-take-all: two *identical* clans still collapsed to one-extinct
+fast. `game/snowball.js` is the ruler (seed two clans, track both pop curves;
+report `divergeTick` / `extinctTick` / end-state: coexist / monopoly /
+collapse-0:0). Baseline: 5/5 symmetric games extinct, mean `extinctTick`≈3450,
+peak≈532. Two negative-feedback knobs tried, both OFF by default and RNG-neutral
+at 0 (so sim.test stays bit-exact):
+- *`food.densityDependence` — local density-dependent regrowth. REFUTED.* New
+  plants fail to root where creatures crowd. Intuitive, but every dose made it
+  WORSE (extinction faster, peak lower): it lowers carrying-capacity K (scarcer
+  resources → *sharper* exclusion), and its feedback peaks during the symmetric
+  coexistence phase and thins once a winner spreads — braking exactly when it
+  shouldn't. Kept as a knob (makes spatial heterogeneity, maybe useful for
+  niches later) but it does NOT fight snowball. `food.js:_maybeReject`.
+- *`pop.freqDependence` — frequency-dependent reproduction / minority refuge.
+  WORKS, shipped.* A clan breeds less easily the more it dominates the pool
+  (`suppress = fd·(share−0.5)·2`, zero at/below parity). Fixes both faults of
+  #1: it tracks *relative standing* not spatial density (a spread-out winner
+  can't escape it) and moves only reproduction, never food (K intact). Symmetric
+  `extinctTick` 3450→5050 (+46%), peak held, zero collapse; a true-exclusion
+  seed went from a ~4750 wipeout to a 9000-tick see-saw. Does NOT force
+  coexistence: asymmetric (B given a worse body) still goes A 4/5, same as
+  baseline — a *systematic* edge wins, only a *random* early lead is pulled
+  back. Dose non-monotone (0.5 best; 0.7/0.9 under-damp into faster-resolving
+  oscillation). `creature.js:maybeReproduce`. Bug found & fixed mid-run: at
+  fd=1.0 the lone survivor (share=1) throttled its OWN breeding to 0 → world
+  died 0:0 (4/5 games); fix = brake only while a rival is present
+  (`total > mine`). **`clan` is no longer behaviour-neutral when fd>0** — that
+  invariant holds only at the default fd=0 (main world, bit-exact); the arena
+  turns fd on (`engine.js` ARENA). **Honest limit:** symmetric still ends 5/5
+  extinct because most symmetric "extinctions" are *bootstrap collapse* (a
+  random brain that never feeds), not exclusion, and a breeding-phase brake
+  can't save a clan that dies before it stabilises — NFDS *delays* exclusion,
+  doesn't abolish it. Stable coexistence needs pre-evolved founders or an
+  anti-collapse mechanism (future work). `game/snowball.js --asym` is the
+  asymmetric bed.
+
 Future work for a deep PvP meta: make several niches simultaneously viable.
 
 ## Tuning lives in `src/config.js`

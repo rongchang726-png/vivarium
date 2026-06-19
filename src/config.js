@@ -43,6 +43,13 @@ const CONFIG = {
     clusterChance: 0.45, // fraction of spawns that land near existing food (patchiness)
     clusterRadius: 46,
     startCount: 1000,
+    // Anti-snowball homeostasis (OFF by default). When > 0, a new plant is more
+    // likely to fail to establish where creatures already crowd — density-
+    // dependent regrowth that caps a booming population's local carrying
+    // capacity so one clan can't snowball a whole world. 0 leaves the RNG
+    // stream bit-exact with every existing save and test.
+    densityDependence: 0,
+    densityRadius: 40, // radius over which local crowding is measured
   },
 
   creature: {
@@ -100,6 +107,14 @@ const CONFIG = {
     softCap: 760, // above this, reproduction is suppressed (resource crunch)
     injectFloor: 22, // below this population, seed fresh random life
     injectCount: 9, // how many to seed per genesis event
+    // Anti-snowball: frequency-dependent reproduction (少数方庇护). OFF by
+    // default. When > 0, a clan breeds *less* easily the more it already
+    // dominates the contestant pool — a majority clan brakes itself while a
+    // minority breeds freely, so one early edge can't snowball to a wipeout.
+    // Drag is zero at or below parity (50% share): an evenly-matched or
+    // trailing clan feels nothing, so a *systematic* edge still wins; only a
+    // runaway *random* lead gets pulled back. 0 keeps the RNG stream bit-exact.
+    freqDependence: 0,
   },
 
   mutation: {
