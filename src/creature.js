@@ -165,10 +165,26 @@ class Creature {
     this.y += Math.sin(this.heading) * this.speed;
 
     // Toroidal world: no walls to camp against, no edge effects to overfit to.
+    // (The isolation experiment can override this with a mid-wall; that DOES
+    // reintroduce camping/edge effects — a known cost of testing spatial
+    // structure. Default null keeps the clean torus, bit-exact.)
     const W = world.width,
       H = world.height;
-    if (this.x < 0) this.x += W;
-    else if (this.x >= W) this.x -= W;
+    const wall = CONFIG.world.wall;
+    if (wall) {
+      const mid = W * 0.5;
+      const prevX = this.x - Math.cos(this.heading) * this.speed;
+      const inGap = this.y >= wall.gapLo && this.y < wall.gapHi;
+      if (!inGap) {
+        if (prevX < mid && this.x >= mid) this.x = mid - 1e-6;
+        else if (prevX >= mid && this.x < mid) this.x = mid;
+      }
+      if (this.x < 0) this.x = 0;
+      else if (this.x >= W) this.x = W - 1e-6;
+    } else {
+      if (this.x < 0) this.x += W;
+      else if (this.x >= W) this.x -= W;
+    }
     if (this.y < 0) this.y += H;
     else if (this.y >= H) this.y -= H;
 

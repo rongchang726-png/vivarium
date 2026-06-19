@@ -37,6 +37,8 @@ const DD = argval("--dd", 0); // food.densityDependence(0=基线)
 const DDR = argval("--ddr", 40); // food.densityRadius
 const FD = argval("--fd", 0); // pop.freqDependence(少数方庇护)
 const ASYM = process.argv.includes("--asym"); // 非对称: B 系统性劣势
+const WALL = process.argv.includes("--wall"); // 空间隔离: 中墙+corridor, 两 clan 各种一边
+const GAP = argval("--gap", 0.2); // corridor 占世界高度的比例(越小越隔离)
 
 const SEEDS = [11, 22, 33, 44, 55];
 const FOUNDERS_PER_CLAN = 45;
@@ -54,9 +56,18 @@ function probe(seed) {
     api.setParam("food.densityRadius", DDR);
   }
   if (FD > 0) api.setParam("pop.freqDependence", FD);
+  const W = api.CONFIG.world.width,
+    H = api.CONFIG.world.height;
+  if (WALL) api.setParam("world.wall", { gapLo: H * (0.5 - GAP / 2), gapHi: H * (0.5 + GAP / 2) });
   const w = api.newArenaWorld(seed);
-  api.seedFounders(w, FOUNDERS_PER_CLAN, SPEC_A, 0);
-  api.seedFounders(w, FOUNDERS_PER_CLAN, SPEC_B, 1);
+  if (WALL) {
+    // 两个 clan 各种世界一边, 中墙把它们半隔离
+    api.seedFounders(w, FOUNDERS_PER_CLAN, SPEC_A, 0, { xmin: 0, xmax: W * 0.5 });
+    api.seedFounders(w, FOUNDERS_PER_CLAN, SPEC_B, 1, { xmin: W * 0.5, xmax: W });
+  } else {
+    api.seedFounders(w, FOUNDERS_PER_CLAN, SPEC_A, 0);
+    api.seedFounders(w, FOUNDERS_PER_CLAN, SPEC_B, 1);
+  }
 
   const series = [];
   let divergeTick = null,
@@ -99,7 +110,7 @@ function bar(a, b, width) {
 
 console.log("=== PvP 雪球诊断:灭绝动力学 ===");
 console.log("配方: A diet=" + SPEC_A.diet + " r=" + SPEC_A.radius + " | B diet=" + SPEC_B.diet + " r=" + SPEC_B.radius + (ASYM ? "  (非对称: B 系统性劣势)" : "  (对称)"));
-console.log("每方 " + FOUNDERS_PER_CLAN + " founders | " + TICKS + " ticks | dd=" + DD + " fd=" + FD);
+console.log("每方 " + FOUNDERS_PER_CLAN + " founders | " + TICKS + " ticks | dd=" + DD + " fd=" + FD + (WALL ? " | wall=on(gap=" + GAP + ")" : ""));
 console.log("");
 
 const results = [];

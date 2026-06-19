@@ -148,6 +148,32 @@ at 0 (so sim.test stays bit-exact):
   anti-collapse mechanism (future work). `game/snowball.js --asym` is the
   asymmetric bed.
 
+**Spatial isolation — the deeper lever (`world.wall`, 2026-06-19).** Pushing the
+"why three problems, not one" question upward: the root under snowball is that the
+world is well-mixed (one global zero-sum arena); the fix one layer up is
+*isolation*. `world.wall` (default null = clean torus, bit-exact) installs a
+mid-wall with a y-gap corridor and stops x wrapping, so two clans on opposite
+sides are semi-isolated (`game/snowball.js --wall --gap G`). Pure space (fd=0)
+produced HEALTHY coexistence (e.g. 193:205) that NFDS never did — spatial
+structure is a stronger stabilizer than a frequency handicap. But it stayed rare
+(≈1/5) and NON-monotone in corridor width (gap .05/.1/.2 → 1/0/1 healthy), so
+width isn't the master knob; the remaining extinctions are all *bootstrap
+collapse*, not exclusion — the wall removes competitive exclusion and lays bare
+the layer beneath it.
+
+**Theory anchor — I went and read (`docs/coexistence-theory.md`, 2026-06-19).**
+After being told I'd spent too long simulating in my own sandbox, I read modern
+coexistence theory. It locks the whole day's experiments into one inequality:
+symmetric clans ⟹ niche overlap ρ=1 ⟹ the coexistence condition ρ < k1/k2 < 1/ρ
+has NO solution ⟹ competitive exclusion is a *mathematical necessity*, not an
+accident. NFDS = negative frequency-dependent stabilizing; the wall =
+fitness-density covariance (a spatial stabilizing mechanism); bootstrap collapse
+lives OUTSIDE the framework (small-population stochastic extinction / fixation
+probability) — confirming it's the bedrock under everything. The principled next
+move isn't another handicap but real *niche difference* (push ρ below 1): multiple
+food types / resources. Next read: fixation probability (Moran process), the math
+of whether a small founding population establishes at all.
+
 Future work for a deep PvP meta: make several niches simultaneously viable.
 
 ## Tuning lives in `src/config.js`

@@ -44,7 +44,7 @@ var __API = {
 
   // Add 'count' founder creatures with optional gene overrides. Brains are
   // random (the point is that behaviour must still be evolved/discovered).
-  seedFounders: function (world, count, spec, clan) {
+  seedFounders: function (world, count, spec, clan, region) {
     for (var i = 0; i < count; i++) {
       var g = Genome.random(world.rng);
       if (spec) {
@@ -54,7 +54,13 @@ var __API = {
         if (spec.fov != null) g.genes.fov = spec.fov;
         if (spec.hue != null) g.genes.hue = spec.hue;
       }
-      world.spawnRandom(g, clan || 0);
+      var c = world.spawnRandom(g, clan || 0);
+      // Optional: place founders in a sub-region (for the spatial-isolation
+      // experiment — seed each clan on its own side of the wall).
+      if (region) {
+        c.x = region.xmin + world.rng.next() * (region.xmax - region.xmin);
+        c.y = world.rng.next() * world.height;
+      }
     }
   },
 

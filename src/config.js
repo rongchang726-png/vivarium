@@ -34,6 +34,12 @@ const CONFIG = {
   world: {
     width: 1280,
     height: 800,
+    // Spatial-isolation experiment (default null = clean torus, bit-exact). Set
+    // to {gapLo, gapHi} to install a vertical mid-wall (x=W/2) with a y-gap
+    // corridor; x then stops wrapping so two clans on opposite sides are
+    // semi-isolated. Tests whether spatial structure ALONE turns competitive
+    // exclusion into coexistence — the "isolation is the root fix" hypothesis.
+    wall: null,
   },
 
   food: {
