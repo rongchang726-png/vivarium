@@ -223,7 +223,16 @@ geometry hypothesis holds *qualitatively*. But a clean symmetric 3-species split
 is NOT confirmed: niches come out unequal and wander, and a 5-bin histogram can't
 resolve 3 ring peaks — clean N-way coexistence needs a finer diagnostic / tuning
 (future work). (The branching.js pass/fail line is a LINEAR criterion; it
-mis-reports "success" on the ring — read the distribution by hand.) Summary: 2-way branching
+mis-reports "success" on the ring — read the distribution by hand.) **12-bin update -- this OVERTURNS the optimism
+above.** A finer read (12 bins, straight off creature.forage, now printed by
+branching.js) shows the 5-bin "spread" was an artifact: the population collapses
+to a SINGLE niche (type0, which on the ring straddles forage 0=1, so it lands in
+bin0 AND bin11 -- one peak, not spread); type1/type2 go ~empty. So N-way branching
+FAILS both ways -- linear (end effect) and ring (stochastic collapse to one
+niche): a robust negative. Lessons: the 5-bin histogram lied to me, the script's
+linear verdict mis-reported "success" twice -- read the FINE distribution; N
+stable niches likely need anti-extinction help (bigger niches / population), not
+just symmetry. Summary: 2-way branching
 works (forage 0.5 is a valley); 3-way does NOT on a linear axis (0.5 is a peak
 with a reach advantage). Bed: `game/branching.js [ticks] [spec] [types] [spread]`.
 
