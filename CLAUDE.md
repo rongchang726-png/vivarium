@@ -340,6 +340,23 @@ it's crowded, so carnivory wins locally) needs genuine SPATIAL structure
 is exactly why #1 below (spatial refugium) is the standing best bet. Solution
 space narrowed -- still a robust negative, but now we know what NOT to try.
 
+Then the cleanest angle (`game/predator-evolve.js`): NO plant at all -- grazing
+impossible, so diet CAN'T drift down (low-diet offspring just starve). Inject
+prey; evolve-or-die. FAILED at both sparse (predators dead by t=600) AND dense
+prey injection (dead by t=300, even with 50+ prey always on the board). This
+exposes the real root -- a three-way DEADLOCK:
+  (1) evolving hunting needs TIME (predators mustn't starve for generations);
+  (2) not-starving needs a graze fallback;
+  (3) a graze fallback lets diet drift back to herbivory.
+Remove the fallback (no plant) and a random-brained predator -- which has NO
+hunting behaviour yet -- can't catch enough to live, dying in a few hundred ticks
+with maxGen ~0: zero evolutionary window. This deadlock is the root of the
+decade of negatives; last year's attempts never diagnosed THIS layer. The one
+logical way out it points to: PARTIAL-HUNTING REWARD (#5 below) -- reward
+near-misses (chasing, approaching, biting without a kill) so hunting evolves up a
+fitness GRADIENT instead of off an all-or-nothing cliff. Today promotes #5 from
+"an idea" to "the only escape from the deadlock" -- the next session's target.
+
 ### If I want to try again (future work, roughly in order of promise)
 - **Protected refugium**: shield a carnivore sub-population from competition for
   N generations so hunting can evolve, then release it. Most promising.
