@@ -316,6 +316,30 @@ one. Also: PvP strategic depth (non-transitive RPS) is gated on THIS problem —
 resource niches give coexistence, but a克制-environment (predation) is what gives
 non-transitivity. So this is the keystone for the deep PvP meta.
 
+### Re-attempt II (2026-06-20): mechanism-level diagnosis (4 more negatives)
+
+New probes via `game/predator-train.js [seed] [ticks] [hard] [toxin] [dd]`. Four
+angles, all negative, but together they pin the mechanism:
+- *hard* (no-graze plantSupp=1 + dense/slow/defenceless prey): carn>.8 zeroes by
+  t=1500. Failure is NOT bootstrap -- kills hit 549/1000 ticks, predators DO
+  catch prey -- it's that diet DRIFTS back to herbivory. plantSuppression=1 only
+  starves diet=1; offspring drift to diet~0.5 where grazing pays again.
+- *toxin* (defended plants, flat per-meal cost): toxin=18 collapses the world
+  (pop 270->29); toxin=8 leaves the herbivore attractor untouched (pop booms,
+  carn=0). Mathematically doomed: gain = energy*eff - toxin; subtracting a
+  constant doesn't change the diet RANKING (herbivore eff is highest, so its gain
+  stays highest). Flat toxin only translates the attractor down (world collapse),
+  never reshapes it.
+- *food.densityDependence*: just scatters herbivores toward less-crowded plants;
+  attractor shape unchanged, diet stays herbivorous.
+Unifying lesson: the herbivore attractor is deep because plants are FREE and
+ABUNDANT, and no global flat/density scalar reshapes it -- they only translate it
+or starve the world. Reshaping it (making herbivory worse specifically where/when
+it's crowded, so carnivory wins locally) needs genuine SPATIAL structure
+(prey/predator separation) or a diet-dependent payoff, not a global scalar. Which
+is exactly why #1 below (spatial refugium) is the standing best bet. Solution
+space narrowed -- still a robust negative, but now we know what NOT to try.
+
 ### If I want to try again (future work, roughly in order of promise)
 - **Protected refugium**: shield a carnivore sub-population from competition for
   N generations so hunting can evolve, then release it. Most promising.

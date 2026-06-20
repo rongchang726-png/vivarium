@@ -271,7 +271,10 @@ class Creature {
           eff *= m;
         }
         f.eaten = true;
-        const gain = CONFIG.food.energy * eff;
+        // Defended plants: a flat toxin cost makes herbivory expensive (0 by
+        // default => unchanged, bit-exact). Net gain can go negative for a poor
+        // digester, which is the point — it punishes relying on plants.
+        const gain = CONFIG.food.energy * eff - (CONFIG.food.toxin || 0);
         this.energy += gain;
         this.ateThisTick += gain;
         world.foodEatenThisTick++;

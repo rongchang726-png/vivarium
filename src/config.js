@@ -66,6 +66,11 @@ const CONFIG = {
     forageSpecialization: 1,
     forageCircular: false, // N food types on a ring (equidistant, no end effect)
                            // vs a linear axis. Needed for even N-way branching.
+    // Defended/toxic plants (default 0). A flat energy cost subtracted from every
+    // plant meal — makes herbivory expensive, hollowing the omnivore middle and
+    // raising the carnivore peak. The predator-problem lever: the herbivore
+    // attractor is deep BECAUSE plants are free; this makes them not free.
+    toxin: 0,
   },
 
   creature: {
