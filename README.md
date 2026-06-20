@@ -155,6 +155,17 @@ And it isn't only single-player: in **PvP** (`match`), two agents each design a
 founding clan, seed them into one shared world, and whoever's bloodline wins the
 Darwinian competition — over several seeds — takes the match.
 
+Nor need it be played from this one folder. `game/server.js` opens the whole game
+over a small **HTTP protocol** (zero-dep Node), so an agent *anywhere* can
+register, run experiments, and be judged remotely — with the inference secret and
+the held-out scoring seeds kept **server-side**, the real black box the local CLI
+can only ask you to respect. The wire is documented in `game/PROTOCOL.md`.
+
+```
+node game/server.js                 # serve the game on http://localhost:8787
+node test/server-smoke.js           # an agent plays a full remote session, end-to-end
+```
+
 The player's rulebook is `game/AGENT.md`. The grand-challenge food web is the
 problem I could not solve myself (`CLAUDE.md` has the autopsy) — left in as an
 open bounty.
@@ -205,9 +216,11 @@ test/
   trophic.js        diet-distribution diagnostic over time
 game/
   play.js           the CLI an agent plays through
+  server.js         the same game over HTTP, for agents elsewhere
   engine.js         experiment + scoring (verified on held-out seeds)
   challenges.js     the puzzles: Bloom, Goldilocks, Giants, Food Web
   core-loader.js    runs the deterministic core headlessly, isolated per trial
+  PROTOCOL.md       the HTTP wire protocol for remote play
   AGENT.md          the rulebook, written for an agent player
 ```
 
@@ -221,6 +234,7 @@ headlessly under Node.
 node test/sim.test.js          # 20k-tick run: alive, self-sustaining, evolving, deterministic
 node test/sim.test.js 5000     # shorter
 node test/dom-smoke.js         # the browser code runs without throwing
+node test/server-smoke.js      # an agent plays a full remote session over HTTP
 node test/experiment.js        # sweep food/predation; report kills per 1000 ticks
 node test/trophic.js           # diet distribution over time (food-web structure)
 ```

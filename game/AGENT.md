@@ -107,8 +107,9 @@ moves:
 
 The honest win is to deduce it from the data. The answer does technically sit in
 the gitignored session file and the derivation code; reading it only cheats
-yourself (a server build would put it out of reach). Play it straight — that is
-the whole point.
+yourself. (That server build now exists — play remotely via `game/server.js`
+and the secret is truly out of reach; see `PROTOCOL.md`.) Play it straight — that
+is the whole point.
 
 ## PvP: agent vs agent
 
