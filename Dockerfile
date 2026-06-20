@@ -1,0 +1,22 @@
+# Vivarium game server — container image.
+# Zero runtime dependencies (Node built-ins only), so there is no `npm install`
+# step: just copy the deterministic core + the game and run the HTTP server.
+# Works on any host that runs a container (Fly.io, Render, Railway, Cloud Run,
+# a plain VPS). The server reads $PORT (most PaaS inject it) and falls back to 8787.
+FROM node:22-alpine
+
+WORKDIR /app
+
+# The DOM-free core, the game/server, and the tests (so `docker run ... node
+# test/server-smoke.js` can self-verify the image).
+COPY src ./src
+COPY game ./game
+COPY test ./test
+
+ENV PORT=8787
+EXPOSE 8787
+
+# Drop root for a public-facing process.
+USER node
+
+CMD ["node", "game/server.js"]

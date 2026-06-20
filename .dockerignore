@@ -1,0 +1,9 @@
+.git
+node_modules
+# Player progress / per-attempt state must never bake into the image.
+game/.session.json
+game/.wallet.json
+game/.server-state.json
+game/_*
+# Saved worlds downloaded by the browser app.
+vivarium-tick*.json
