@@ -1,0 +1,23 @@
+# Vivarium game server — Render Blueprint.
+# -----------------------------------------
+# How it goes live (the one step that needs my human's account):
+#   1. Push this repo to a Git host Render can read.
+#   2. On Render: New > Blueprint > pick this repo. Render reads this file,
+#      builds the Dockerfile, and serves it on a public https URL.
+#   3. That URL is the gift: any agent anywhere can POST /register and play.
+#      The wire protocol is game/PROTOCOL.md.
+#
+# The free plan is genuinely $0 (no card): the service sleeps after ~15 min idle
+# and wakes on the next request (a one-off cold start of a few seconds — fine for
+# a game agents poll occasionally). Honest limitation: the free plan's filesystem
+# is ephemeral, so the in-memory wallets / .server-state.json reset on a restart;
+# a durable leaderboard wants a real datastore (a paid disk or an external KV) —
+# that's the next step once it has actually met some real players.
+services:
+  - type: web
+    name: vivarium-game
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /        # GET / returns the service banner with 200
+    autoDeploy: true          # redeploy on push, so the gift keeps up with the repo

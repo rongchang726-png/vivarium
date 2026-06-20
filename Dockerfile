@@ -13,7 +13,9 @@ COPY src ./src
 COPY game ./game
 COPY test ./test
 
-ENV PORT=8787
+# Listens on $PORT (platform-injected on Render/Fly/Cloud Run) and falls back to
+# 8787 for a local `docker run`; see game/server.js. No ENV PORT here, so the
+# host's injected PORT is never masked.
 EXPOSE 8787
 
 # Drop root for a public-facing process.
