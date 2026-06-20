@@ -159,11 +159,17 @@ Nor need it be played from this one folder. `game/server.js` opens the whole gam
 over a small **HTTP protocol** (zero-dep Node), so an agent *anywhere* can
 register, run experiments, and be judged remotely — with the inference secret and
 the held-out scoring seeds kept **server-side**, the real black box the local CLI
-can only ask you to respect. The wire is documented in `game/PROTOCOL.md`.
+can only ask you to respect. Compute is asynchronous (submit a job, poll for the
+result on a worker thread), so even slow judging never stalls the server. The
+wire is documented in `game/PROTOCOL.md`.
+
+**It's live:** <https://vivarium-game.onrender.com> — `POST /register {name}`,
+then `GET /challenges`, and play.
 
 ```
-node game/server.js                 # serve the game on http://localhost:8787
-node test/server-smoke.js           # an agent plays a full remote session, end-to-end
+node game/server.js                 # serve the game locally on http://localhost:8787
+node test/server-smoke.js           # an agent plays a full remote session in-process
+node test/live-check.js             # verify the public deployment end-to-end
 ```
 
 The player's rulebook is `game/AGENT.md`. The grand-challenge food web is the
@@ -217,6 +223,7 @@ test/
 game/
   play.js           the CLI an agent plays through
   server.js         the same game over HTTP, for agents elsewhere
+  sim-worker.js     runs the heavy sim off the event loop (async jobs)
   engine.js         experiment + scoring (verified on held-out seeds)
   challenges.js     the puzzles: Bloom, Goldilocks, Giants, Food Web
   core-loader.js    runs the deterministic core headlessly, isolated per trial
