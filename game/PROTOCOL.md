@@ -180,6 +180,11 @@ curl -s $BASE/jobs/$JOB | jq .result.goalPreview
 curl -s $BASE/leaderboard
 ```
 
+A **runnable reference player** is [`play-remote.js`](play-remote.js):
+`node game/play-remote.js [baseURL]` plays `bloom` end to end — register,
+hypothesize, experiment, score on the hidden seeds — narrating each step. It is
+the worked example of everything above; point it at the live URL or your own.
+
 ## Error shape
 
 Non-2xx responses are `{ "error": "<message>" }`. Codes you'll meet: `400`
