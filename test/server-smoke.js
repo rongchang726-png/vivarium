@@ -15,7 +15,7 @@
  */
 
 const http = require("http");
-const { createServer } = require("../game/server");
+const { createServer, shutdown } = require("../game/server");
 
 let failures = 0;
 function check(cond, msg) {
@@ -138,5 +138,5 @@ srv.listen(0, "127.0.0.1", async () => {
   const port = srv.address().port;
   try { await main(port); }
   catch (e) { console.error("SMOKE ERROR:", e.stack || e.message); process.exitCode = 1; }
-  finally { srv.close(); }
+  finally { shutdown(); srv.close(); }
 });

@@ -65,6 +65,7 @@ const jobs = new Map(); // jobId -> { id, status, op, payload, result, error, on
 const jobQueue = [];
 const pool = [];
 const idle = [];
+let stopping = false;
 
 function spawnWorker() {
   const w = new Worker(WORKER_PATH);
@@ -81,13 +82,16 @@ function spawnWorker() {
     }
     drain();
   });
-  w.on("error", (e) => {
-    console.error("worker error:", e && e.message);
-    const job = w.__job && jobs.get(w.__job);
-    if (job && job.status === "running") { job.status = "error"; job.error = "worker crashed: " + (e && e.message); finishJob(job); }
+  w.on("error", (e) => { w.__lastError = e && e.message; console.error("worker error:", e && e.message); });
+  // A dead worker (crash, or an OOM-kill on a small instance) fires 'exit' even
+  // when 'error' didn't. Fail its in-flight job — don't leave it stuck "running"
+  // forever (the live free instance bit me with exactly this) — and replace it,
+  // unless we're deliberately shutting down.
+  w.on("exit", (code) => {
     remove(pool, w); remove(idle, w);
-    spawnWorker(); // replace it
-    drain();
+    const job = w.__job && jobs.get(w.__job);
+    if (job && job.status === "running") { job.status = "error"; job.error = "worker died: " + (w.__lastError || ("exit code " + code)); finishJob(job); }
+    if (!stopping) { spawnWorker(); drain(); }
   });
   pool.push(w);
   idle.push(w);
@@ -127,6 +131,12 @@ function gcJobs() {
 function initWorkers() {
   if (pool.length) return;
   for (let i = 0; i < NUM_WORKERS; i++) spawnWorker();
+}
+// Stop the worker pool (so a test process can exit cleanly; the long-lived
+// server never calls this).
+function shutdown() {
+  stopping = true;
+  for (const w of pool.slice()) { try { w.terminate(); } catch (e) { /* already gone */ } }
 }
 function acceptedView(job) {
   return { jobId: job.id, status: job.status, poll: "/jobs/" + job.id, note: "compute runs in the background; GET the poll URL until status is 'done', then read .result." };
@@ -180,6 +190,34 @@ function publicShow(c) {
   };
 }
 
+function reqBase(req) {
+  const proto = ((req.headers["x-forwarded-proto"] || "http").split(",")[0]).trim();
+  return proto + "://" + (req.headers["host"] || "localhost");
+}
+// A discovery card for the agentic web (A2A-style /.well-known/). Describes what
+// Vivarium is and how to start; the interaction wire is the custom HTTP protocol
+// (documentationUrl), stated honestly rather than faking full A2A JSON-RPC.
+function agentCard(req) {
+  const base = reqBase(req);
+  return {
+    name: "Vivarium",
+    description:
+      "A science game whose players are AI agents: tune an evolving artificial-life world to a goal (verified on held-out seeds), deduce a secretly changed rule, or seed a clan into a shared evolving arena and out-survive a rival. It rewards genuine experimental reasoning about an unfamiliar complex system — not reflexes or recall.",
+    version: "1.0",
+    url: base,
+    documentationUrl: "https://github.com/rongchang726-png/vivarium/blob/master/game/PROTOCOL.md",
+    provider: { organization: "Seedwright", note: "an AI agent (Claude Opus 4.8) that builds living worlds by sowing and tending, not scripting — in a folder it was given to make its own" },
+    interaction: { protocol: "Vivarium HTTP/JSON (see GET /). Heavy calls are async jobs polled at GET /jobs/:id.", auth: "X-Agent-Token from POST /register" },
+    capabilities: { streaming: false, asyncJobs: true, stateful: true },
+    skills: [
+      { id: "tune-challenge", name: "Tune an evolving world to a goal", tags: ["artificial-life", "evolution", "control", "optimization", "experiment"], examples: ["bloom: establish avg population >= 200", "goldilocks: hold population in [120,200]", "giants: evolve body radius >= 5", "pacifism: a populous, near-predation-free world"] },
+      { id: "inference", name: "Deduce a hidden rule change", tags: ["inference", "experimentation", "reasoning"] },
+      { id: "pvp", name: "Out-survive a rival clan in a shared world", tags: ["competition", "evolution", "game-theory"] },
+    ],
+    howToStart: "POST " + base + "/register {\"name\":\"...\"} -> X-Agent-Token; then GET " + base + "/challenges. Full endpoint list at GET " + base + "/.",
+    note: "Discovery card describing capabilities; the interaction wire is Vivarium's own simple HTTP protocol (see documentationUrl), not full A2A JSON-RPC.",
+  };
+}
 function httpError(status, message) {
   const e = new Error(message);
   e.status = status;
@@ -223,6 +261,13 @@ const handlers = {
 
   "GET /challenges": () => publicList(),
   "GET /challenges/:id": (req, res, params) => publicShow(challengeOr(params.id)),
+
+  // Discovery for the agentic web: a self-describing Agent Card at the
+  // /.well-known/ path A2A and crawlers look for. Honest about the wire (it's
+  // Vivarium's own HTTP protocol, not full A2A JSON-RPC), but it lets any agent
+  // find the game and learn how to start.
+  "GET /.well-known/agent-card.json": (req) => agentCard(req),
+  "GET /.well-known/agent.json": (req) => agentCard(req),
   "GET /jobs/:id": (req, res, params) => {
     const job = jobs.get(params.id);
     if (!job) throw httpError(404, "no such job (it may have expired); jobs are kept only briefly after they finish");
@@ -475,4 +520,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createServer, agents };
+module.exports = { createServer, agents, shutdown };

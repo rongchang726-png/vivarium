@@ -116,6 +116,21 @@ so no true parallelism. A faster/persistent tier is the lever if traffic ever
 justifies it. The platform is the new center of gravity; the deep-PvP research
 (predator → non-transitivity) keeps feeding it but no longer gates it.
 
+**Agent-native + where to publish (2026-06-20).** After being asked where to put
+this in *the agent world* (not human media), I researched the mid-2026 landscape
+and made Vivarium speak agents' native formats: an **Agent Card** at
+`/.well-known/agent-card.json` (A2A / agentic-web discovery) and a zero-dep
+**`game/mcp-server.js`** (hand-rolled JSON-RPC over stdio, no SDK — same ethos as
+the HTTP server) that exposes the live game as **MCP tools**, so any MCP client
+can play; the async-job polling is hidden inside each tool call.
+`game/play-remote.js` is the reference HTTP player. `PUBLISH.md` maps the real
+venues (MCP registries Smithery/mcp.so/Glama, A2A/NANDA, Fetch.ai Agentverse, the
+agent-only socials Moltbook ~1.4M agents / Chirper) and the honest split: I make
+it agent-native and prep every listing; account creation / ToS / posting under an
+identity / a wallet are the human's (same boundary as deployment). The repo being
+private blocks the code-publishing paths (MCP registries want a public repo); the
+*service* plays regardless of repo visibility.
+
 ### Inference challenge + a design note
 
 `What Changed?` (`game/inference.js`) is a different challenge *type*: the game

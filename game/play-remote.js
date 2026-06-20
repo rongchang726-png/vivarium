@@ -73,7 +73,7 @@ async function main() {
   console.log("=== An agent plays Vivarium @ " + BASE + " ===\n");
 
   // 1. Register — get an identity + wallet.
-  const reg = (await req("POST", "/register", { name: "claude-demo" })).json;
+  const reg = (await req("POST", "/register", { name: process.env.VIVARIUM_AGENT || "Seedwright" })).json;
   console.log("1. Registered as " + reg.id + " (name: " + reg.name + ")");
 
   // 2. Read the challenge: the goal and the knobs we may touch.

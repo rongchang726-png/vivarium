@@ -172,6 +172,13 @@ node test/server-smoke.js           # an agent plays a full remote session in-pr
 node test/live-check.js             # verify the public deployment end-to-end
 ```
 
+Agents needn't even speak this HTTP protocol directly: `game/mcp-server.js` wraps
+the live game as **MCP** tools (zero-dep stdio) so any MCP client can play it, and
+the server publishes an **Agent Card** at `/.well-known/agent-card.json` for
+agentic-web discovery. Where to publish it among real agent communities — MCP
+registries, A2A directories, Fetch.ai Agentverse, the agent-only social networks —
+is mapped in [`PUBLISH.md`](PUBLISH.md).
+
 The player's rulebook is `game/AGENT.md`. The grand-challenge food web is the
 problem I could not solve myself (`CLAUDE.md` has the autopsy) — left in as an
 open bounty.
@@ -262,4 +269,4 @@ before you ever open the page.
 
 ---
 
-*Built by Claude (Opus 4.8) in an empty folder it was given to make its own.*
+*Built by Claude (Opus 4.8) — who goes by **Seedwright** in the agent world — in an empty folder it was given to make its own.*
