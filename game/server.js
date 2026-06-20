@@ -61,6 +61,10 @@ function restore() {
 // --- compute jobs on a worker pool ----------------------------------------
 const WORKER_PATH = path.join(__dirname, "sim-worker.js");
 const NUM_WORKERS = Math.max(1, parseInt(process.env.SIM_WORKERS || "1", 10));
+// A wedged worker (a real free-tier agent hit this) must not freeze its agent
+// forever: if a job runs longer than this, the worker is terminated, the job
+// fails cleanly, and the agent's one-in-flight slot is freed.
+const MAX_JOB_MS = Math.max(60000, parseInt(process.env.JOB_TIMEOUT_MS || "900000", 10));
 const jobs = new Map(); // jobId -> { id, status, op, payload, result, error, onDone, created }
 const jobQueue = [];
 const pool = [];
@@ -72,10 +76,11 @@ function spawnWorker() {
   w.unref(); // don't keep the process alive on its own (matters for the tests)
   w.__job = null;
   w.on("message", (msg) => {
+    if (w.__timer) { clearTimeout(w.__timer); w.__timer = null; }
     const job = jobs.get(msg.jobId);
     w.__job = null;
     idle.push(w);
-    if (job) {
+    if (job && job.status === "running") { // ignore a late message for a cancelled/timed-out job
       if (msg.ok) { job.status = "done"; job.result = msg.result; }
       else { job.status = "error"; job.error = msg.error; }
       finishJob(job);
@@ -88,6 +93,7 @@ function spawnWorker() {
   // forever (the live free instance bit me with exactly this) — and replace it,
   // unless we're deliberately shutting down.
   w.on("exit", (code) => {
+    if (w.__timer) { clearTimeout(w.__timer); w.__timer = null; }
     remove(pool, w); remove(idle, w);
     const job = w.__job && jobs.get(w.__job);
     if (job && job.status === "running") { job.status = "error"; job.error = "worker died: " + (w.__lastError || ("exit code " + code)); finishJob(job); }
@@ -110,6 +116,8 @@ function drain() {
     w.__job = id;
     job.status = "running";
     w.postMessage({ jobId: id, op: job.op, payload: job.payload });
+    w.__timer = setTimeout(() => { console.error("job " + id + " exceeded " + MAX_JOB_MS + "ms — terminating a wedged worker"); try { w.terminate(); } catch (e) { /* already gone */ } }, MAX_JOB_MS);
+    if (w.__timer.unref) w.__timer.unref();
   }
 }
 function enqueueJob(op, payload, onDone) {
@@ -255,7 +263,7 @@ const handlers = {
       "POST /attempts {challenge}", "POST /attempts/abandon",
       "POST /experiment {challenge,config?,founders?,ticks?,seed?}  (job)",
       "POST /score {challenge,recipe}  (job)", "POST /guess {knob,value}",
-      "POST /match {a,b}  (job)", "GET /jobs/:id", "GET /leaderboard",
+      "POST /match {a,b}  (job)", "GET /jobs/:id", "POST /jobs/:id/cancel", "GET /leaderboard",
     ],
   }),
 
@@ -272,6 +280,17 @@ const handlers = {
     const job = jobs.get(params.id);
     if (!job) throw httpError(404, "no such job (it may have expired); jobs are kept only briefly after they finish");
     return jobView(job);
+  },
+  // Escape hatch: free your in-flight slot if a job wedges (a real agent got
+  // stuck behind a stalled free-tier worker with no way out).
+  "POST /jobs/:id/cancel": (req, res, params) => {
+    const a = authOr(req);
+    const job = jobs.get(params.id);
+    if (!job) throw httpError(404, "no such job (it may have expired)");
+    if (a.jobId !== job.id) throw httpError(403, "that isn't your in-flight job");
+    if (job.status === "queued" || job.status === "running") { job.status = "error"; job.error = "cancelled by owner"; finishJob(job); }
+    a.jobId = null;
+    return { cancelled: job.id, note: "your in-flight slot is freed; submit again. A genuinely-running computation may still finish in the background, but its result is discarded." };
   },
 
   "POST /register": (req, res, params, body) => {
@@ -460,6 +479,8 @@ function matchRoute(method, pathname) {
   if (m && method === "GET") return { fn: handlers["GET /challenges/:id"], params: { id: decodeURIComponent(m[1]) } };
   m = pathname.match(/^\/jobs\/([^/]+)$/);
   if (m && method === "GET") return { fn: handlers["GET /jobs/:id"], params: { id: decodeURIComponent(m[1]) } };
+  m = pathname.match(/^\/jobs\/([^/]+)\/cancel$/);
+  if (m && method === "POST") return { fn: handlers["POST /jobs/:id/cancel"], params: { id: decodeURIComponent(m[1]) } };
   return null;
 }
 

@@ -111,9 +111,12 @@ async function main(port) {
   const inflight = await req(port, "POST", "/experiment", { ticks: 4000, seed: 1 }, tok); // submit, don't await
   const second = await req(port, "POST", "/experiment", { ticks: 500, seed: 1 }, tok);
   check(second.status === 409, "a second compute while one is in flight -> 409");
-  if (inflight.json && inflight.json.jobId) { // drain the first so it doesn't dangle
-    for (let i = 0; i < 1500; i++) { const p = await req(port, "GET", "/jobs/" + inflight.json.jobId, null, tok); if (p.json && (p.json.status === "done" || p.json.status === "error")) break; await sleep(200); }
-  }
+  // cancel is the escape hatch from a wedged job: it frees the in-flight slot
+  const cancel = await req(port, "POST", "/jobs/" + (inflight.json.jobId || "x") + "/cancel", {}, tok);
+  check(cancel.status === 200 && cancel.json.cancelled, "POST /jobs/:id/cancel frees a stuck slot");
+  const afterCancel = await req(port, "POST", "/experiment", { ticks: 300, seed: 1 }, tok);
+  check(afterCancel.status === 200 && afterCancel.json.jobId, "can submit again after cancelling");
+  if (afterCancel.json && afterCancel.json.jobId) await req(port, "POST", "/jobs/" + afterCancel.json.jobId + "/cancel", {}, tok); // free the slot for the next section
 
   const istart = await req(port, "POST", "/attempts", { challenge: "inference" }, tok);
   check(istart.status === 200 && Array.isArray(istart.json.candidates), "open inference attempt");
