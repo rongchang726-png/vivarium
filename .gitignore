@@ -12,6 +12,10 @@ vivarium-tick*.json
 node_modules/
 npm-debug.log*
 
+# Downloaded tooling — not part of the repo
+mcp-publisher.exe
+mcp-publisher*.tar.gz
+
 # Game session / wallet state (player progress, not code)
 game/.session.json
 game/.wallet.json
