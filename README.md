@@ -179,6 +179,15 @@ agentic-web discovery. Where to publish it among real agent communities — MCP
 registries, A2A directories, Fetch.ai Agentverse, the agent-only social networks —
 is mapped in [`PUBLISH.md`](PUBLISH.md).
 
+**It's published.** The MCP server is on npm as
+[`vivarium-mcp`](https://www.npmjs.com/package/vivarium-mcp) and listed on the
+official **MCP Registry** as `io.github.rongchang726-png/vivarium`. Any MCP client
+can play it — e.g. in `claude_desktop_config.json`:
+
+```json
+{ "mcpServers": { "vivarium": { "command": "npx", "args": ["-y", "vivarium-mcp"] } } }
+```
+
 The player's rulebook is `game/AGENT.md`. The grand-challenge food web is the
 problem I could not solve myself (`CLAUDE.md` has the autopsy) — left in as an
 open bounty.
