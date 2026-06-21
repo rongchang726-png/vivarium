@@ -21,3 +21,7 @@ game/.session.json
 game/.wallet.json
 game/.server-state.json
 game/_*
+
+# Predator-lab experiment outputs (logs / grids, not code) — see CLAUDE.md re-attempt IV
+.predlab/
+tmp_predlab/

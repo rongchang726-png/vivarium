@@ -49,6 +49,12 @@ class Creature {
       (CONFIG.creature.maxRadius - CONFIG.creature.minRadius);
     this.maxSpeed = lerp(CONFIG.creature.speedSmall, CONFIG.creature.speedBig, t);
     this._metab = CONFIG.creature.metabBase + CONFIG.creature.metabPerArea * this.area;
+    // Energetic lever (default 0 => unchanged, bit-exact): a leaner carnivore
+    // metabolism. Diet-scaled, so herbivores (diet 0) keep their exact upkeep and
+    // the herbivore attractor is not cheapened. Computed once here from this
+    // individual's diet — no per-tick branch, no RNG.
+    const _cmd = CONFIG.creature.carnMetabolismDiscount;
+    if (_cmd) this._metab *= 1 - _cmd * this.diet;
 
     this.age = opts.age != null ? opts.age : 0;
     this._maxAge = opts.maxAge != null
@@ -220,7 +226,13 @@ class Creature {
     if (this.y < 0) this.y += H;
     else if (this.y >= H) this.y -= H;
 
-    this.energy -= CONFIG.creature.moveCost * thrust * this.speed * this._areaSqrt;
+    // Energetic lever (default 0 => unchanged, bit-exact): cheaper locomotion for
+    // carnivores so chasing prey doesn't bankrupt them. Diet-scaled => herbivores
+    // pay the exact same move cost as before.
+    let moveCost = CONFIG.creature.moveCost;
+    const _cvd = CONFIG.creature.carnMoveDiscount;
+    if (_cvd) moveCost *= 1 - _cvd * this.diet;
+    this.energy -= moveCost * thrust * this.speed * this._areaSqrt;
 
     // Partial-hunting reward: a small, diet-scaled bonus for actually moving
     // toward the prey sensed this tick — rewarding the *pursuit* up a gradient so
@@ -272,7 +284,12 @@ class Creature {
       best.cause = "preyed";
       // ...but a successful kill yields the prey's biomass as a proper meal,
       // which is what makes hunting a viable living at all.
-      this.energy += CONFIG.creature.carcassFactor * best.area * carnEff;
+      // Energetic lever (carnCarcassBonus default 0 => unchanged, bit-exact): a
+      // fatter kill payoff for committed carnivores only (diet-scaled), so a real
+      // hunter is rewarded without also fattening low-diet omnivores.
+      const carcassMult =
+        CONFIG.creature.carcassFactor + CONFIG.creature.carnCarcassBonus * this.diet;
+      this.energy += carcassMult * best.area * carnEff;
       world.predationsThisTick++;
     }
   }

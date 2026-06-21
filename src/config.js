@@ -113,6 +113,32 @@ const CONFIG = {
     // flat meat-floor produced. See ../CLAUDE.md "the predator problem".
     pursuitReward: 0,
 
+    // --- Energetic levers against the carnivore ENERGETIC WALL (all default 0,
+    // OFF, RNG-neutral => bit-exact). The wean test (CLAUDE.md re-attempt III)
+    // split the predator problem in two: pursuitReward crosses the BEHAVIOURAL
+    // valley (random brains learn to hunt), but carnivory stays net-NEGATIVE even
+    // with skill — an ENERGETIC deficit the pursuit subsidy was only papering
+    // over. These knobs attack that deficit directly so a hunting guild can be
+    // SELF-SUFFICIENT (survive a wean to pursuitReward=0). All diet-scaled, so a
+    // herbivore (diet~0) is untouched and the herbivore attractor isn't cheapened.
+    //
+    // carnMetabolismDiscount: a diet-scaled reduction of per-tick upkeep
+    //   (effective _metab *= (1 - carnMetabolismDiscount*diet)). A leaner
+    //   carnivore metabolism — being a hunter costs less to simply stay alive,
+    //   so sparse kill income can cover the bill. 0 => upkeep unchanged.
+    carnMetabolismDiscount: 0,
+    // carnMoveDiscount: a diet-scaled reduction of movement cost
+    //   (effective moveCost *= (1 - carnMoveDiscount*diet)). Cheaper locomotion
+    //   for predators — chasing prey doesn't bankrupt them. 0 => moveCost
+    //   unchanged.
+    carnMoveDiscount: 0,
+    // carnCarcassBonus: extra carcass yield ADDED to carcassFactor, but only for
+    //   committed carnivores (scaled by diet) — effective carcass multiplier =
+    //   carcassFactor + carnCarcassBonus*diet. A fatter kill payoff that does NOT
+    //   also fatten low-diet omnivores (a raw carcassFactor bump would). 0 =>
+    //   carcass yield unchanged.
+    carnCarcassBonus: 0,
+
     // Digestion efficiency by diet. diet 0 = pure herbivore, 1 = pure carnivore.
     // Plants feed you ∝ (1 - diet); meat feeds you ∝ diet. Omnivores get a
     // little of both but excel at neither.

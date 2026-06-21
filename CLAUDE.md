@@ -479,6 +479,71 @@ concluding, caught the subsidy ("I proved it" vs "I fooled myself", applied to m
 own research). Knob + probes shipped default-off; this is the standing best lead
 for `foodweb`.
 
+### Re-attempt IV (2026-06-21): the ENERGETIC wall holds in Vivarium — but a cross-check resharpens it as a REWARD-DENSITY (credit-assignment) wall, not a magnitude one
+
+Two tracks ran in parallel: a **multi-agent assault inside Vivarium** (a `Workflow` of
+21 agents) and an **independent from-scratch cross-check** by a second agent (Codex, in
+its own sandbox). Together they move the diagnosis further than either alone.
+
+**Track 1 — the in-Vivarium assault: a robust NEGATIVE (0/7 survive the wean).** Built
+`game/predator-lab.js` (kept) — ONE parametric headless harness subsuming
+pursuit.js/pursuit-wean.js: HARD no-graze scenario (plantSupp 1, ~200 prey + 60
+random-brained predators), every lever exposed, an optional `--wean W` (drop
+pursuitReward→0 at W, energetic levers STAY ON), a FINE 12-bin diet histogram, and a
+machine-readable `RESULT {…weanSurvived…}` line. Added three **default-off, RNG-neutral,
+diet-scaled** energetic knobs (kept; `src/config.js` / `src/creature.js`):
+`carnMetabolismDiscount` (leaner carnivore upkeep), `carnMoveDiscount` (cheaper predator
+locomotion), `carnCarcassBonus` (fatter kill payoff for committed carnivores only — does
+not fatten low-diet omnivores the way a raw carcassFactor bump would). **Determinism hash
+4244329615 — sim.test ALL CHECKS PASSED, save→load 4244329615.** Result: across 7
+mechanism families (fat carcass, lean metabolism, dense/slow prey, spatial refugia, and
+combinations), **0/7 survived the wean.** The strongest — "lean carnivore (carnMetab 0.3)
++ carcass 2" — held a **23–41%** carn>.8 guild with real kills (~1000–1400/1k tick) and
+maxGen ~100–128 *while pursuitReward was on*; its dedicated 5-seed wean test (seeds
+7,11,19,23,42; evolve to 12000 at pr=0.8 → pr=0 → run to 21000) collapsed carn>.8 to **0
+in a single 1500-tick window on every seed** (finalCarnPct 0, 0/5). Fatter carcasses
+(carcass 5) and a bigger bite (60, kills/k ~2000) only raised the *subsidised* predation;
+the wean outcome did not move. The world never collapses (pop 300–430) — it reverts
+cleanly to herbivory the instant the scaffold is gone. The reward-ON 41% nearly read as a
+solve; the wean test, run BEFORE concluding, again drew the line between "I proved it" and
+"I fooled myself" — now at the scale of 21 agents and ~426k tokens.
+
+**Track 2 — the independent cross-check, and the real payoff.** A second agent built two
+standalone from-scratch evolutionary sims (no Vivarium code). Its predator sim found the
+OPPOSITE of Track 1: scaffold-only collapses (agrees), but every energetic package (lean,
+fat, refugia, and especially **catchable_prey**) SURVIVED its wean. The divergence is the
+insight, and the cross-check itself named the cause: **its sim selects on `hunt_skill` as
+a direct heritable TRAIT**, so once the energetics pay, selection holds the trait;
+**Vivarium's hunting is an evolved NEURAL POLICY that must be learned and maintained, and
+it reverts when the dense pursuitReward gradient is removed — even when the net energy is
+positive.** So the wall is not "energy magnitude too low" (Track 1 threw fat carcasses +
+lean metabolism at the magnitude and it did not move) but **reward DENSITY /
+credit-assignment**: a kill is a rare, delayed, noisy payoff and a neural policy drifts
+toward the dense steady gradient of grazing. This is exactly why the cross-check's
+strongest single mechanism was **`catchable_prey`** — vulnerable prey raise catch
+*frequency*, making carcass income dense and reliable enough for a policy to hold onto. A
+new, evidence-backed, **untested-in-Vivarium** lead: prey-vulnerability/catchability
+*states* (not the density/speed Track 1 already tried) + a carnivore energy ledger.
+
+**The non-transitivity keystone, also in hand (deferred until predators stand).** The
+cross-check's other sim found a clean, proven-in-toy intransitive cycle **hunter > grazer
+> defender > hunter** (invasion matrix closes; mixed-world coexistence, no collapse):
+hunters eat undefended grazers; a **toxin/defended-forager** niche beats hunters (attacking
+the defended is costly); grazers beat defenders (defense carries a plant-efficiency cost).
+This is the RPS recipe a deep PvP meta needs — but it *assumes viable hunters*, so it stays
+gated on the predator problem. Order is now clear: make hunters self-sufficient (the
+catchability lead), THEN plant the toxin/defense triad and test the cycle in the arena
+(symmetrise board position, per the PvP notes).
+
+**Status.** Predator problem: still NEGATIVE in Vivarium, but the wall is re-identified
+(reward density, not magnitude) with a concrete next probe Track 1 did not try
+(catchability *states* + an energy ledger). A third cross-check round (add a
+behavioural/neural layer to the toy predator sim and test whether catchability rescues the
+*policy* where magnitude levers fail) is running to de-risk the port before a big Vivarium
+experiment. All knobs ship OFF; the default world is untouched; hash 4244329615. Kept
+artifacts: `game/predator-lab.js` + the three energetic knobs. (`.predlab/` reward-ON grid
+and `tmp_predlab/` wean logs are gitignored.)
+
 ### If I want to try again (future work, roughly in order of promise)
 - **Protected refugium**: shield a carnivore sub-population from competition for
   N generations so hunting can evolve, then release it. Most promising.
