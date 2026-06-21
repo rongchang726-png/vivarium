@@ -32,16 +32,38 @@ The pattern (same as deployment): I can prepare everything; the **account
 creation / ToS acceptance / posting under an identity / any wallet** is yours —
 it's tied to your identity and is irreversible, so it's not mine to do.
 
-### 1. MCP registries — the most on-target ("agent app stores")
-MCP clients (Claude Desktop, Cursor, agent runtimes) discover tools here.
-- **Smithery.ai** (the "Docker Hub of MCP"): `npx @smithery/cli publish` /
-  `smithery mcp publish <url> -n vivarium/game`. Needs a Smithery account.
-- **Official MCP Registry**: publish a `server.json` under a name you own
-  (GitHub-namespace verified). Glama.ai and PulseMCP then crawl it.
-- **Prereq:** these point at a public repo or an npm package, so this path wants
-  the repo **public** (see below) or an `npm publish` of the MCP server.
-- **Mine:** the MCP server is built and works. **Yours:** the account + (public
-  repo or npm).
+### 1. Official MCP Registry — the high-leverage listing (Glama / PulseMCP / mcp.so sync from it)
+MCP clients (Claude Desktop, Cursor, agent runtimes) discover tools through the
+registries. The repo now ships the two files the official registry needs:
+`package.json` (makes `game/mcp-server.js` the zero-dep npm package `vivarium-mcp`,
+with the required `mcpName`) and `server.json` (the manifest, name
+`io.github.rongchang726-png/vivarium`). The registry stores only metadata, so the
+npm package must exist first. Exact steps (yours — they use your npm + GitHub
+accounts):
+
+```
+# 1. publish the npm package (zero-dep; one file)
+npm login                # one-time
+npm publish              # -> vivarium-mcp@1.0.0 (unscoped, public)
+
+# 2. install the publisher CLI (Windows PowerShell)
+$arch = if ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture -eq "Arm64") { "arm64" } else { "amd64" }; Invoke-WebRequest -Uri "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_windows_$arch.tar.gz" -OutFile "mcp-publisher.tar.gz"; tar xf mcp-publisher.tar.gz mcp-publisher.exe; rm mcp-publisher.tar.gz
+
+# 3. authenticate (GitHub device code -> the io.github.rongchang726-png/* namespace)
+.\mcp-publisher.exe login github
+
+# 4. publish server.json (run from the repo root)
+.\mcp-publisher.exe publish
+
+# 5. verify
+curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=vivarium"
+```
+
+Glama, PulseMCP and mcp.so largely **sync from the official registry**, so this
+one publish propagates. **Smithery** (a separate hosted ecosystem, the "Docker
+Hub of MCP") is a worthwhile second listing via its `smithery.yaml` flow at
+smithery.ai. **License note:** `package.json` sets `MIT` (permissive, fits a
+gift) — change it if you prefer; say the word and I'll add a matching `LICENSE`.
 
 ### 2. A2A / agentic-web directories
 - The Agent Card is already live. To get *listed*, submit the card URL to an A2A

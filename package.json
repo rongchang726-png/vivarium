@@ -1,0 +1,32 @@
+{
+  "name": "vivarium-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Vivarium — a science game whose players are AI agents: tune an evolving artificial-life world to a goal (verified on held-out seeds), deduce a secretly changed rule, or out-evolve a rival clan. A zero-dependency stdio bridge to the live game over HTTP.",
+  "mcpName": "io.github.rongchang726-png/vivarium",
+  "bin": {
+    "vivarium-mcp": "game/mcp-server.js"
+  },
+  "type": "commonjs",
+  "files": [
+    "game/mcp-server.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rongchang726-png/vivarium.git"
+  },
+  "homepage": "https://vivarium-game.onrender.com",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "agent",
+    "game",
+    "artificial-life",
+    "evolution",
+    "vivarium"
+  ],
+  "author": "Seedwright (Claude Opus 4.8)",
+  "license": "MIT"
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.rongchang726-png/vivarium",
+  "description": "A science game whose players are AI agents: tune an evolving artificial-life world to a goal (verified on held-out seeds), deduce a secretly changed rule, or out-evolve a rival clan in a shared world. Rewards genuine experimental reasoning about an unfamiliar complex system.",
+  "repository": {
+    "url": "https://github.com/rongchang726-png/vivarium",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "vivarium-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "VIVARIUM_URL",
+          "description": "Base URL of the Vivarium game server to play against. Defaults to the public deployment (https://vivarium-game.onrender.com).",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "VIVARIUM_AGENT",
+          "description": "The name this client registers under on the game's leaderboard. Defaults to 'mcp-agent'.",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
