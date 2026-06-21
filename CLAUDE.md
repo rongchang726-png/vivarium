@@ -438,6 +438,47 @@ near-misses (chasing, approaching, biting without a kill) so hunting evolves up 
 fitness GRADIENT instead of off an all-or-nothing cliff. Today promotes #5 from
 "an idea" to "the only escape from the deadlock" -- the next session's target.
 
+### Re-attempt III (2026-06-21): partial-hunting reward — crosses the BEHAVIOURAL valley, reveals the ENERGETIC one
+
+Built #5 at last. `creature.pursuitReward` (default 0, bit-exact — hash still
+4244329615; `sense()` tracks the nearest smaller in-FOV creature, `act()` adds a
+small `pursuitReward · diet · approach-speed` bonus for moving toward it; OFF
+consumes no RNG). It rewards the *pursuit* precursor up a gradient, diet-scaled so
+herbivores get ≈nothing (dodging the meat-floor "cannibal soup"). Probes:
+`game/pursuit.js` (no-graze HARD scenario: plantSupp=1, 200 prey + 60 pred diet .9),
+`game/pursuit-wean.js` (the integrity check).
+
+**Positive (a real first).** With PR=0.8 a carnivore guild ESTABLISHES and
+PERSISTS: carn>.8 collapses early (random brains can't hunt) then CLIMBS BACK as
+hunting skill evolves, settling at ~26–31% of the population (seed 7: 31%, seed 11:
+26%; herb<.2 ~23–35% alongside), kills/k ~1000–1300 (real predation, not
+reward-farming), 130–143 generations. The SAME scenario at PR=0 is the decade-old
+collapse — carn>.8 = 0 from tick 1500 to 15000, herbivore monoculture. So the
+pursuit reward demonstrably bridges the adaptive valley *while active*, robustly
+across seeds. **First persistent carnivore guild in the project.**
+
+**Negative — the wean test, and the real lesson.** `pursuit-wean.js` evolves with
+PR=0.8 to tick 12000 (carn>.8 = 106), then sets PR=0 and keeps running. Verdict:
+carn>.8 collapses 106 → 0 in ONE 1500-tick window, kills/k crashes 1194 → ~130,
+diet reverts to herbivory and stays there to 21000. **It's a SUBSIDY, not a solve**
+— carcass income alone can't pay for the carnivore lifestyle here; the pursuit
+bonus was propping it up.
+
+**What it bought — the sharpened diagnosis.** The wean test SEPARATES the predator
+problem into two barriers a decade of attempts conflated: (1) the **behavioural
+adaptive valley** — random brains can't evolve hunting skill; pursuit reward
+CROSSES this (they really learn to hunt, maxGen 121). (2) the **energetic deficit**
+— carnivory is net-negative *even with skill*; pursuit reward only SUBSIDISES it,
+and the wean collapse exposes it. The keystone is no longer the vague "make
+predation rewarding" but a sharp target: make carnivore energetics SELF-SUFFICIENT
+(fatter carcasses / leaner carnivore metabolism / denser prey) AND use pursuit
+reward to cross the behavioural valley — both walls at once. Next probe: PR + high
+carcassFactor, then wean — does richer kill income survive weaning? Discipline
+note: the 15000-tick result nearly read as a solve; the wean check, run BEFORE
+concluding, caught the subsidy ("I proved it" vs "I fooled myself", applied to my
+own research). Knob + probes shipped default-off; this is the standing best lead
+for `foodweb`.
+
 ### If I want to try again (future work, roughly in order of promise)
 - **Protected refugium**: shield a carnivore sub-population from competition for
   N generations so hunting can evolve, then release it. Most promising.

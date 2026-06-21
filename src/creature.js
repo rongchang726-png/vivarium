@@ -79,6 +79,11 @@ class Creature {
     this._fd = new Float32Array(BRAIN.EYES); // nearest food squared-dist per eye
     this._cd = new Float32Array(BRAIN.EYES); // nearest creature squared-dist per eye
     this._cref = new Array(BRAIN.EYES).fill(null);
+    // Pursuit-reward scratch (only written when CONFIG.creature.pursuitReward > 0):
+    // unit direction to the nearest smaller in-view creature, sensed pre-move.
+    this._hasPrey = false;
+    this._preyUx = 0;
+    this._preyUy = 0;
   }
 
   // --- sense -----------------------------------------------------------------
@@ -115,6 +120,13 @@ class Creature {
       if (d2 < fd[e]) fd[e] = d2;
     });
 
+    // Pursuit-reward bookkeeping: track the nearest smaller in-view creature so
+    // act() can reward moving toward it. Guarded so it's inert (no behaviour, no
+    // RNG) when pursuitReward is 0 — the default stays bit-exact.
+    const pursuit = CONFIG.creature.pursuitReward > 0;
+    let preyD2 = Infinity,
+      preyDx = 0,
+      preyDy = 0;
     world.creatureGrid.query(hx, hy, range, (c) => {
       if (c === this || !c.alive) return;
       const dx = c.x - hx,
@@ -130,7 +142,22 @@ class Creature {
         cd[e] = d2;
         cref[e] = c;
       }
+      if (pursuit && c.radius < this.radius && d2 < preyD2) {
+        preyD2 = d2;
+        preyDx = dx;
+        preyDy = dy;
+      }
     });
+    if (pursuit) {
+      if (preyD2 < Infinity) {
+        const inv = 1 / Math.sqrt(preyD2);
+        this._preyUx = preyDx * inv;
+        this._preyUy = preyDy * inv;
+        this._hasPrey = true;
+      } else {
+        this._hasPrey = false;
+      }
+    }
 
     const inp = this._inp;
     for (let e = 0; e < EYES; e++) {
@@ -194,6 +221,18 @@ class Creature {
     else if (this.y >= H) this.y -= H;
 
     this.energy -= CONFIG.creature.moveCost * thrust * this.speed * this._areaSqrt;
+
+    // Partial-hunting reward: a small, diet-scaled bonus for actually moving
+    // toward the prey sensed this tick — rewarding the *pursuit* up a gradient so
+    // a would-be hunter need not land a full kill to get any payoff. Off (0) and
+    // bit-exact by default; herbivores (diet≈0) get ≈nothing.
+    const pr = CONFIG.creature.pursuitReward;
+    if (pr > 0 && this._hasPrey && this.diet > 0) {
+      const approach =
+        Math.cos(this.heading) * this.speed * this._preyUx +
+        Math.sin(this.heading) * this.speed * this._preyUy;
+      if (approach > 0) this.energy += pr * this.diet * approach;
+    }
 
     if (bite > 0.5) this._attack(world);
   }

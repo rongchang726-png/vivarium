@@ -102,6 +102,16 @@ const CONFIG = {
     biteDamage: 18, // base bite damage, scaled by attacker area (few bites kill)
     retaliation: 0.42, // defender bites back ∝ its area * this factor
     carcassFactor: 0.7, // on a kill, predator also absorbs ∝ prey body area
+    // Partial-hunting reward — the diagnosed escape from the predator deadlock.
+    // Default 0 = OFF and bit-exact (consumes no RNG). When > 0, a creature gains
+    // a SMALL energy bonus for moving toward a smaller creature (prey) within its
+    // field of view, scaled by its own diet and its approach speed. This rewards
+    // the *pursuit* precursor of hunting up a fitness GRADIENT, so a would-be
+    // carnivore can climb toward competent predation instead of starving at the
+    // all-or-nothing kill cliff (the adaptive valley). Diet-scaled, so herbivores
+    // (diet≈0) get nothing — avoiding the indiscriminate "cannibal soup" that a
+    // flat meat-floor produced. See ../CLAUDE.md "the predator problem".
+    pursuitReward: 0,
 
     // Digestion efficiency by diet. diet 0 = pure herbivore, 1 = pure carnivore.
     // Plants feed you ∝ (1 - diet); meat feeds you ∝ diet. Omnivores get a
