@@ -197,7 +197,22 @@ class Creature {
     this.lastBite = bite;
 
     this.heading = wrapAngle(this.heading + turn * CONFIG.creature.turnRate);
-    const target = thrust * this.maxSpeed;
+    // Reward-DENSITY lever (preyVulnerability, default 0 => bit-exact): a WELL-FED
+    // herbivore moves slower (post-meal torpor), so a hunter's chase closes more
+    // often — raising catch FREQUENCY (the dense reinforcement a neural hunting
+    // policy needs to survive the wean) rather than per-kill payoff. Scaled by diet
+    // (1-diet) => slows PREY not predators; by energy (eFrac) => only the WELL-FED
+    // (a hungry prey stays nimble and forages freely — so NO starvation death-spiral;
+    // the v1 "slow when hungry" form collapsed the prey population). Prey must graze
+    // to ~74% to breed, so the vulnerable window is unavoidable yet self-limiting.
+    // No energy granted here — fair: a slow prey is only easier to *reach*.
+    let maxSpeed = this.maxSpeed;
+    const pv = CONFIG.creature.preyVulnerability;
+    if (pv > 0) {
+      const eFrac = this.energy / this.capacity;
+      maxSpeed *= 1 - pv * eFrac * (1 - this.diet);
+    }
+    const target = thrust * maxSpeed;
     this.speed += (target - this.speed) * 0.35; // a little inertia
     this.x += Math.cos(this.heading) * this.speed;
     this.y += Math.sin(this.heading) * this.speed;

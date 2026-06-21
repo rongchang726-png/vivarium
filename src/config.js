@@ -139,6 +139,24 @@ const CONFIG = {
     //   carcass yield unchanged.
     carnCarcassBonus: 0,
 
+    // --- Reward-DENSITY lever (re-attempt IV cross-check). The magnitude levers
+    // above all FAILED the wean (0/7, CLAUDE.md). Sharper diagnosis: Vivarium's
+    // hunting is a NEURAL policy that reverts when the dense pursuitReward scaffold
+    // is removed — the wall is reward DENSITY / credit-assignment, not energy
+    // magnitude. A kill is a rare, delayed payoff; a policy drifts to the dense
+    // steady gradient of grazing. preyVulnerability raises catch FREQUENCY so an
+    // evolved hunting policy gets dense enough real reinforcement to self-sustain
+    // past the wean — without paying any free energy (fair: prey just move slower;
+    // no bite/carcass ⇒ no income). An independent neural-bridge cross-check
+    // (Codex) predicts catch-frequency rescues the policy where magnitude doesn't.
+    //
+    // preyVulnerability: a WELL-FED herbivore slows (post-meal torpor) so a hunter's
+    //   chase closes more often. Effective maxSpeed *= 1 - preyVulnerability *
+    //   (energy/capacity) * (1 - diet): (1-diet) slows PREY not predators; eFrac slows
+    //   only the WELL-FED (a hungry prey stays nimble — no forage death-spiral; the
+    //   "slow when hungry" v1 collapsed the prey). Range [0,1]; 0 => unchanged, bit-exact.
+    preyVulnerability: 0,
+
     // Digestion efficiency by diet. diet 0 = pure herbivore, 1 = pure carnivore.
     // Plants feed you ∝ (1 - diet); meat feeds you ∝ diet. Omnivores get a
     // little of both but excel at neither.

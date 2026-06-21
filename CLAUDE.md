@@ -544,6 +544,51 @@ experiment. All knobs ship OFF; the default world is untouched; hash 4244329615.
 artifacts: `game/predator-lab.js` + the three energetic knobs. (`.predlab/` reward-ON grid
 and `tmp_predlab/` wean logs are gitignored.)
 
+### Re-attempt V (2026-06-21): the wall CRACKS — catchability (reward FREQUENCY) makes predation self-sustain past the wean, on a subset of seeds
+
+Re-attempt IV's cross-check (Codex's neural-bridge sim) predicted the wall is reward
+DENSITY, not magnitude, and that **catchability** (raising catch FREQUENCY) would rescue
+the hunting policy where fat carcasses / lean metabolism (magnitude) failed 0/7. This
+re-attempt ported and tested it in real Vivarium — and it largely holds, with hard caveats.
+
+New knob `creature.preyVulnerability` (default 0, RNG-neutral, **hash 4244329615 intact**):
+a WELL-FED herbivore moves slower (post-meal torpor — `maxSpeed *= 1 - preyVulnerability *
+(energy/capacity) * (1-diet)`), so a hunter's chase closes more often. Grants NO energy
+(fair: a slow prey is only easier to *reach*); scaled by (1-diet) [slows prey, not
+predators] and by energy [only the WELL-FED — a hungry prey stays nimble and forages
+freely]. (v1 used `(1-eFrac)` = slow-when-hungry; that created a forage DEATH-SPIRAL that
+collapsed the prey to ~25 — a diagnosed-and-fixed bug. The fix is the flip to well-fed.)
+
+Results (`game/predator-lab.js`, wean at tick 12000, energetic levers STAY ON across it):
+- **Catchability ALONE did NOT cross.** preyVuln 0.3/0.5/0.7 on the modest (failed)
+  magnitude package: a strong reward-ON guild (carn>.8 ~90–103, kills/k ~1000–1440 — it
+  clearly raises catch frequency) but carn>.8 → 0 in one window post-wean, like everything
+  before. Frequency alone isn't enough: Vivarium's brains DON'T learn within-life (fixed
+  evolved weights), so the neural-bridge's within-life-reinforcement framing only partly
+  maps — here it's lineage fitness, and one lever doesn't tip it.
+- **Catchability × rich carcasses DID cross, on a subset of seeds.** Extreme combo
+  (preyVuln 0.6 + carcass 8 + carnCarcass 4 + carnMetab 0.6 → effective carcass ~11.6×):
+  post-wean predation SELF-SUSTAINS on ALL 5 seeds (kills/k 600–1762 — **a project first;
+  predation never persisted past the wean before**), and a genuine SPECIALIST carn>.8 guild
+  survives on a subset: seed 11 (no inject) — carn>.8 RE-EVOLVED post-wean and climbed to
+  **27%**, kills/k 1762; seeds 23 / 42 (with prey-injection) — **16% / 32%**. Other seeds go
+  omnivory-leaning (high kills, low carn>.8 — the known "predation as low-diet omnivory"
+  regime; read the DISTRIBUTION, not carn%). maxGen 80–169, healthy multi-trophic pops
+  (287–760). pursuitReward is OFF — this is NOT the behavioural subsidy.
+
+**Verdict: the predator wall is CRACKED, not cleanly solved.** The cross-check's core
+insight is validated — **catch FREQUENCY (catchability), not energy magnitude, was the
+missing lever**: magnitude alone was 0/7, and catchability flips a subset of seeds to a
+self-sustaining specialist guild that even RE-EVOLVES after the scaffold is gone (the first
+time carnivory has come back on its own here). But it is QUALIFIED: it needs EXTREME,
+subsidy-adjacent energetics (effective carcass ~11.6×); the specialist guild is
+SEED-DEPENDENT (≈3 of 5 tried, omnivory-leaning on the rest); and prey-injection (a
+bootstrap-collapse control) shifts which seeds win. Honest next step: robustness at
+DEFENSIBLE parameters — find the minimum carcass × catchability that holds a specialist
+guild on ≥4/5 seeds WITHOUT injection — then the full skeptic panel, then (finally unblocked)
+the non-transitivity hunter>grazer>defender triad. Kept: `creature.preyVulnerability`
+(default-off, bit-exact); `game/predator-lab.js` gained a `--preyVuln` flag.
+
 ### If I want to try again (future work, roughly in order of promise)
 - **Protected refugium**: shield a carnivore sub-population from competition for
   N generations so hunting can evolve, then release it. Most promising.

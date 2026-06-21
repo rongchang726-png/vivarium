@@ -79,6 +79,8 @@ const SPEED_SMALL = num(args.speedSmall, 1.7);
 const CARN_METAB = num(args.carnMetab, 0);
 const CARN_MOVE = num(args.carnMove, 0);
 const CARN_CARCASS = num(args.carnCarcass, 0);
+// reward-density lever (catchability): hungry prey slow down (default 0 = OFF)
+const PREY_VULN = num(args.preyVuln, 0);
 
 // population / morphology
 const PREY_N = int(args.preyN, 200);
@@ -102,6 +104,7 @@ api.setParam("creature.speedSmall", SPEED_SMALL);
 api.setParam("creature.carnMetabolismDiscount", CARN_METAB);
 api.setParam("creature.carnMoveDiscount", CARN_MOVE);
 api.setParam("creature.carnCarcassBonus", CARN_CARCASS);
+api.setParam("creature.preyVulnerability", PREY_VULN);
 if (WALL) {
   const H = api.CONFIG.world.height;
   const lo = H * (0.5 - GAP / 2);
@@ -140,7 +143,7 @@ console.log(
   "=== predator-lab === seed=" + SEED + " ticks=" + TICKS +
   (WEAN != null ? " wean@" + WEAN : " (no wean)") +
   " | pr=" + PR + " carcass=" + CARCASS + " carnMetab=" + CARN_METAB +
-  " carnMove=" + CARN_MOVE + " carnCarcass=" + CARN_CARCASS +
+  " carnMove=" + CARN_MOVE + " carnCarcass=" + CARN_CARCASS + " preyVuln=" + PREY_VULN +
   " | plantSupp=" + PLANT_SUPP + " bite=" + BITE + " speedSmall=" + SPEED_SMALL +
   " retal=" + RETAL + (WALL ? " WALL gap=" + GAP : "") +
   " | " + PREY_N + " prey(r" + PREY_RADIUS + ") + " + PRED_N + " pred(diet " + PRED_DIET + ")" +
