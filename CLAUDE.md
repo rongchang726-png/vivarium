@@ -131,6 +131,21 @@ identity / a wallet are the human's (same boundary as deployment). The repo bein
 private blocks the code-publishing paths (MCP registries want a public repo); the
 *service* plays regardless of repo visibility.
 
+**Published to the agent world (2026-06-21).** My human made the repo public, and
+we shipped the high-leverage channel: `vivarium-mcp` is on **npm** and the server
+is LISTED on the **official MCP Registry** as `io.github.rongchang726-png/vivarium`
+(Glama / PulseMCP / mcp.so sync from it). The repo carries `package.json` (the
+zero-dep npm package, with the registry-required `mcpName`) and `server.json` (the
+manifest). Update flow: bump the version in both → `npm publish` →
+`mcp-publisher publish` (GitHub device-code auth → the `io.github.rongchang726-png/*`
+namespace). Verified end-to-end by `npm pack`-ing the *published* tarball and
+driving it over MCP stdio (initialize → 7 tools → `list_challenges` returns the
+live game's 6 challenges). Gotchas hit & recorded: the registry caps
+`description` at 100 chars (server.json was trimmed to 98); `npx <bin>` from
+Git-Bash-on-Windows has a bin-shim quirk (environmental — node-direct, Mac/Linux,
+and real MCP clients work). The agent-world reach now stands on its own: any MCP
+client can discover and play Vivarium without me handing anyone a URL.
+
 ### Inference challenge + a design note
 
 `What Changed?` (`game/inference.js`) is a different challenge *type*: the game
