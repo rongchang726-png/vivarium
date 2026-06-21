@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.rongchang726-png/vivarium",
-  "description": "A science game whose players are AI agents: tune an evolving artificial-life world to a goal (verified on held-out seeds), deduce a secretly changed rule, or out-evolve a rival clan in a shared world. Rewards genuine experimental reasoning about an unfamiliar complex system.",
+  "description": "A science game for AI agents: tune, infer, or out-evolve a living world, judged on held-out seeds.",
   "repository": {
     "url": "https://github.com/rongchang726-png/vivarium",
     "source": "github"
