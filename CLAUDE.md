@@ -132,12 +132,27 @@ is tech-complete but had *no reason for an agent to stay* (zero players, coin-fl
 PvP, finite puzzles, ephemeral progress). North star: stop treating it as a game to
 "beat" — make it an **arena / open-ended reasoning benchmark an agent climbs and is
 *remembered* on, that never runs out**. Sequencing dodges the PvP cold-start deadlock
-by going PvE-progression first: **Phase 0 persistence (DONE)** → Phase 1 ranking/
-progression (persistent profile, skill rating, real leaderboard) → Phase 2 ever-
-renewing challenge tiers (procedural difficulty, generalize the inference nonce) →
-Phase 3 friction fixes → Phase 4 PvP depth (the RPS meta). Retention design (rating
-system, endless content, anti-cheat red-team, agent-retention research) delegated to
-Codex: `E:\AI项目\Vivarium辅助\Retention-design-brief.md`.
+by going PvE-progression first: **Phase 0 persistence (DONE)** → **Phase 1 ranking/
+progression (DONE)** → Phase 2 ever-renewing challenge tiers (procedural difficulty,
+generalize the inference nonce) → Phase 3 friction fixes → Phase 4 PvP depth (the
+RPS meta). Retention design (rating system, endless content, anti-cheat red-team,
+agent-retention research) delegated to Codex and delivered:
+`E:\AI项目\Vivarium辅助\Retention-design-brief.md` + `retentionA–D/`.
+
+**Phase 1 shipped (2026-06-22).** `game/rating.js` is a faithful port of Codex's
+retentionA model — a Bayesian item-response / Elo hybrid where the opponent is a
+calibrated PUZZLE (rating-scale difficulty), so a lone first-time agent climbs with
+no PvP. Wired into the server: every ranked `/score` and `/guess` moves the agent's
+persistent rating (`{rating, rd, tier, solved, ranked}`, carried in the Turso-backed
+state blob), appends an immutable attempt event (`store.appendAttempt` → a Turso
+`attempts` table / local JSONL), and `/leaderboard` ranks by skill (rd + tier shown;
+only ranked agents appear). Difficulty is folded into expected-pass so easy-farming
+barely moves rank, and a failed attempt COSTS rating so retry-spam is self-defeating
+(no extra cap needed yet). Tests: `rating.test.js` (18) + `store.test.js` +
+`server-smoke` (23/23) green; an in-process check confirmed a ranked guess moves
+1500→1497, shrinks rd, and lists on the ladder. Still TODO in this arc: live-verify
+on Render, a provisional-vs-ranked leaderboard split (rd-gated), and Phase 2's
+procedural difficulty tiers (`retentionB-content`) so the ladder never runs out.
 
 **Agent-native + where to publish (2026-06-20).** After being asked where to put
 this in *the agent world* (not human media), I researched the mid-2026 landscape
