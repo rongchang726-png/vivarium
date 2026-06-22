@@ -96,7 +96,7 @@ class World {
     this.computeStats();
   }
 
-  spawnRandom(genome, clan = 0, forage) {
+  spawnRandom(genome, clan = 0, forage, defense) {
     const c = new Creature(
       this,
       genome,
@@ -104,7 +104,7 @@ class World {
       this.rng.range(0, this.height),
       CONFIG.creature.energyStart,
       0,
-      { clan, forage },
+      { clan, forage, defense },
     );
     this.creatures.push(c);
     this.births++;
@@ -128,7 +128,14 @@ class World {
       // way, so types=1 is untouched.)
       childForage = CONFIG.food.forageCircular ? ((childForage % 1) + 1) % 1 : clamp(childForage, 0, 1);
     }
-    const c = new Creature(this, genome, x, y, energy, parent.generation + 1, { clan: parent.clan, forage: childForage });
+    // Defense drifts only when the RPS toxin/defense mechanism is enabled (else
+    // bit-exact: no RNG drawn), same pattern as forage above.
+    let childDefense = parent.defense;
+    if (CONFIG.defense.enabled) {
+      childDefense += this.rng.gauss(0, CONFIG.mutation.defenseStd);
+      childDefense = clamp(childDefense, 0, 1);
+    }
+    const c = new Creature(this, genome, x, y, energy, parent.generation + 1, { clan: parent.clan, forage: childForage, defense: childDefense });
     this.creatures.push(c);
     this.births++;
     return c;

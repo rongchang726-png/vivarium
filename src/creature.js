@@ -72,6 +72,13 @@ class Creature {
     // single-food world keeps its RNG stream bit-exact). Only bites when
     // food.types > 1; see eatNearby.
     this.forage = opts.forage != null ? opts.forage : 0.5;
+    // Defense (RPS "defender" trait): a toxic/defended forager. Creature-level
+    // like forage/clan (NOT in the genome — so the default world, with
+    // CONFIG.defense.enabled false, keeps its RNG stream bit-exact). 0 =
+    // undefended. When active it cuts both ways: biting you costs the attacker
+    // and yields less meat (_attack), but it also makes your OWN grazing less
+    // efficient (eatNearby) — defense isn't free. See ../CLAUDE.md RPS notes.
+    this.defense = opts.defense != null ? opts.defense : 0;
 
     this.alive = true;
     this.cause = null;
@@ -283,12 +290,26 @@ class Creature {
 
     const carnEff = this.diet * CONFIG.creature.carnDigest;
     const dmg = CONFIG.creature.biteDamage * this._areaNorm;
+    // Toxic/defended prey (RPS "defender" leg). Biting a defended creature costs
+    // the attacker a flat toxin hit and converts to less usable meat, so a
+    // hunter's ROI on a defender is poor-to-negative even though the bite still
+    // lands and still hurts the prey (defense lowers the attacker's GAIN, not the
+    // damage dealt — per the spec, defended prey aren't untouchable). This is the
+    // defender>hunter edge. Gated on defense.enabled AND the prey carrying
+    // defense, so the default world is untouched: meatMult stays exactly 1.0 and
+    // x*1.0===x keeps it bit-exact. Spec: Codex roundF.
+    const def = CONFIG.defense;
+    let meatMult = 1;
+    if (def.enabled && best.defense > 0) {
+      this.energy -= def.toxinEnergyCost * best.defense;
+      meatMult = 1 + (def.meatConversionMultiplier - 1) * best.defense; // lerp(1, mcm, defense)
+    }
     // Energy harvested is capped by what the prey actually has, so overkill on
     // the finishing bite isn't a windfall...
     const take = Math.min(dmg, Math.max(0, best.energy));
     best.energy -= dmg;
     best.lastHurt = 6;
-    this.energy += take * carnEff;
+    this.energy += take * carnEff * meatMult;
     // The victim's body fights back: biting something big is dangerous, which
     // is what keeps predators preferring prey smaller than themselves.
     this.energy -= CONFIG.creature.biteDamage * best._areaNorm * CONFIG.creature.retaliation;
@@ -304,7 +325,7 @@ class Creature {
       // hunter is rewarded without also fattening low-diet omnivores.
       const carcassMult =
         CONFIG.creature.carcassFactor + CONFIG.creature.carnCarcassBonus * this.diet;
-      this.energy += carcassMult * best.area * carnEff;
+      this.energy += carcassMult * best.area * carnEff * meatMult;
       world.predationsThisTick++;
     }
   }
@@ -317,6 +338,7 @@ class Creature {
     const reach2 = reach * reach;
     const multi = CONFIG.food.types > 1; // resource partitioning active?
     const spec = CONFIG.food.forageSpecialization;
+    const def = CONFIG.defense;
     world.foodGrid.query(this.x, this.y, reach, (f) => {
       if (f.eaten) return;
       const dx = f.x - this.x,
@@ -341,6 +363,11 @@ class Creature {
           if (m <= 0) return; // can't digest this type — leave it (no interference)
           eff *= m;
         }
+        // Defended foragers pay a plant-efficiency cost (the grazer>defender edge:
+        // defense isn't free, so when predators are rare an efficient grazer out-
+        // competes a defender). Gated on defense.enabled AND defense>0 => the
+        // default world is bit-exact.
+        if (def.enabled && this.defense > 0) eff *= 1 - def.plantEfficiencyPenalty * this.defense;
         f.eaten = true;
         // Defended plants: a flat toxin cost makes herbivory expensive (0 by
         // default => unchanged, bit-exact). Net gain can go negative for a poor
@@ -424,6 +451,7 @@ class Creature {
       id: this.id,
       c: this.clan,
       f: this.forage,
+      d: this.defense,
       // The recurrent hidden state is live dynamic memory: without it, a
       // restored world is not the same world. Serialize it for exact reload.
       bh: Array.from(this.brain.h),
@@ -441,6 +469,7 @@ class Creature {
       id: o.id,
       clan: o.c,
       forage: o.f,
+      defense: o.d,
     });
     if (o.s != null) c.speed = o.s;
     if (o.bh) c.brain.h.set(o.bh);

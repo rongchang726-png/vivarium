@@ -325,6 +325,52 @@ Future work for a deep PvP meta: niches are now co-viable (resource partitioning
 AND self-organising (branching under a convex trade-off). Next: non-transitivity
 (RPS among strategies) for a real strategic meta.
 
+### The RPS meta — non-transitivity, the deep-PvP keystone (started 2026-06-22)
+
+This is the standing long-term arc. **Why:** PvP (`match`) is a coin-flip because
+the world has ONE optimal niche and ONE win dimension (population) — two strong
+agents both converge on the small-herbivore optimum and the verdict is luck (see
+the `match` notes). The cure the whole project has pointed at is **non-transitivity**:
+`hunter > grazer > defender > hunter`. No single dominant strategy ⟹ strategy
+choice matters ⟹ a PvP worth an agent's compute (and a real reason for the still-
+empty leaderboard to fill). It's finally buildable: niches are co-viable
+(resource partitioning, 5/5), predators are cracked (extreme-only but viable,
+re-attempt V), and the cycle is proven in a toy + spec'd for port (Codex roundA
+closes the invasion matrix; roundF is the implementation-ready port spec, both in
+`E:\AI项目\Vivarium辅助`).
+
+**Honest gate:** the `hunter>grazer` edge needs viable hunters, which only hold at
+extreme energetics so far. So the plan is staged, and the integrity check is "does
+the cycle actually CLOSE in Vivarium" (the RPS analogue of the wean test — measure
+it before declaring victory).
+
+- **Phase 1 — the defender niche (DONE, 2026-06-22).** Built the missing third
+  leg: a `defense` creature-level trait (like `forage`/`clan`, NOT in the genome,
+  drifts via the spawnChild hook ONLY when `defense.enabled`) + a `CONFIG.defense`
+  block. Mechanism (Codex roundF): biting a defended creature costs the attacker
+  `toxinEnergyCost·defense` and converts to less meat (`meatConversionMultiplier`,
+  applied to BOTH per-bite take and carcass) ⟹ **defender > hunter**; carrying
+  defense cuts the forager's OWN plant efficiency (`plantEfficiencyPenalty`) ⟹
+  **grazer > defender** (the essential anti-degenerate cost — without it defenders
+  just become a cheaper herbivore monoculture). All **default-off, RNG-neutral,
+  bit-exact**: `defense.enabled:false` ⟹ no new code path runs, no RNG drawn,
+  meatMult stays exactly 1.0 (`x*1.0===x`). **sim.test: ALL CHECKS PASSED, hash
+  4244329615, save→load 4244329615.** Deferred v2 levers (each needs new
+  serialized state or a brain channel): `handlingTicks` (post-bite attacker stun)
+  and a visibility cue so skilled hunters can learn to avoid defenders.
+- **Phase 2 — prove the cycle in Vivarium (NEXT).** A `game/rps-lab.js` probe per
+  roundF's test plan: (a) pairwise invasion (95% resident + 5% mutant) — verify
+  hunter invades grazer, defender invades hunter, grazer invades defender; (b)
+  three-way coexistence (equal seeding) — no strategy below ~5% in the final
+  quarter, with sustained oscillation. Needs game-side founder plumbing to seed a
+  `defense` value (mirror how founders set `forage`). This is the make-or-break:
+  the toy cycle may NOT port (Vivarium hunting is an evolved neural policy, not a
+  trait — the same gap that made the predator wean hard).
+- **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
+  draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
+  meta becomes RPS instead of a coin-flip. Symmetrize board position (per the
+  `match` fairness note) before trusting any payoff relation.
+
 ## Tuning lives in `src/config.js`
 
 The whole "physics" is there. Lessons from tuning so far (don't relearn them):

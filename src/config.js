@@ -192,6 +192,29 @@ const CONFIG = {
     freqDependence: 0,
   },
 
+  // --- RPS toxin/defense mechanism: the "defender" niche --------------------
+  // Default-off (enabled:false) => every new code path below is skipped and NO
+  // RNG is drawn, so the default world stays bit-exact (determinism hash
+  // 4244329615). This is the long-missing THIRD leg of the non-transitive cycle
+  // the project has aimed at since the PvP notes: hunter > grazer > defender >
+  // hunter. A "defender" is a toxic/defended forager (creature.defense > 0):
+  //   - biting one costs the attacker a toxin hit and yields less meat
+  //     (creature._attack)  => defender beats hunter;
+  //   - but carrying defense makes the forager's own grazing less efficient
+  //     (creature.eatNearby) => grazer beats defender, so defense can't just
+  //     become a cheaper herbivore monoculture (the key anti-degenerate rule).
+  // Hunters still crush undefended grazers, closing the cycle. Toy-world proof &
+  // implementation spec: Codex roundA/roundF (E:\AI项目\Vivarium辅助).
+  // v2 levers deferred (each needs new serialized state or a brain channel):
+  // handlingTicks (post-bite attacker stun) and a visibility cue so skilled
+  // hunters can learn to avoid defenders.
+  defense: {
+    enabled: false,
+    toxinEnergyCost: 8, // flat energy the attacker loses per bite, * prey.defense
+    meatConversionMultiplier: 0.45, // meat+carcass energy from a defended kill: lerp(1, this, defense)
+    plantEfficiencyPenalty: 0.18, // the defended forager's own plant digestion drops by this * defense
+  },
+
   mutation: {
     weightRate: 0.11, // probability each weight is perturbed on reproduction
     weightStd: 0.27, // gaussian std of a normal perturbation
@@ -203,6 +226,7 @@ const CONFIG = {
     fovStd: 0.05,
     rangeStd: 0.06,
     forageStd: 0.03, // forage specialisation drift on reproduction (only when food.types > 1)
+    defenseStd: 0.03, // defense trait drift on reproduction (only when defense.enabled)
   },
 
   // Default runtime knobs (the UI can change these live).
