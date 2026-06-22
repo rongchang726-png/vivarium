@@ -59,6 +59,9 @@ var __API = {
       // (forageSpread) to seed every niche attractor-basin for branching tests.
       if (spec && spec.forageSpread) c.forage = world.rng.next();
       else if (spec && spec.forage != null) c.forage = spec.forage;
+      // RPS "defender" trait: a fixed defense value for a defended/toxic founder
+      // (creature-level, like forage). Only meaningful when CONFIG.defense.enabled.
+      if (spec && spec.defense != null) c.defense = spec.defense;
       // Optional: place founders in a sub-region (for the spatial-isolation
       // experiment — seed each clan on its own side of the wall).
       if (region) {
@@ -141,6 +144,24 @@ var __API = {
       bioA: Math.round(bioA), bioB: Math.round(bioB),
       wild: wild,
     };
+  },
+
+  // RPS lab: per-strategy population + mean diet/defense, bucketed by clan
+  // (grazer=0, hunter=1, defender=2). Used by game/rps-lab.js to test whether the
+  // hunter>grazer>defender cycle closes (coexistence) in Vivarium. Mean diet/
+  // defense per clan let you see whether each lineage HOLDS its phenotype or
+  // drifts/converges (the real risk: hunting is an evolved neural policy).
+  rpsSnapshot: function (world) {
+    var n = [0, 0, 0], sd = [0, 0, 0], sdef = [0, 0, 0], tot = 0;
+    var cs = world.creatures;
+    for (var i = 0; i < cs.length; i++) {
+      var c = cs[i];
+      if (c.clan >= 0 && c.clan <= 2) { n[c.clan]++; sd[c.clan] += c.diet; sdef[c.clan] += c.defense; tot++; }
+    }
+    function pack(k) {
+      return { n: n[k], meanDiet: n[k] ? round(sd[k] / n[k], 3) : 0, meanDefense: n[k] ? round(sdef[k] / n[k], 3) : 0 };
+    }
+    return { tick: world.tick, total: tot, allPop: cs.length, grazer: pack(0), hunter: pack(1), defender: pack(2) };
   },
 };
 
