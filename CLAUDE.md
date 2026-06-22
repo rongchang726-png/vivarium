@@ -358,14 +358,41 @@ it before declaring victory).
   4244329615, save→load 4244329615.** Deferred v2 levers (each needs new
   serialized state or a brain channel): `handlingTicks` (post-bite attacker stun)
   and a visibility cue so skilled hunters can learn to avoid defenders.
-- **Phase 2 — prove the cycle in Vivarium (NEXT).** A `game/rps-lab.js` probe per
-  roundF's test plan: (a) pairwise invasion (95% resident + 5% mutant) — verify
-  hunter invades grazer, defender invades hunter, grazer invades defender; (b)
-  three-way coexistence (equal seeding) — no strategy below ~5% in the final
-  quarter, with sustained oscillation. Needs game-side founder plumbing to seed a
-  `defense` value (mirror how founders set `forage`). This is the make-or-break:
-  the toy cycle may NOT port (Vivarium hunting is an evolved neural policy, not a
-  trait — the same gap that made the predator wean hard).
+- **Phase 2 — prove the cycle (DONE, first finding 2026-06-22: it does NOT close
+  in the well-mixed world).** Built `game/rps-lab.js` (seeds the three archetypes
+  as clans 0/1/2 into one shared `newArenaWorld`, judges three-way coexistence /
+  pairwise invasion) + game-side plumbing (`seedFounders` takes a `defense` value;
+  `rpsSnapshot` reports per-clan pop + mean diet/defense). Three configs, seed 7,
+  18k ticks: (1) weak defense (toxin 8) — hunters boom on the grazers and hit 95%
+  by t1500, grazers wiped; (2,3) strong defense (toxin 25, meatConv 0.2) + a deep
+  grazer pool (G220 H30 D150), both with extreme AND defensible hunter energetics
+  — **total collapse 0:0** by t4.5k–10.5k. In every case grazers AND the 150
+  defenders are gone by t1500. **Why (the real finding):** the mechanism works as
+  specified (I checked: a hunter biting a defender nets ≈ −20 energy/bite), but
+  defense makes attacking a defender *costly*, not the defender *un-killable* — and
+  in a WELL-MIXED world the hunters fill up on the abundant undefended grazers
+  first, and that well-fed swarm can then afford to bite the defenders to death
+  anyway. Prey exhausted ⟹ the hunters crash too. This is textbook competitive
+  exclusion / predator over-exploitation — exactly the law in
+  `docs/coexistence-theory.md` (well-mixed ⟹ exclusion is a mathematical
+  necessity). The defender>hunter edge needs hunters that attack defenders to be
+  *selected out* over generations, but the grazer subsidy lets them keep paying
+  the toxin bill, so that selection never bites. **roundA's toy closed for two
+  reasons that don't port:** it used spatial **patchiness** (`wall_patchiness
+  0.18` — "preserve local waves, prevent global washout") AND an abstract
+  cell-dominance invasion grid that ignores trophic reality (in Vivarium a hunter
+  *monoculture* just starves — there's no prey — so roundF's "hunter resident"
+  pairwise test is ill-defined here). **Indicated next lever:** spatial structure
+  (`world.wall` / patches) so a local defender cluster starves invading hunters
+  before the grazer subsidy reaches them — the SAME stabilizer the snowball notes
+  found strongest. But Vivarium's spatial structure is coarse (a single mid-wall,
+  and coexistence under it was already rare/non-monotone), so this is genuinely
+  hard; may need finer patchiness, region-seeded founders, or a partial
+  damage-reduction component to `defense` (risky — must not make defenders
+  un-killable, or they become the new monoculture per roundF's anti-degenerate
+  rule). The honest status: **the cycle does not yet close in Vivarium**, and the
+  barrier is the project's oldest one (well-mixed exclusion), not the new
+  mechanism.
 - **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
   draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
   meta becomes RPS instead of a coin-flip. Symmetrize board position (per the
