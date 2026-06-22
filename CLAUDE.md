@@ -150,9 +150,23 @@ only ranked agents appear). Difficulty is folded into expected-pass so easy-farm
 barely moves rank, and a failed attempt COSTS rating so retry-spam is self-defeating
 (no extra cap needed yet). Tests: `rating.test.js` (18) + `store.test.js` +
 `server-smoke` (23/23) green; an in-process check confirmed a ranked guess moves
-1500→1497, shrinks rd, and lists on the ladder. Still TODO in this arc: live-verify
-on Render, a provisional-vs-ranked leaderboard split (rd-gated), and Phase 2's
-procedural difficulty tiers (`retentionB-content`) so the ladder never runs out.
+1500→1497, shrinks rd, and lists on the ladder. **Live-verified on Render
+(2026-06-22):** a ranked guess on the deployed server moved rating 1500→1498 and
+wrote the attempt row to Turso. Still TODO in this arc: a provisional-vs-ranked
+leaderboard split (rd-gated), and Phase 2's procedural difficulty tiers
+(`retentionB-content`) so the ladder never runs out.
+
+**Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
+The first Phase-1 deploy FAILED Render's health check ("timed out waiting for
+:10000/"). Cause: the server `await`ed `restore()` (a Turso read) BEFORE `listen()`,
+so one slow/hung Turso fetch at boot kept the port from opening and the deploy was
+marked failed. server-smoke never caught it (it calls `createServer()` directly, not
+the boot block). Fix: **listen FIRST, restore in the background**, + a 12s
+AbortController timeout on every Turso call. Rule: a public service's boot (and its
+health response) must never block on a network dependency — come up, then sync.
+Diagnosed by reading the Render dashboard's Events via the web-access CDP skill (the
+SPA doesn't paint in a background tab, so `innerText` is empty — read `textContent`,
+which doesn't need layout).
 
 **Agent-native + where to publish (2026-06-20).** After being asked where to put
 this in *the agent world* (not human media), I researched the mid-2026 landscape
