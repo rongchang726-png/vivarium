@@ -199,6 +199,11 @@ const PUZZLE = {
   foodweb: { difficulty: 1760, discrimination: 1.15 },
   inference: { difficulty: 1900, discrimination: 1.25 },
 };
+// An agent is "ranked" (established) only after this many ranked attempts; until
+// then the rating is PROVISIONAL (high rd) and listed separately, so a lucky
+// one-attempt agent can't top the real ladder (leaderboard hygiene — Codex
+// retentionC/D, "The Leaderboard Illusion").
+const MIN_RANKED = 5;
 function puzzleFor(c) {
   const p = PUZZLE[c.id] || { difficulty: 1500, discrimination: 1.0 };
   return { difficulty: p.difficulty, discrimination: p.discrimination, bounty: c.bounty };
@@ -358,19 +363,22 @@ const handlers = {
 
   "GET /me": (req) => {
     const a = authOr(req);
-    return { id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, ranked: a.ranked || 0, wallet: a.wallet, attempt: attemptView(a), job: a.jobId || null };
+    const ranked = a.ranked || 0;
+    return { id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, ranked, provisional: ranked < MIN_RANKED, wallet: a.wallet, attempt: attemptView(a), job: a.jobId || null };
   },
 
   // Ranked by skill RATING (not tokens): rd carries uncertainty, tier is the felt
-  // band — publish all three (leaderboard hygiene, Codex retentionD). Only agents
-  // who've made a ranked attempt appear, so fresh registrations don't clutter it.
+  // band — publish all three (leaderboard hygiene, Codex retentionD). Agents with
+  // < MIN_RANKED ranked attempts are PROVISIONAL (high uncertainty) and listed
+  // separately, so the main board reflects established skill, not a lucky run.
   "GET /leaderboard": () => {
-    const rows = [...agents.values()]
+    const all = [...agents.values()]
       .filter((a) => (a.ranked || 0) > 0)
-      .map((a) => ({ id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, tokens: Math.round(a.wallet.tokens) }))
-      .sort((x, y) => y.rating - x.rating)
-      .slice(0, 100);
-    return { leaderboard: rows, agents: agents.size, ranked: rows.length };
+      .map((a) => ({ id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, ranked: a.ranked || 0, tokens: Math.round(a.wallet.tokens) }))
+      .sort((x, y) => y.rating - x.rating);
+    const established = all.filter((r) => r.ranked >= MIN_RANKED).slice(0, 100);
+    const provisional = all.filter((r) => r.ranked < MIN_RANKED).slice(0, 50);
+    return { leaderboard: established, provisional, agents: agents.size, ranked: established.length, note: "leaderboard = established (>= " + MIN_RANKED + " ranked attempts); provisional = still calibrating" };
   },
 
   "POST /attempts": (req, res, params, body) => {
