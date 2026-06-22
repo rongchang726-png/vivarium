@@ -31,6 +31,7 @@ const fs = require("fs");
 const path = require("path");
 
 const STATE_FILE = path.join(__dirname, ".server-state.json");
+const ATTEMPTS_FILE = path.join(__dirname, ".server-attempts.jsonl");
 const STATE_KEY = "server-state";
 
 const DB_URL = (process.env.VIVARIUM_DB_URL || "").trim();
@@ -88,6 +89,22 @@ async function tursoLoad() {
   try { return JSON.parse(value); } catch (e) { return null; }
 }
 
+// Append-only ranked-attempt audit log (Phase 1). It grows unbounded, so it lives
+// in its OWN sink — a Turso `attempts` table (INSERT-only) / a local JSONL file —
+// never the state blob (which is rewritten whole on every save). Values stored as
+// text (SQLite is dynamically typed; this is an audit/history log, not for numeric
+// queries) so a type mismatch can never reject an insert.
+async function tursoAppendAttempt(ev) {
+  await pipeline([
+    { sql: "CREATE TABLE IF NOT EXISTS attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT, agent_id TEXT, challenge TEXT, passed TEXT, score TEXT, efficiency TEXT, rating_before TEXT, rating_after TEXT, recipe_hash TEXT)" },
+    { sql: "INSERT INTO attempts (ts,agent_id,challenge,passed,score,efficiency,rating_before,rating_after,recipe_hash) VALUES (?,?,?,?,?,?,?,?,?)",
+      args: ["ts", "agent_id", "challenge", "passed", "score", "efficiency", "rating_before", "rating_after", "recipe_hash"].map((k) => textArg(ev[k] == null ? "" : ev[k])) },
+  ]);
+}
+function fileAppendAttempt(ev) {
+  try { fs.appendFileSync(ATTEMPTS_FILE, JSON.stringify(ev) + "\n"); return true; } catch (e) { return false; }
+}
+
 // --- public interface --------------------------------------------------------
 async function load() {
   if (useTurso) {
@@ -103,5 +120,12 @@ async function save(dump) {
   }
   return fileSave(dump);
 }
+async function appendAttempt(ev) {
+  if (useTurso) {
+    try { await tursoAppendAttempt(ev); return true; }
+    catch (e) { console.error("store.appendAttempt (turso) failed; local backup:", e.message); return fileAppendAttempt(ev); }
+  }
+  return fileAppendAttempt(ev);
+}
 
-module.exports = { load, save, backend: useTurso ? "turso" : "file", STATE_FILE };
+module.exports = { load, save, appendAttempt, backend: useTurso ? "turso" : "file", STATE_FILE, ATTEMPTS_FILE };

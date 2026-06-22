@@ -35,6 +35,7 @@ const { challenges } = require("./challenges");
 const engine = require("./engine");
 const inference = require("./inference");
 const store = require("./store");
+const rating = require("./rating");
 
 // --- state: one record per agent, in memory ------------------------------
 // agents: token -> { id, name, wallet:{tokens,best}, attempt|null, jobId|null }
@@ -44,13 +45,24 @@ const agents = new Map();
 // Turso/libSQL when VIVARIUM_DB_URL/TOKEN are set, so progress survives a Render
 // redeploy instead of vanishing — the foundation for ranking/progression).
 function persist() {
-  const dump = { agents: [...agents].map(([token, a]) => ({ token, id: a.id, name: a.name, wallet: a.wallet, created: a.created })) };
+  const dump = { agents: [...agents].map(([token, a]) => ({
+    token, id: a.id, name: a.name, wallet: a.wallet, created: a.created,
+    rating: a.rating, rd: a.rd, tier: a.tier, solved: a.solved, ranked: a.ranked,
+  })) };
   store.save(dump).catch((e) => console.error("persist:", e && e.message));
 }
 async function restore() {
   const d = await store.load();
   if (!d) return;
-  for (const a of d.agents || []) agents.set(a.token, { id: a.id, name: a.name, wallet: a.wallet || { tokens: 0, best: {} }, attempt: null, jobId: null, created: a.created });
+  for (const a of d.agents || []) {
+    const rt = a.rating != null ? a.rating : rating.DEFAULTS.rating;
+    agents.set(a.token, {
+      id: a.id, name: a.name, wallet: a.wallet || { tokens: 0, best: {} },
+      rating: rt, rd: a.rd != null ? a.rd : rating.DEFAULTS.rd,
+      tier: a.tier || rating.tierForRating(rt), solved: a.solved || 0, ranked: a.ranked || 0,
+      attempt: null, jobId: null, created: a.created,
+    });
+  }
 }
 
 // --- compute jobs on a worker pool ----------------------------------------
@@ -174,6 +186,49 @@ function creditWallet(agent, challenge, reward) {
   if (reward > prev) { w.tokens += reward - prev; w.best[challenge] = reward; }
   return w;
 }
+
+// --- rating & progression (Phase 1; see game/rating.js + Codex retentionA) ---
+// Rating-scale difficulty + discrimination per fixed challenge (Codex's puzzle
+// bank); the bounty comes from the challenge. Until procedural tiers (Phase 2),
+// each fixed challenge is one calibrated "puzzle".
+const PUZZLE = {
+  bloom: { difficulty: 1180, discrimination: 0.85 },
+  goldilocks: { difficulty: 1370, discrimination: 0.95 },
+  pacifism: { difficulty: 1490, discrimination: 1.05 },
+  giants: { difficulty: 1630, discrimination: 1.10 },
+  foodweb: { difficulty: 1760, discrimination: 1.15 },
+  inference: { difficulty: 1900, discrimination: 1.25 },
+};
+function puzzleFor(c) {
+  const p = PUZZLE[c.id] || { difficulty: 1500, discrimination: 1.0 };
+  return { difficulty: p.difficulty, discrimination: p.discrimination, bounty: c.bounty };
+}
+function round4(x) { return Math.round((x || 0) * 10000) / 10000; }
+// Budget efficiency in [0,1]: fraction of the attempt budget left unspent.
+function efficiencyOf(attempt) {
+  if (!attempt || !attempt.budget) return 0;
+  const e = (attempt.budget - attempt.spent) / attempt.budget;
+  return e < 0 ? 0 : e > 1 ? 1 : e;
+}
+// Apply a ranked-attempt rating update: move the agent's rating/rd/tier, bump
+// counts, append an immutable attempt event, and return a compact view for the
+// response. Solving counts even if over budget (efficiency captures the cost);
+// a failed attempt costs rating, which is what makes retry-spam self-defeating.
+function applyRating(agent, challenge, outcome, recipe) {
+  const out = rating.rate({ rating: agent.rating, rd: agent.rd }, puzzleFor(challenge), outcome);
+  agent.rating = out.rating;
+  agent.rd = out.rd;
+  agent.tier = out.tier;
+  agent.ranked = (agent.ranked || 0) + 1;
+  if (out.solvedInc) agent.solved = (agent.solved || 0) + 1;
+  const recipeHash = crypto.createHash("sha256").update(JSON.stringify(recipe || {})).digest("hex").slice(0, 16);
+  store.appendAttempt({
+    ts: new Date().toISOString(), agent_id: agent.id, challenge: challenge.id,
+    passed: outcome.passed ? 1 : 0, score: round4(outcome.score), efficiency: round4(outcome.efficiency),
+    rating_before: Math.round(out.ratingBefore), rating_after: Math.round(out.rating), recipe_hash: recipeHash,
+  }).catch((e) => console.error("appendAttempt:", e && e.message));
+  return { before: Math.round(out.ratingBefore), after: Math.round(out.rating), delta: Math.round(out.delta * 10) / 10, rd: Math.round(out.rd), tier: out.tier, expected: Math.round(out.expected * 100) / 100 };
+}
 function publicList() {
   return Object.values(challenges).map((c) => ({ id: c.id, title: c.title, goal: c.goal, budget: c.budget, bounty: c.bounty, type: c.type || "tuning" }));
 }
@@ -292,23 +347,30 @@ const handlers = {
     const name = (body && typeof body.name === "string" && body.name.trim()) || "anon";
     const token = crypto.randomBytes(16).toString("hex");
     const id = "agent_" + crypto.randomBytes(4).toString("hex");
-    agents.set(token, { id, name: name.slice(0, 40), wallet: { tokens: 0, best: {} }, attempt: null, jobId: null, created: nowStamp() });
+    agents.set(token, {
+      id, name: name.slice(0, 40), wallet: { tokens: 0, best: {} },
+      rating: rating.DEFAULTS.rating, rd: rating.DEFAULTS.rd, tier: rating.tierForRating(rating.DEFAULTS.rating),
+      solved: 0, ranked: 0, attempt: null, jobId: null, created: nowStamp(),
+    });
     persist();
     return { agentToken: token, id, name: name.slice(0, 40), note: "Send this token as the X-Agent-Token header on every authed call. Keep it; it is your identity and wallet." };
   },
 
   "GET /me": (req) => {
     const a = authOr(req);
-    return { id: a.id, name: a.name, wallet: a.wallet, attempt: attemptView(a), job: a.jobId || null };
+    return { id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, ranked: a.ranked || 0, wallet: a.wallet, attempt: attemptView(a), job: a.jobId || null };
   },
 
+  // Ranked by skill RATING (not tokens): rd carries uncertainty, tier is the felt
+  // band — publish all three (leaderboard hygiene, Codex retentionD). Only agents
+  // who've made a ranked attempt appear, so fresh registrations don't clutter it.
   "GET /leaderboard": () => {
     const rows = [...agents.values()]
-      .map((a) => ({ id: a.id, name: a.name, tokens: a.wallet.tokens, solved: Object.keys(a.wallet.best).length }))
-      .filter((r) => r.tokens > 0 || r.solved > 0)
-      .sort((x, y) => y.tokens - x.tokens)
+      .filter((a) => (a.ranked || 0) > 0)
+      .map((a) => ({ id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, tokens: Math.round(a.wallet.tokens) }))
+      .sort((x, y) => y.rating - x.rating)
       .slice(0, 100);
-    return { leaderboard: rows, agents: agents.size };
+    return { leaderboard: rows, agents: agents.size, ranked: rows.length };
   },
 
   "POST /attempts": (req, res, params, body) => {
@@ -396,6 +458,9 @@ const handlers = {
           charge(a, "score", r.ticksUsed);
           const withinBudget = a.attempt.spent <= a.attempt.budget;
           const reward = r.pass && withinBudget ? c.bounty + Math.floor((a.attempt.budget - a.attempt.spent) / 1000) : 0;
+          // Ranked rating update: solving counts (efficiency captures budget cost);
+          // failing costs rating, so retry-spam is self-defeating.
+          r.rating = applyRating(a, c, { passed: r.pass, score: r.avgScore, efficiency: efficiencyOf(a.attempt) }, recipe);
           r.graded = true; r.budget = a.attempt.budget; r.spent = a.attempt.spent; r.withinBudget = withinBudget; r.reward = reward;
           r.wallet = reward > 0 ? creditWallet(a, c.id, reward) : a.wallet;
           r.verdict = r.pass && withinBudget ? "PASS — earned " + reward + " tokens" : r.pass ? "PASS but OVER BUDGET — no reward" : "FAIL — no reward";
@@ -426,6 +491,7 @@ const handlers = {
     grade.reward = reward;
     grade.wallet = reward > 0 ? creditWallet(a, c.id, reward) : a.wallet;
     grade.verdict = grade.pass ? "CORRECT — earned " + reward + " tokens" : grade.knobCorrect ? "right knob, value off by " + (grade.relErr * 100).toFixed(0) + "% — no reward" : "wrong knob — no reward";
+    grade.rating = applyRating(a, c, { passed: grade.pass, score: grade.score, efficiency: efficiencyOf(a.attempt) }, { knob: body.knob, value: body.value });
     a.attempt = null;
     persist();
     return grade;

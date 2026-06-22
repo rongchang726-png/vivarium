@@ -20,6 +20,7 @@ mcp-publisher*.tar.gz
 game/.session.json
 game/.wallet.json
 game/.server-state.json
+game/.server-attempts.jsonl
 game/_*
 
 # Predator-lab experiment outputs (logs / grids, not code) — see CLAUDE.md re-attempt IV
