@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vivarium — PvP spectator (god's-eye)</title>
+    <style>
+      :root { --red: hsl(12, 72%, 56%); --blue: hsl(210, 72%, 60%); }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #05080c; color: #cdd6df;
+        font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+      body { display: flex; flex-direction: column; }
+      #bar { display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+        padding: 9px 14px; background: #0a131c; border-bottom: 1px solid #16242f; }
+      #bar .grp { display: flex; align-items: center; gap: 7px; }
+      #bar h1 { font-size: 15px; margin: 0 6px 0 0; font-weight: 650; letter-spacing: .2px; }
+      #bar .sub { color: #6b7c8a; font-size: 12px; }
+      select, input[type="number"], button {
+        background: #11202c; color: #cdd6df; border: 1px solid #1d3140;
+        border-radius: 7px; padding: 5px 9px; font: inherit; }
+      button { cursor: pointer; }
+      button.primary { background: #16384a; border-color: #245168; }
+      button:hover { border-color: #3a6f8c; }
+      input[type="range"] { width: 120px; accent-color: #4aa3c8; }
+      input[type="number"] { width: 72px; }
+      .score { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+      .chip { display: flex; align-items: center; gap: 6px; padding: 3px 10px;
+        border-radius: 20px; background: #0e1a24; border: 1px solid #1a2b38; font-variant-numeric: tabular-nums; }
+      .chip .dot { width: 10px; height: 10px; border-radius: 50%; }
+      .chip.a .dot { background: var(--red); } .chip.b .dot { background: var(--blue); }
+      .chip b { font-weight: 700; } .chip .bm { color: #6b7c8a; font-size: 12px; }
+      #status { min-width: 220px; text-align: right; color: #8aa0b0; font-variant-numeric: tabular-nums; }
+      #status.win-a { color: var(--red); font-weight: 650; }
+      #status.win-b { color: var(--blue); font-weight: 650; }
+      #status.draw { color: #c9a14a; font-weight: 600; }
+      #view { flex: 1; width: 100%; min-height: 0; display: block; }
+      #hint { padding: 6px 14px; color: #5c6b78; font-size: 12px; background: #070d13;
+        border-top: 1px solid #11202c; }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      <h1>Vivarium · PvP</h1>
+      <div class="grp">
+        <label class="sub" for="scenario">scenario</label>
+        <select id="scenario">
+          <option value="duel">Grazer duel — competitive exclusion</option>
+          <option value="predator">Predator vs prey — watch the hunt</option>
+        </select>
+      </div>
+      <div class="grp">
+        <label class="sub" for="seed">seed</label>
+        <input id="seed" type="number" value="11" min="0" step="1" />
+        <button id="newmatch" class="primary">↻ New match</button>
+        <button id="pause">⏸ Pause</button>
+      </div>
+      <div class="grp">
+        <label class="sub" for="speed">speed</label>
+        <input id="speed" type="range" min="1" max="24" step="1" value="6" />
+        <span class="sub" id="speedlab">6×</span>
+      </div>
+      <div class="score">
+        <span class="chip a"><span class="dot"></span><span id="labA">A</span> <b id="popA">0</b><span class="bm" id="bmA"></span></span>
+        <span class="chip b"><span class="dot"></span><span id="labB">B</span> <b id="popB">0</b><span class="bm" id="bmB"></span></span>
+      </div>
+      <div id="status">—</div>
+    </div>
+    <canvas id="view"></canvas>
+    <div id="hint">
+      Two founding bloodlines, random brains — behaviour must EVOLVE. Each clan a different hue
+      (red vs blue); their offspring inherit it, so you watch families spread and one drive the
+      other extinct (Gause's competitive exclusion). The same deterministic engine the agents play.
+    </div>
+
+    <!-- the DOM-free simulation core, in load order (same as index.html) -->
+    <script src="src/config.js"></script>
+    <script src="src/util.js"></script>
+    <script src="src/genome.js"></script>
+    <script src="src/brain.js"></script>
+    <script src="src/food.js"></script>
+    <script src="src/creature.js"></script>
+    <script src="src/world.js"></script>
+    <script src="src/render.js"></script>
+
+    <script>
+      // --- scenarios: a CONFIG patch + the two founding clans (clan 0 = A/red, 1 = B/blue).
+      // diet/radius shape the niche; hue makes the bloodline visible. Brains are random.
+      const SCENARIOS = {
+        duel: {
+          // Two near-identical small efficient herbivores — the documented PvP optimum.
+          // One niche, so it resolves by competitive exclusion: a winner-take-all duel.
+          config: {
+            "creature.pursuitReward": 0, "creature.preyVulnerability": 0,
+            "creature.carcassFactor": 0.7, "creature.carnCarcassBonus": 0,
+            "creature.carnMetabolismDiscount": 0, "creature.biteDamage": 18,
+            "creature.plantSuppression": 0.7, "defense.enabled": false,
+            "pop.freqDependence": 0.5, // the arena's anti-snowball brake (still usually decisive)
+          },
+          clans: [
+            { n: 60, diet: 0.07, radius: 3.4, hue: 12, spread: 22, label: "Red" },
+            { n: 60, diet: 0.07, radius: 3.4, hue: 208, spread: 26, label: "Blue" },
+          ],
+        },
+        predator: {
+          // Red hunters vs blue grazers, with the cracked predator package so hunting is
+          // viable (re-attempt V). You'll see red chase and catch blue — real, evolved
+          // pursuit. Closed system: often a dramatic boom then bust (over-exploitation).
+          config: {
+            "creature.pursuitReward": 0.8, "creature.preyVulnerability": 0.5,
+            "creature.carcassFactor": 5, "creature.carnCarcassBonus": 2,
+            "creature.carnMetabolismDiscount": 0.5, "creature.biteDamage": 35,
+            "creature.plantSuppression": 0.7, "defense.enabled": false,
+            "pop.freqDependence": 0,
+          },
+          clans: [
+            { n: 35, diet: 0.9, radius: 6.5, hue: 8, spread: 12, label: "Hunters" },
+            { n: 110, diet: 0.05, radius: 3.3, hue: 205, spread: 24, label: "Grazers" },
+          ],
+        },
+      };
+
+      function setParam(dotted, v) {
+        const p = dotted.split(".");
+        let o = CONFIG;
+        for (let i = 0; i < p.length - 1; i++) o = o[p[i]];
+        o[p[p.length - 1]] = v;
+      }
+
+      const $ = (id) => document.getElementById(id);
+      const renderer = new Renderer($("view"));
+      let world = null;
+      let running = true;
+      let scenario = "duel";
+
+      function newMatch() {
+        scenario = $("scenario").value;
+        const sc = SCENARIOS[scenario];
+        for (const k in sc.config) setParam(k, sc.config[k]);
+        const seed = parseInt($("seed").value, 10) || 0;
+        world = new World({ seed: seed, creatures: 0, noGenesis: true });
+        sc.clans.forEach((c, clan) => {
+          for (let i = 0; i < c.n; i++) {
+            const g = Genome.random(world.rng);
+            g.genes.diet = c.diet;
+            g.genes.radius = c.radius;
+            g.genes.hue = c.hue + world.rng.next() * c.spread;
+            world.spawnRandom(g, clan);
+          }
+        });
+        $("labA").textContent = sc.clans[0].label;
+        $("labB").textContent = sc.clans[1].label;
+        running = true;
+        $("pause").textContent = "⏸ Pause";
+      }
+
+      function tally() {
+        let pa = 0, pb = 0, ba = 0, bb = 0;
+        const cs = world.creatures;
+        for (let i = 0; i < cs.length; i++) {
+          const c = cs[i];
+          if (c.clan === 0) { pa++; ba += c.area; }
+          else if (c.clan === 1) { pb++; bb += c.area; }
+        }
+        return { pa, pb, ba, bb };
+      }
+
+      function updateScore() {
+        const t = tally();
+        $("popA").textContent = t.pa;
+        $("popB").textContent = t.pb;
+        $("bmA").textContent = t.pa ? "·" + Math.round(t.ba) : "";
+        $("bmB").textContent = t.pb ? "·" + Math.round(t.bb) : "";
+        const s = $("status");
+        const tick = "t=" + world.tick;
+        if (t.pa === 0 && t.pb === 0) { s.className = "draw"; s.textContent = "mutual collapse · " + tick; }
+        else if (t.pa === 0) { s.className = "win-b"; s.textContent = $("labB").textContent + " wins · " + tick; }
+        else if (t.pb === 0) { s.className = "win-a"; s.textContent = $("labA").textContent + " wins · " + tick; }
+        else { s.className = ""; s.textContent = "evolving · " + tick; }
+      }
+
+      let speed = 6;
+      function loop() {
+        if (running && world) {
+          for (let i = 0; i < speed; i++) world.step();
+          world.computeStats();
+        }
+        if (world) { renderer.render(world, null); updateScore(); }
+        requestAnimationFrame(loop);
+      }
+
+      $("newmatch").onclick = newMatch;
+      $("scenario").onchange = newMatch;
+      $("pause").onclick = () => { running = !running; $("pause").textContent = running ? "⏸ Pause" : "▶ Play"; };
+      $("speed").oninput = (e) => { speed = +e.target.value; $("speedlab").textContent = speed + "×"; };
+      window.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); $("pause").click(); } });
+
+      newMatch();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>
