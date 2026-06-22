@@ -51,16 +51,24 @@ function httpOrigin(u) {
   // Turso hands out libsql://name-org.turso.io; the HTTP endpoint is the https origin.
   return u.replace(/^libsql:\/\//i, "https://").replace(/\/+$/, "");
 }
+const TURSO_TIMEOUT_MS = 12000; // bound every Turso call so a hung fetch can't stall boot or a request
 async function pipeline(stmts) {
   const requests = stmts.map((s) => ({ type: "execute", stmt: s }));
   requests.push({ type: "close" });
-  const res = await fetch(httpOrigin(DB_URL) + "/v2/pipeline", {
-    method: "POST",
-    headers: { Authorization: "Bearer " + DB_TOKEN, "Content-Type": "application/json" },
-    body: JSON.stringify({ requests }),
-  });
-  if (!res.ok) throw new Error("turso HTTP " + res.status + ": " + (await res.text()).slice(0, 200));
-  return res.json();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TURSO_TIMEOUT_MS);
+  try {
+    const res = await fetch(httpOrigin(DB_URL) + "/v2/pipeline", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + DB_TOKEN, "Content-Type": "application/json" },
+      body: JSON.stringify({ requests }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error("turso HTTP " + res.status + ": " + (await res.text()).slice(0, 200));
+    return res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 function textArg(v) { return { type: "text", value: String(v) }; }
 

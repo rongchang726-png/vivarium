@@ -594,12 +594,17 @@ function createServer() {
 
 if (require.main === module) {
   const port = parseInt(process.argv[2] || process.env.PORT || "8787", 10);
-  restore().then(() => {
-    createServer().listen(port, () => {
-      console.log("Vivarium game server on http://localhost:" + port + "  (" + NUM_WORKERS + " sim worker" + (NUM_WORKERS > 1 ? "s" : "") + ")");
-      console.log("  POST /register {name} -> token, then GET /challenges. Protocol: game/PROTOCOL.md");
-      console.log("  " + agents.size + " agent(s) restored (store: " + store.backend + ")");
-    });
+  // Listen FIRST so the platform health check (GET /) passes immediately — THEN
+  // restore agent state in the background. A slow/blocked durable-store read must
+  // never keep the server from coming up: a single Turso hiccup at boot once made
+  // restore() hang before listen(), and the health check timed out -> the whole
+  // deploy was marked failed. store.load() already falls back to the local file.
+  createServer().listen(port, () => {
+    console.log("Vivarium game server on http://localhost:" + port + "  (" + NUM_WORKERS + " sim worker" + (NUM_WORKERS > 1 ? "s" : "") + ")");
+    console.log("  POST /register {name} -> token, then GET /challenges. Protocol: game/PROTOCOL.md");
+    restore()
+      .then(() => console.log("  " + agents.size + " agent(s) restored (store: " + store.backend + ")"))
+      .catch((e) => console.error("  restore failed (serving anyway):", e && e.message));
   });
 }
 
