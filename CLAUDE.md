@@ -583,11 +583,19 @@ self-sustaining specialist guild that even RE-EVOLVES after the scaffold is gone
 time carnivory has come back on its own here). But it is QUALIFIED: it needs EXTREME,
 subsidy-adjacent energetics (effective carcass ~11.6×); the specialist guild is
 SEED-DEPENDENT (≈3 of 5 tried, omnivory-leaning on the rest); and prey-injection (a
-bootstrap-collapse control) shifts which seeds win. Honest next step: robustness at
-DEFENSIBLE parameters — find the minimum carcass × catchability that holds a specialist
-guild on ≥4/5 seeds WITHOUT injection — then the full skeptic panel, then (finally unblocked)
-the non-transitivity hunter>grazer>defender triad. Kept: `creature.preyVulnerability`
-(default-off, bit-exact); `game/predator-lab.js` gained a `--preyVuln` flag.
+bootstrap-collapse control) shifts which seeds win. **Tested the defensible-robustness next
+step (2026-06-22):** at a defensible ~6.8× (carcass 5 + carnCarcass 2 + carnMetab 0.5 +
+preyVuln 0.6, NO injection, seeds 7/11/19/23/42) the specialist guild is **0/5** — only the
+extreme ~11.6× cracks it. At defensible energetics you still get OMNIVOROUS predation that
+persists past the wean (kills/k ~580–1080) but NOT a specialist carn>.8 guild. So the crack
+is **EXTREME-ONLY**: real (catch FREQUENCY is the missing lever, and predation self-sustains
+past the wean for the first time in the project) but it needs subsidy-adjacent richness; a
+robust specialist guild at *defensible* params remains UNSOLVED and likely needs a
+structurally different mechanism (a globally higher carnivore peak — e.g. genuinely
+scarce/defended plants — or the pre-evolved-seed/protected-refugium route), not more tuning.
+The non-transitivity hunter>grazer>defender triad (Codex's roundF spec is implementation-ready)
+stays gated on a robust hunter. Kept: `creature.preyVulnerability` (default-off, bit-exact);
+`game/predator-lab.js` gained a `--preyVuln` flag.
 
 ### If I want to try again (future work, roughly in order of promise)
 - **Protected refugium**: shield a carnivore sub-population from competition for
