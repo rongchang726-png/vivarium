@@ -358,41 +358,49 @@ it before declaring victory).
   4244329615, save→load 4244329615.** Deferred v2 levers (each needs new
   serialized state or a brain channel): `handlingTicks` (post-bite attacker stun)
   and a visibility cue so skilled hunters can learn to avoid defenders.
-- **Phase 2 — prove the cycle (DONE, first finding 2026-06-22: it does NOT close
-  in the well-mixed world).** Built `game/rps-lab.js` (seeds the three archetypes
-  as clans 0/1/2 into one shared `newArenaWorld`, judges three-way coexistence /
-  pairwise invasion) + game-side plumbing (`seedFounders` takes a `defense` value;
-  `rpsSnapshot` reports per-clan pop + mean diet/defense). Three configs, seed 7,
-  18k ticks: (1) weak defense (toxin 8) — hunters boom on the grazers and hit 95%
-  by t1500, grazers wiped; (2,3) strong defense (toxin 25, meatConv 0.2) + a deep
-  grazer pool (G220 H30 D150), both with extreme AND defensible hunter energetics
-  — **total collapse 0:0** by t4.5k–10.5k. In every case grazers AND the 150
-  defenders are gone by t1500. **Why (the real finding):** the mechanism works as
-  specified (I checked: a hunter biting a defender nets ≈ −20 energy/bite), but
-  defense makes attacking a defender *costly*, not the defender *un-killable* — and
-  in a WELL-MIXED world the hunters fill up on the abundant undefended grazers
-  first, and that well-fed swarm can then afford to bite the defenders to death
-  anyway. Prey exhausted ⟹ the hunters crash too. This is textbook competitive
-  exclusion / predator over-exploitation — exactly the law in
-  `docs/coexistence-theory.md` (well-mixed ⟹ exclusion is a mathematical
-  necessity). The defender>hunter edge needs hunters that attack defenders to be
-  *selected out* over generations, but the grazer subsidy lets them keep paying
-  the toxin bill, so that selection never bites. **roundA's toy closed for two
-  reasons that don't port:** it used spatial **patchiness** (`wall_patchiness
-  0.18` — "preserve local waves, prevent global washout") AND an abstract
-  cell-dominance invasion grid that ignores trophic reality (in Vivarium a hunter
-  *monoculture* just starves — there's no prey — so roundF's "hunter resident"
-  pairwise test is ill-defined here). **Indicated next lever:** spatial structure
-  (`world.wall` / patches) so a local defender cluster starves invading hunters
-  before the grazer subsidy reaches them — the SAME stabilizer the snowball notes
-  found strongest. But Vivarium's spatial structure is coarse (a single mid-wall,
-  and coexistence under it was already rare/non-monotone), so this is genuinely
-  hard; may need finer patchiness, region-seeded founders, or a partial
-  damage-reduction component to `defense` (risky — must not make defenders
-  un-killable, or they become the new monoculture per roundF's anti-degenerate
-  rule). The honest status: **the cycle does not yet close in Vivarium**, and the
-  barrier is the project's oldest one (well-mixed exclusion), not the new
-  mechanism.
+- **Phase 2 — prove the cycle (DONE, 2026-06-22: it does NOT close; the broken
+  edge is `grazer>defender`).** Built `game/rps-lab.js` (seeds the three archetypes
+  as clans 0/1/2 into one shared `newArenaWorld`; `coexist` and `invade` modes;
+  `--freezeTraits` zeroes defense/diet/forage drift so a clan stays a FIXED
+  phenotype — the clean way to read an invasion edge as clan-vs-clan, not
+  contaminated by within-lineage drift; roundA ran its invasion suite with mutation
+  off for exactly this reason) + plumbing (`seedFounders` takes `defense`;
+  `rpsSnapshot` reports per-clan pop + mean diet/defense; `invade` reports
+  start/peak/end mutant share so "invaded then collapsed" is distinct from "never
+  invaded"). 3-way coexistence (seed 7, all configs) collapses — hunters boom on
+  the abundant grazers and the well-fed swarm then bites even the defenders to
+  death (each bite nets ≈ −20E, but a grazer-fed hunter can afford it), prey
+  exhausted ⟹ 0:0. The DEFINITIVE read is the **clean frozen-trait invasion
+  matrix** (seed 7, 12k ticks, toxin 25, meatConv 0.2, plantPen 0.5, hunters
+  viable via the extreme package):
+    - `hunter → grazer`: **INVADES** (5%→92%) ✓ — then over-exploits to a 0:0
+      collapse (a strong edge, but an unstable pair on a closed prey base).
+    - `hunter → defender`: **FAILS** (5%→0) ✓ — `defender>hunter` holds cleanly;
+      hunters can't grow on toxic prey.
+    - `grazer → defender`: **FAILS** (10 grazers vanish among 190 defenders) ✗ —
+      even frozen, even at a heavy plantPen 0.5.
+  So two edges are real STRONG interactions (predation, toxicity); **the third is
+  broken.** **Why (the structural finding):** grazers and defenders eat the SAME
+  resource (plants) — one niche differing only in foraging efficiency + defense —
+  so their relationship is mere resource COMPETITION, not an RPS counter. The
+  more-efficient grazer would win at equilibrium, but from rarity it can't displace
+  an entrenched majority that monopolises the shared plant supply (a strong
+  incumbency/priority effect in a well-mixed world = competitive exclusion again,
+  `docs/coexistence-theory.md`). And with no predators present the defender lineage
+  just evolves its OWN defense away (observed UNfrozen: def 0.92→0.77, diet→0.73) —
+  the edge expresses as trait erosion, not clan replacement. roundA hid both with
+  an abstract local-dominance grid (a 5% mutant takes over locally) + spatial
+  patchiness — neither is shared-resource competition in a well-mixed energy world.
+  (Also: a hunter *monoculture* just starves here, so roundF's "hunter resident"
+  pairwise test is trophically ill-defined — skip it.) **The fix the matrix points
+  to (Phase 2.5):** make `grazer>defender` a STRONG interaction, not weak
+  shared-resource competition — give grazers and defenders DIFFERENT food types
+  (`food.types>1`, already built and proven to give coexistence) so a
+  defender-dominated world leaves the grazer's food uneaten and the grazer can
+  invade an empty niche; and/or spatial structure so a local grazer cluster
+  dominates. Until grazer>defender is a real counter, the cycle can't close.
+  Status: **defender niche works; `hunter>grazer` and `defender>hunter` confirmed;
+  cycle still OPEN at the `grazer>defender` edge.**
 - **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
   draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
   meta becomes RPS instead of a coin-flip. Symmetrize board position (per the

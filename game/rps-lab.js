@@ -100,6 +100,21 @@ api.setParam("creature.biteDamage", BITE);
 api.setParam("creature.plantSuppression", PLANT_SUPP);
 // freqDependence stays 0: clan must remain behaviour-neutral so the RPS dynamics
 // are clean (the arena's anti-snowball homeostasis would mask them).
+// Optional: freeze the evolving traits (defense/diet/forage drift) so the seeded
+// archetypes stay put. This is the clean way to measure a pairwise INVASION edge
+// as clan-vs-clan competition, NOT contaminated by within-lineage trait erosion —
+// roundA ran its invasion suite with mutation OFF for exactly this reason. Without
+// it, a predator-free defender clan simply evolves its OWN defense away (observed:
+// def 0.92 -> 0.77, diet -> 0.73), which reads as "grazer failed to invade" when
+// the grazer>defender edge actually expressed itself as trait drift inside the
+// defender lineage. Use --freezeTraits for invasion tests; leave it off to study
+// the live evolutionary dynamics.
+const FREEZE = !!args.freezeTraits;
+if (FREEZE) {
+  api.setParam("mutation.defenseStd", 0);
+  api.setParam("mutation.dietStd", 0);
+  api.setParam("mutation.forageStd", 0);
+}
 
 const w = api.newArenaWorld(SEED); // noGenesis: no wildlife clan -1 to confound
 
@@ -182,26 +197,40 @@ function runCoexist() {
 }
 
 function runInvade(R, M, nRes, nMut) {
-  const rClan = clanOf(R), mClan = clanOf(M);
+  const mClan = clanOf(M);
+  const pick = (s, k) => (k === 0 ? s.grazer : k === 1 ? s.hunter : s.defender);
   const startMut = nMut / (nRes + nMut);
+  let peakMut = startMut;
   row(api.rpsSnapshot(w));
   let t = 0;
   while (t < TICKS) {
     const chunk = Math.min(1500, TICKS - t);
     api.step(w, chunk);
     t += chunk;
-    row(api.rpsSnapshot(w));
+    const s = api.rpsSnapshot(w);
+    row(s);
+    const share = pick(s, mClan).n / (s.total || 1);
+    if (share > peakMut) peakMut = share;
   }
   const s = api.rpsSnapshot(w);
   const tot = s.total || 1;
-  const pick = (k) => (k === 0 ? s.grazer : k === 1 ? s.hunter : s.defender);
-  const endMut = pick(mClan).n / tot;
-  // mutant invades if it grew its share meaningfully above its 5% start and isn't extinct.
-  const invades = pick(mClan).n > 0 && endMut > startMut * 1.5;
+  const endMut = pick(s, mClan).n / tot;
+  // invades  = the mutant ever grew its share decisively => the edge holds
+  //            BEHAVIOURALLY (this is what closes the non-transitive cycle).
+  // persists = it's still present at the end and the world didn't collapse => the
+  //            pair is STABLE, not a boom-bust. A real RPS edge wants invades=true;
+  //            stable coexistence additionally wants persists=true. (Separating
+  //            these matters: a predator can invade prey and then over-exploit it
+  //            into a mutual 0:0 collapse — invaded, but did not persist.)
+  const collapsed = tot <= 1;
+  const invades = peakMut > startMut * 1.5;
+  const persists = pick(s, mClan).n > 0 && !collapsed;
   console.log("");
-  console.log("mutant " + M + " share: start " + (startMut * 100).toFixed(0) + "% -> end " + (endMut * 100).toFixed(0) + "%");
+  console.log("mutant " + M + " share: start " + (startMut * 100).toFixed(0) + "% -> peak " +
+    (peakMut * 100).toFixed(0) + "% -> end " + (endMut * 100).toFixed(0) + "%" + (collapsed ? "  (world collapsed 0:0)" : ""));
   console.log("RESULT " + JSON.stringify({
     mode: "invade", seed: SEED, resident: R, mutant: M,
-    startMutShare: +startMut.toFixed(3), endMutShare: +endMut.toFixed(3), invades,
+    startMutShare: +startMut.toFixed(3), peakMutShare: +peakMut.toFixed(3), endMutShare: +endMut.toFixed(3),
+    invades, persists, collapsed,
   }));
 }
