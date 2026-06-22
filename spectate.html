@@ -3,76 +3,107 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vivarium — PvP spectator (god's-eye)</title>
+    <title>Vivarium — Evolutionary Arena</title>
     <style>
-      :root { --red: hsl(12, 72%, 56%); --blue: hsl(210, 72%, 60%); }
+      :root {
+        --bg: #070b11; --panel: #0c131c; --panel2: #0f1825; --line: #1b2735;
+        --ink: #e2e9f1; --muted: #7a8795; --faint: #4a5662;
+        --a: #ff6b6b; --b: #57c7ff; --win: #ffd166;
+      }
       * { box-sizing: border-box; }
-      html, body { margin: 0; height: 100%; background: #05080c; color: #cdd6df;
-        font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink);
+        font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
       body { display: flex; flex-direction: column; }
-      #bar { display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
-        padding: 9px 14px; background: #0a131c; border-bottom: 1px solid #16242f; }
-      #bar .grp { display: flex; align-items: center; gap: 7px; }
-      #bar h1 { font-size: 15px; margin: 0 6px 0 0; font-weight: 650; letter-spacing: .2px; }
-      #bar .sub { color: #6b7c8a; font-size: 12px; }
+
+      header { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        padding: 11px 18px; background: linear-gradient(180deg, #0b121b, #090f17);
+        border-bottom: 1px solid var(--line); }
+      .brand { display: flex; align-items: baseline; gap: 12px; }
+      .brand h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: 3px; }
+      .brand .tag { color: var(--muted); font-size: 12.5px; letter-spacing: .3px; }
+      .controls { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+      .controls label { color: var(--muted); font-size: 12px; }
       select, input[type="number"], button {
-        background: #11202c; color: #cdd6df; border: 1px solid #1d3140;
-        border-radius: 7px; padding: 5px 9px; font: inherit; }
-      button { cursor: pointer; }
-      button.primary { background: #16384a; border-color: #245168; }
-      button:hover { border-color: #3a6f8c; }
-      input[type="range"] { width: 120px; accent-color: #4aa3c8; }
-      input[type="number"] { width: 72px; }
-      .score { display: flex; align-items: center; gap: 10px; margin-left: auto; }
-      .chip { display: flex; align-items: center; gap: 6px; padding: 3px 10px;
-        border-radius: 20px; background: #0e1a24; border: 1px solid #1a2b38; font-variant-numeric: tabular-nums; }
-      .chip .dot { width: 10px; height: 10px; border-radius: 50%; }
-      .chip.a .dot { background: var(--red); } .chip.b .dot { background: var(--blue); }
-      .chip b { font-weight: 700; } .chip .bm { color: #6b7c8a; font-size: 12px; }
-      #status { min-width: 220px; text-align: right; color: #8aa0b0; font-variant-numeric: tabular-nums; }
-      #status.win-a { color: var(--red); font-weight: 650; }
-      #status.win-b { color: var(--blue); font-weight: 650; }
-      #status.draw { color: #c9a14a; font-weight: 600; }
-      #view { flex: 1; width: 100%; min-height: 0; display: block; }
-      #hint { padding: 6px 14px; color: #5c6b78; font-size: 12px; background: #070d13;
-        border-top: 1px solid #11202c; }
+        background: #11202c; color: var(--ink); border: 1px solid #20384a;
+        border-radius: 8px; padding: 6px 10px; font: inherit; }
+      button { cursor: pointer; transition: border-color .15s, background .15s; }
+      button.primary { background: #163a4d; border-color: #2a6480; }
+      button:hover { border-color: #3f7d9c; }
+      input[type="range"] { width: 110px; accent-color: #4aa8cc; vertical-align: middle; }
+      input[type="number"] { width: 70px; }
+
+      main { flex: 1; display: flex; min-height: 0; }
+      #stage { position: relative; flex: 1; min-width: 0; }
+      #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      .banner { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%) scale(.96);
+        padding: 14px 30px; border-radius: 14px; font-size: 26px; font-weight: 800; letter-spacing: 1px;
+        background: rgba(8, 14, 20, .72); border: 1px solid var(--line); backdrop-filter: blur(3px);
+        opacity: 0; pointer-events: none; transition: opacity .5s, transform .5s; white-space: nowrap; }
+      .banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+      aside { width: 344px; flex-shrink: 0; padding: 16px; display: flex; flex-direction: column; gap: 14px;
+        background: var(--panel); border-left: 1px solid var(--line); overflow: hidden; }
+      .team { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
+        background: var(--panel2); border: 1px solid var(--line); border-left-width: 4px; }
+      .team.a { border-left-color: var(--a); } .team.b { border-left-color: var(--b); }
+      .team .nm { flex: 1; }
+      .team .nm .t { font-weight: 650; letter-spacing: .3px; }
+      .team .nm .s { color: var(--muted); font-size: 12px; }
+      .team .pop { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+      .team.a .pop { color: var(--a); } .team.b .pop { color: var(--b); }
+      .team .bm { color: var(--faint); font-size: 11px; text-align: right; }
+
+      .sharebar { height: 10px; border-radius: 6px; overflow: hidden; display: flex; background: #0a0f15; border: 1px solid var(--line); }
+      .sharebar .pa { background: linear-gradient(90deg, #ff5a5a, #ff8a8a); }
+      .sharebar .pb { background: linear-gradient(90deg, #6fd0ff, #3aa8ee); }
+
+      .panelcard { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+      .panelcard .hd { color: var(--muted); font-size: 11.5px; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
+      #chart { width: 100%; height: 150px; display: block; }
+      .status { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+      .status .verdict { font-weight: 650; }
+      .verdict.a { color: var(--a); } .verdict.b { color: var(--b); } .verdict.draw { color: var(--win); }
+      .foot { margin-top: auto; color: var(--faint); font-size: 11px; line-height: 1.5; }
     </style>
   </head>
   <body>
-    <div id="bar">
-      <h1>Vivarium · PvP</h1>
-      <div class="grp">
-        <label class="sub" for="scenario">scenario</label>
-        <select id="scenario">
-          <option value="duel">Grazer duel — competitive exclusion</option>
-          <option value="predator">Predator vs prey — watch the hunt</option>
+    <header>
+      <div class="brand">
+        <h1>VIVARIUM</h1>
+        <span class="tag">evolutionary arena — two bloodlines enter, evolution decides</span>
+      </div>
+      <div class="controls">
+        <select id="scenario" title="scenario">
+          <option value="duel">Grazer duel</option>
+          <option value="predator">Predator vs prey</option>
         </select>
-      </div>
-      <div class="grp">
-        <label class="sub" for="seed">seed</label>
-        <input id="seed" type="number" value="11" min="0" step="1" />
+        <label>seed</label><input id="seed" type="number" value="11" min="0" step="1" />
+        <label>speed</label><input id="speed" type="range" min="1" max="24" step="1" value="6" /><span id="speedlab" class="tag">6×</span>
+        <button id="pause">⏸</button>
         <button id="newmatch" class="primary">↻ New match</button>
-        <button id="pause">⏸ Pause</button>
       </div>
-      <div class="grp">
-        <label class="sub" for="speed">speed</label>
-        <input id="speed" type="range" min="1" max="24" step="1" value="6" />
-        <span class="sub" id="speedlab">6×</span>
-      </div>
-      <div class="score">
-        <span class="chip a"><span class="dot"></span><span id="labA">A</span> <b id="popA">0</b><span class="bm" id="bmA"></span></span>
-        <span class="chip b"><span class="dot"></span><span id="labB">B</span> <b id="popB">0</b><span class="bm" id="bmB"></span></span>
-      </div>
-      <div id="status">—</div>
-    </div>
-    <canvas id="view"></canvas>
-    <div id="hint">
-      Two founding bloodlines, random brains — behaviour must EVOLVE. Each clan a different hue
-      (red vs blue); their offspring inherit it, so you watch families spread and one drive the
-      other extinct (Gause's competitive exclusion). The same deterministic engine the agents play.
-    </div>
+    </header>
 
-    <!-- the DOM-free simulation core, in load order (same as index.html) -->
+    <main>
+      <div id="stage">
+        <canvas id="view"></canvas>
+        <div id="banner" class="banner">—</div>
+      </div>
+      <aside>
+        <div class="team a"><div class="nm"><div class="t" id="nameA">Red</div><div class="s" id="subA">bloodline A</div></div>
+          <div style="text-align:right"><div class="pop" id="popA">0</div><div class="bm" id="bmA">—</div></div></div>
+        <div class="team b"><div class="nm"><div class="t" id="nameB">Blue</div><div class="s" id="subB">bloodline B</div></div>
+          <div style="text-align:right"><div class="pop" id="popB">0</div><div class="bm" id="bmB">—</div></div></div>
+        <div class="sharebar"><div class="pa" id="shareA" style="width:50%"></div><div class="pb" id="shareB" style="width:50%"></div></div>
+        <div class="panelcard"><div class="hd">population over time</div><canvas id="chart"></canvas></div>
+        <div class="status"><span id="clock">t = 0</span><span class="verdict" id="verdict">evolving…</span></div>
+        <div class="foot">Neural creatures, random brains — foraging and hunting must EVOLVE, nothing is scripted.
+          Each bloodline a heritable hue; you are watching natural selection pick a winner, on the same
+          deterministic engine the agents compete on.</div>
+      </aside>
+    </main>
+
+    <!-- DOM-free simulation core (no render.js — this page draws its own arena view) -->
     <script src="src/config.js"></script>
     <script src="src/util.js"></script>
     <script src="src/genome.js"></script>
@@ -80,117 +111,185 @@
     <script src="src/food.js"></script>
     <script src="src/creature.js"></script>
     <script src="src/world.js"></script>
-    <script src="src/render.js"></script>
 
     <script>
-      // --- scenarios: a CONFIG patch + the two founding clans (clan 0 = A/red, 1 = B/blue).
-      // diet/radius shape the niche; hue makes the bloodline visible. Brains are random.
       const SCENARIOS = {
         duel: {
-          // Two near-identical small efficient herbivores — the documented PvP optimum.
-          // One niche, so it resolves by competitive exclusion: a winner-take-all duel.
-          config: {
-            "creature.pursuitReward": 0, "creature.preyVulnerability": 0,
-            "creature.carcassFactor": 0.7, "creature.carnCarcassBonus": 0,
-            "creature.carnMetabolismDiscount": 0, "creature.biteDamage": 18,
-            "creature.plantSuppression": 0.7, "defense.enabled": false,
-            "pop.freqDependence": 0.5, // the arena's anti-snowball brake (still usually decisive)
-          },
-          clans: [
-            { n: 60, diet: 0.07, radius: 3.4, hue: 12, spread: 22, label: "Red" },
-            { n: 60, diet: 0.07, radius: 3.4, hue: 208, spread: 26, label: "Blue" },
-          ],
+          config: { "creature.pursuitReward": 0, "creature.preyVulnerability": 0, "creature.carcassFactor": 0.7,
+            "creature.carnCarcassBonus": 0, "creature.carnMetabolismDiscount": 0, "creature.biteDamage": 18,
+            "creature.plantSuppression": 0.7, "defense.enabled": false, "pop.freqDependence": 0.5 },
+          clans: [ { n: 60, diet: 0.07, radius: 3.4, hue: 12, spread: 18, name: "Red", sub: "small herbivore" },
+                   { n: 60, diet: 0.07, radius: 3.4, hue: 208, spread: 22, name: "Blue", sub: "small herbivore" } ],
         },
         predator: {
-          // Red hunters vs blue grazers, with the cracked predator package so hunting is
-          // viable (re-attempt V). You'll see red chase and catch blue — real, evolved
-          // pursuit. Closed system: often a dramatic boom then bust (over-exploitation).
-          config: {
-            "creature.pursuitReward": 0.8, "creature.preyVulnerability": 0.5,
-            "creature.carcassFactor": 5, "creature.carnCarcassBonus": 2,
-            "creature.carnMetabolismDiscount": 0.5, "creature.biteDamage": 35,
-            "creature.plantSuppression": 0.7, "defense.enabled": false,
-            "pop.freqDependence": 0,
-          },
-          clans: [
-            { n: 35, diet: 0.9, radius: 6.5, hue: 8, spread: 12, label: "Hunters" },
-            { n: 110, diet: 0.05, radius: 3.3, hue: 205, spread: 24, label: "Grazers" },
-          ],
+          config: { "creature.pursuitReward": 0.8, "creature.preyVulnerability": 0.5, "creature.carcassFactor": 5,
+            "creature.carnCarcassBonus": 2, "creature.carnMetabolismDiscount": 0.5, "creature.biteDamage": 35,
+            "creature.plantSuppression": 0.7, "defense.enabled": false, "pop.freqDependence": 0 },
+          clans: [ { n: 34, diet: 0.9, radius: 6.5, hue: 8, spread: 10, name: "Hunters", sub: "carnivore guild" },
+                   { n: 110, diet: 0.05, radius: 3.3, hue: 205, spread: 22, name: "Grazers", sub: "herbivore herd" } ],
         },
       };
-
-      function setParam(dotted, v) {
-        const p = dotted.split(".");
-        let o = CONFIG;
-        for (let i = 0; i < p.length - 1; i++) o = o[p[i]];
-        o[p[p.length - 1]] = v;
-      }
+      // team palette (clan 0 = warm, clan 1 = cool); [glow rgb, core rgb]
+      const TEAM = [ { glow: [255, 96, 96], core: [255, 176, 176] }, { glow: [76, 188, 255], core: [176, 224, 255] } ];
+      const GREY = { glow: [120, 130, 140], core: [170, 178, 188] };
 
       const $ = (id) => document.getElementById(id);
-      const renderer = new Renderer($("view"));
-      let world = null;
-      let running = true;
-      let scenario = "duel";
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const view = $("view"), wctx = view.getContext("2d", { alpha: false });
+      const chart = $("chart"), cctx = chart.getContext("2d");
+
+      let world = null, running = true, speed = 6, scenarioKey = "duel";
+      let history = [], decided = false;
+
+      function setParam(dotted, v) { const p = dotted.split("."); let o = CONFIG;
+        for (let i = 0; i < p.length - 1; i++) o = o[p[i]]; o[p[p.length - 1]] = v; }
 
       function newMatch() {
-        scenario = $("scenario").value;
-        const sc = SCENARIOS[scenario];
+        scenarioKey = $("scenario").value;
+        const sc = SCENARIOS[scenarioKey];
         for (const k in sc.config) setParam(k, sc.config[k]);
         const seed = parseInt($("seed").value, 10) || 0;
         world = new World({ seed: seed, creatures: 0, noGenesis: true });
         sc.clans.forEach((c, clan) => {
           for (let i = 0; i < c.n; i++) {
             const g = Genome.random(world.rng);
-            g.genes.diet = c.diet;
-            g.genes.radius = c.radius;
+            g.genes.diet = c.diet; g.genes.radius = c.radius;
             g.genes.hue = c.hue + world.rng.next() * c.spread;
             world.spawnRandom(g, clan);
           }
         });
-        $("labA").textContent = sc.clans[0].label;
-        $("labB").textContent = sc.clans[1].label;
-        running = true;
-        $("pause").textContent = "⏸ Pause";
+        $("nameA").textContent = sc.clans[0].name; $("subA").textContent = sc.clans[0].sub;
+        $("nameB").textContent = sc.clans[1].name; $("subB").textContent = sc.clans[1].sub;
+        history = []; decided = false;
+        $("banner").classList.remove("show");
+        running = true; $("pause").textContent = "⏸";
       }
 
       function tally() {
         let pa = 0, pb = 0, ba = 0, bb = 0;
         const cs = world.creatures;
-        for (let i = 0; i < cs.length; i++) {
-          const c = cs[i];
-          if (c.clan === 0) { pa++; ba += c.area; }
-          else if (c.clan === 1) { pb++; bb += c.area; }
-        }
+        for (let i = 0; i < cs.length; i++) { const c = cs[i];
+          if (c.clan === 0) { pa++; ba += c.area; } else if (c.clan === 1) { pb++; bb += c.area; } }
         return { pa, pb, ba, bb };
       }
 
-      function updateScore() {
-        const t = tally();
-        $("popA").textContent = t.pa;
-        $("popB").textContent = t.pb;
-        $("bmA").textContent = t.pa ? "·" + Math.round(t.ba) : "";
-        $("bmB").textContent = t.pb ? "·" + Math.round(t.bb) : "";
-        const s = $("status");
-        const tick = "t=" + world.tick;
-        if (t.pa === 0 && t.pb === 0) { s.className = "draw"; s.textContent = "mutual collapse · " + tick; }
-        else if (t.pa === 0) { s.className = "win-b"; s.textContent = $("labB").textContent + " wins · " + tick; }
-        else if (t.pb === 0) { s.className = "win-a"; s.textContent = $("labA").textContent + " wins · " + tick; }
-        else { s.className = ""; s.textContent = "evolving · " + tick; }
+      function fit(canvas) {
+        const w = canvas.clientWidth, h = canvas.clientHeight;
+        if (canvas._w !== w || canvas._h !== h) {
+          canvas.width = Math.max(1, Math.round(w * dpr)); canvas.height = Math.max(1, Math.round(h * dpr));
+          canvas._w = w; canvas._h = h; }
+        return { w, h };
       }
 
-      let speed = 6;
+      function drawWorld() {
+        const { w: cw, h: ch } = fit(view);
+        const W = CONFIG.world.width, H = CONFIG.world.height;
+        const scale = Math.min(cw / W, ch / H), ox = (cw - W * scale) / 2, oy = (ch - H * scale) / 2;
+        wctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        wctx.fillStyle = "#05080d"; wctx.fillRect(0, 0, cw, ch);
+        wctx.save();
+        wctx.translate(ox, oy); wctx.scale(scale, scale);
+        wctx.beginPath(); wctx.rect(0, 0, W, H); wctx.clip();
+        const g = wctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.62);
+        g.addColorStop(0, "#0c1825"); g.addColorStop(1, "#070d15");
+        wctx.fillStyle = g; wctx.fillRect(0, 0, W, H);
+        if (!world) { wctx.restore(); return; }
+        // food — faint backdrop
+        const fl = world.food.list;
+        wctx.fillStyle = "rgba(108, 200, 150, 0.16)";
+        wctx.beginPath();
+        for (let i = 0; i < fl.length; i++) { const f = fl[i]; wctx.moveTo(f.x + 1.7, f.y); wctx.arc(f.x, f.y, 1.7, 0, TAU); }
+        wctx.fill();
+        const cs = world.creatures;
+        // glow pass (additive: dense armies bloom into luminous masses)
+        wctx.globalCompositeOperation = "lighter";
+        for (let i = 0; i < cs.length; i++) { const c = cs[i];
+          const tm = c.clan === 0 ? TEAM[0] : c.clan === 1 ? TEAM[1] : GREY;
+          const e = clamp(c.energy / c.capacity, 0, 1);
+          wctx.fillStyle = "rgba(" + tm.glow[0] + "," + tm.glow[1] + "," + tm.glow[2] + "," + (0.07 + 0.11 * e) + ")";
+          wctx.beginPath(); wctx.arc(c.x, c.y, c.radius * 2.7, 0, TAU); wctx.fill(); }
+        // core pass
+        wctx.globalCompositeOperation = "source-over";
+        for (let i = 0; i < cs.length; i++) { const c = cs[i];
+          const tm = c.clan === 0 ? TEAM[0] : c.clan === 1 ? TEAM[1] : GREY;
+          const e = clamp(c.energy / c.capacity, 0, 1);
+          wctx.globalAlpha = 0.5 + 0.5 * e;
+          wctx.fillStyle = "rgb(" + tm.core[0] + "," + tm.core[1] + "," + tm.core[2] + ")";
+          wctx.beginPath(); wctx.arc(c.x, c.y, c.radius, 0, TAU); wctx.fill();
+          if (c.lastBite > 0.5) { wctx.globalAlpha = 1; wctx.fillStyle = "#fff";
+            wctx.beginPath(); wctx.arc(c.x, c.y, c.radius * 0.5, 0, TAU); wctx.fill(); } }
+        wctx.globalAlpha = 1;
+        wctx.restore();
+      }
+
+      function drawChart() {
+        const { w, h } = fit(chart);
+        cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cctx.clearRect(0, 0, w, h);
+        const pad = 4, x0 = pad, x1 = w - pad, y0 = h - pad, y1 = pad;
+        if (history.length < 2) return;
+        let maxP = 10, t0 = history[0].t, t1 = history[history.length - 1].t;
+        for (const p of history) maxP = Math.max(maxP, p.a, p.b);
+        if (t1 <= t0) return;
+        const sx = (t) => x0 + ((t - t0) / (t1 - t0)) * (x1 - x0);
+        const sy = (v) => y0 - (v / maxP) * (y0 - y1);
+        // gridlines
+        cctx.strokeStyle = "rgba(255,255,255,0.05)"; cctx.lineWidth = 1;
+        for (let k = 1; k <= 3; k++) { const y = y1 + (k / 4) * (y0 - y1);
+          cctx.beginPath(); cctx.moveTo(x0, y); cctx.lineTo(x1, y); cctx.stroke(); }
+        const series = (key, line, fill) => {
+          cctx.beginPath(); cctx.moveTo(sx(history[0].t), y0);
+          for (const p of history) cctx.lineTo(sx(p.t), sy(p[key]));
+          cctx.lineTo(sx(t1), y0); cctx.closePath(); cctx.fillStyle = fill; cctx.fill();
+          cctx.beginPath();
+          for (let i = 0; i < history.length; i++) { const p = history[i];
+            i ? cctx.lineTo(sx(p.t), sy(p[key])) : cctx.moveTo(sx(p.t), sy(p[key])); }
+          cctx.strokeStyle = line; cctx.lineWidth = 1.8; cctx.stroke();
+        };
+        series("a", "#ff6b6b", "rgba(255,90,90,0.16)");
+        series("b", "#57c7ff", "rgba(80,190,255,0.16)");
+      }
+
+      function updatePanel(t) {
+        $("popA").textContent = t.pa; $("popB").textContent = t.pb;
+        $("bmA").textContent = t.pa ? "biomass " + Math.round(t.ba) : "extinct";
+        $("bmB").textContent = t.pb ? "biomass " + Math.round(t.bb) : "extinct";
+        const tot = t.pa + t.pb || 1;
+        $("shareA").style.width = (100 * t.pa / tot) + "%";
+        $("shareB").style.width = (100 * t.pb / tot) + "%";
+        $("clock").textContent = "t = " + world.tick.toLocaleString();
+        const v = $("verdict"), bn = $("banner");
+        const nameA = $("nameA").textContent, nameB = $("nameB").textContent;
+        if (t.pa === 0 && t.pb === 0) { v.className = "verdict draw"; v.textContent = "mutual collapse";
+          showBanner(bn, "draw", "Mutual collapse", "#c9a14a"); }
+        else if (t.pa === 0) { v.className = "verdict b"; v.textContent = nameB + " wins";
+          showBanner(bn, "b", nameB + " prevails", "var(--b)"); }
+        else if (t.pb === 0) { v.className = "verdict a"; v.textContent = nameA + " wins";
+          showBanner(bn, "a", nameA + " prevails", "var(--a)"); }
+        else { v.className = "verdict"; v.textContent = "evolving…"; }
+      }
+      function showBanner(bn, cls, text, color) {
+        if (decided) return; decided = true;
+        bn.textContent = text; bn.style.color = color; bn.classList.add("show");
+      }
+
       function loop() {
         if (running && world) {
           for (let i = 0; i < speed; i++) world.step();
           world.computeStats();
+          const t = tally();
+          const last = history[history.length - 1];
+          if (!last || world.tick - last.t >= 30) history.push({ t: world.tick, a: t.pa, b: t.pb });
+          if (history.length > 2400) history.shift();
         }
-        if (world) { renderer.render(world, null); updateScore(); }
+        drawWorld();
+        if (world) { drawChart(); updatePanel(tally()); }
         requestAnimationFrame(loop);
       }
 
       $("newmatch").onclick = newMatch;
       $("scenario").onchange = newMatch;
-      $("pause").onclick = () => { running = !running; $("pause").textContent = running ? "⏸ Pause" : "▶ Play"; };
+      $("pause").onclick = () => { running = !running; $("pause").textContent = running ? "⏸" : "▶"; };
       $("speed").oninput = (e) => { speed = +e.target.value; $("speedlab").textContent = speed + "×"; };
       window.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); $("pause").click(); } });
 
