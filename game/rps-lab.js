@@ -69,6 +69,7 @@ const DEFENSE = args.defense == null ? 1 : int(args.defense, 1); // RPS needs it
 const TOXIN = num(args.toxin, 8);
 const MEATCONV = num(args.meatConv, 0.45);
 const PLANTPEN = num(args.plantPen, 0.18);
+const DMGRED = num(args.dmgRed, 0); // armor: defended prey takes (1 - dmgRed*defense) damage
 // cracked predator package (CLAUDE.md re-attempt V "EXTREME combo"): catch
 // FREQUENCY (preyVuln) + fat carcasses + lean carn metabolism, so hunters are
 // genuinely viable and the hunter>grazer edge is real.
@@ -91,6 +92,7 @@ api.setParam("defense.enabled", !!DEFENSE);
 api.setParam("defense.toxinEnergyCost", TOXIN);
 api.setParam("defense.meatConversionMultiplier", MEATCONV);
 api.setParam("defense.plantEfficiencyPenalty", PLANTPEN);
+api.setParam("defense.damageReduction", DMGRED);
 api.setParam("creature.preyVulnerability", PREY_VULN);
 api.setParam("creature.carcassFactor", CARCASS);
 api.setParam("creature.carnCarcassBonus", CARN_CARCASS);

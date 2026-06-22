@@ -401,6 +401,47 @@ it before declaring victory).
   dominates. Until grazer>defender is a real counter, the cycle can't close.
   Status: **defender niche works; `hunter>grazer` and `defender>hunter` confirmed;
   cycle still OPEN at the `grazer>defender` edge.**
+- **Phase 2.5 — all three edges are individually achievable, but the cycle won't
+  robustly CO-hold; the blocker is the predator problem (2026-06-22).** Two moves.
+  (a) Reframed the test from 5%-invasion to **50/50 MATCHES** — the PvP-relevant
+  format. The invasion test was too harsh: a 5% rare invader fails on fixation
+  probability / incumbency (small-population stochastic extinction), not because
+  the edge is absent. At 50/50 the superior competitor wins by exclusion, which is
+  what a real `match` measures. (b) Added the 4th and final defender lever,
+  `defense.damageReduction` (armor: a defended creature takes `1 - dmgRed·defense`
+  of the bite damage; default 0, **bit-exact, hash 4244329615, sim.test PASSED**).
+  Also a key archetype correction: the defender must be a defended GRAZER
+  (`diet 0.05`), NOT roundA's `diet 0.18` — at 0.18 it's an omnivore that *preys
+  on* grazers (with preyVulnerability making grazers catchable), inverting the
+  edge (defender beat grazer, the wrong way). Edge-by-edge at 50/50 (seed 7,
+  `game/rps-lab.js --nG/--nH/--nD`, freezeTraits, defenderDiet 0.05):
+    - `grazer > defender`: ✓ ROBUST — at `plantPen 0.4` the defense cost makes the
+      defender forage at ~0.63 vs the grazer's ~0.96, and the grazer wins exclusion
+      (464:0). (At plantPen 0.25 the cost is too small and the defender wins — there
+      is a real threshold ~0.3.)
+    - `defender > hunter`: ✓ ACHIEVABLE but tuning-sensitive — needs `toxin 50 +
+      dmgRed 0.8`: the armor lets defenders tank the indiscriminate hunter swarm
+      while the toxin poisons the hunters (311:0). Without enough armor (0.5) the
+      two mutually annihilate to a stochastic 0:0 — defense that only taxes the
+      attacker isn't enough; the defender must also SURVIVE the bites.
+    - `hunter > grazer`: ✗ FRAGILE — a boom-bust: hunters explode (60→408) eating
+      the grazers, then **over-exploit and crash to 0:0**. It won cleanly in one
+      config (hunter 410) but collapsed in another (the final set) — a knife's
+      edge, not a robust win.
+  So **each edge can be won, but they do NOT robustly co-hold at one parameter set**
+  — and the weak link is `hunter>grazer`'s over-exploitation collapse. That is the
+  **predator problem resurfacing**: the only viable hunters are the EXTREME-energetics
+  ones (re-attempt V), and an extreme hunter over-breeds and exhausts its prey
+  instead of settling into a stable predator-prey balance. **The RPS meta is
+  confirmed gated on a ROBUST (sustainable, non-over-exploiting) hunter** — exactly
+  what the predator notes predicted. This is real progress (first time all three
+  edges have been demonstrated in Vivarium, + a complete 4-lever defender mechanism,
+  all bit-exact) but it is NOT a closed cycle. Next: a hunter with a stable
+  functional response (prey resilience / a satiation cap so it can't over-exploit),
+  and/or spatial structure (the recurring lever — it both prevents over-exploitation
+  and stops the hunter swarm concentrating on defenders); then re-assemble and
+  verify all three at ONE param set across seeds, board-symmetrized. Kept: the
+  `defense.damageReduction` lever + `game/rps-lab.js` 50/50-match capability.
 - **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
   draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
   meta becomes RPS instead of a coin-flip. Symmetrize board position (per the

@@ -213,6 +213,11 @@ const CONFIG = {
     toxinEnergyCost: 8, // flat energy the attacker loses per bite, * prey.defense
     meatConversionMultiplier: 0.45, // meat+carcass energy from a defended kill: lerp(1, this, defense)
     plantEfficiencyPenalty: 0.18, // the defended forager's own plant digestion drops by this * defense
+    damageReduction: 0, // armor: a defended creature takes (1 - this*defense) of the bite damage.
+                        // Partial only (must stay < ~1/maxDefense so it's not untouchable, per
+                        // roundF). Lets a defender SURVIVE an indiscriminate hunter swarm long
+                        // enough to out-last it (the clean defender>hunter edge — without it, 50/50
+                        // hunter-vs-defender just mutually annihilates). 0 => bit-exact.
   },
 
   mutation: {

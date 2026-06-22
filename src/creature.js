@@ -289,20 +289,23 @@ class Creature {
     if (!best) return;
 
     const carnEff = this.diet * CONFIG.creature.carnDigest;
-    const dmg = CONFIG.creature.biteDamage * this._areaNorm;
-    // Toxic/defended prey (RPS "defender" leg). Biting a defended creature costs
-    // the attacker a flat toxin hit and converts to less usable meat, so a
-    // hunter's ROI on a defender is poor-to-negative even though the bite still
-    // lands and still hurts the prey (defense lowers the attacker's GAIN, not the
-    // damage dealt — per the spec, defended prey aren't untouchable). This is the
-    // defender>hunter edge. Gated on defense.enabled AND the prey carrying
-    // defense, so the default world is untouched: meatMult stays exactly 1.0 and
-    // x*1.0===x keeps it bit-exact. Spec: Codex roundF.
     const def = CONFIG.defense;
+    let dmg = CONFIG.creature.biteDamage * this._areaNorm;
+    // Toxic/defended prey (RPS "defender" leg). Biting a defended creature (a)
+    // costs the attacker a flat toxin hit, (b) converts to less usable meat, and
+    // (c) is partly turned away by armor (damageReduction) so fewer of the
+    // would-be-lethal bites get through. Together these make a hunter's ROI on a
+    // defender poor-to-negative AND let the defender SURVIVE an indiscriminate
+    // swarm long enough to out-last it — the clean defender>hunter edge (without
+    // the armor, a 50/50 hunter-vs-defender just mutually annihilates). Still
+    // killable (partial reduction only, per roundF's "not untouchable" rule).
+    // Gated on defense.enabled AND prey defense>0, so the default world is
+    // bit-exact (meatMult/dmg unchanged; x*1.0===x). Spec: Codex roundF.
     let meatMult = 1;
     if (def.enabled && best.defense > 0) {
       this.energy -= def.toxinEnergyCost * best.defense;
       meatMult = 1 + (def.meatConversionMultiplier - 1) * best.defense; // lerp(1, mcm, defense)
+      dmg *= 1 - def.damageReduction * best.defense; // armor: less damage gets through
     }
     // Energy harvested is capped by what the prey actually has, so overkill on
     // the finishing bite isn't a windfall...
