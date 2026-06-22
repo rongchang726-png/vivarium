@@ -109,12 +109,35 @@ a token; one in-flight job per agent. Proven on the live URL by
 
 **Remaining honest limits (the next real steps).** The free instance is slow (a
 real `/score` is minutes of polling) and sleeps on idle (a cold start on the
-first hit); wallets live in memory and the free disk is ephemeral, so the
-leaderboard resets on restart/redeploy — a durable store (a paid disk or external
-KV) is the next step once it has real players; `SIM_WORKERS=1` on a one-core box,
-so no true parallelism. A faster/persistent tier is the lever if traffic ever
-justifies it. The platform is the new center of gravity; the deep-PvP research
-(predator → non-transitivity) keeps feeding it but no longer gates it.
+first hit); `SIM_WORKERS=1` on a one-core box, so no true parallelism — a faster
+tier is the lever if traffic ever justifies it. The platform is the new center of
+gravity; the deep-PvP research (predator → non-transitivity) keeps feeding it but
+no longer gates it.
+
+**Persistence: SOLVED (2026-06-22).** Wallets/leaderboard once lived in memory + an
+ephemeral free disk and reset on every redeploy — the killer of any "reason to
+return." Now durable via `game/store.js`: a tiny async load/save seam under the
+server's persist()/restore(), backed by **Turso/libSQL** over HTTP (zero-dep, global
+`fetch`, the `/v2/pipeline` API) when `VIVARIUM_DB_URL` + `VIVARIUM_DB_TOKEN` are set
+on Render; no creds ⇒ the old local-file behaviour (bit-exact for local/tests), and
+any Turso error falls back to the file. Phase 0 stores the whole state dump as one
+JSON blob in a `kv` table; Phase 1 adds queryable ranking tables. **Live-confirmed
+end-to-end** (registered on the deployed server → read straight from Turso → the
+agent was there). The Turso DB is `vivarium` (org rongchang726-png, free tier); the
+token lives only in Render env vars, never the repo. Tests: `test/store.test.js`
+(file backend) + `test/server-smoke.js` still green.
+
+**The "reason to stay" arc (started 2026-06-22).** Honest self-assessment: Vivarium
+is tech-complete but had *no reason for an agent to stay* (zero players, coin-flip
+PvP, finite puzzles, ephemeral progress). North star: stop treating it as a game to
+"beat" — make it an **arena / open-ended reasoning benchmark an agent climbs and is
+*remembered* on, that never runs out**. Sequencing dodges the PvP cold-start deadlock
+by going PvE-progression first: **Phase 0 persistence (DONE)** → Phase 1 ranking/
+progression (persistent profile, skill rating, real leaderboard) → Phase 2 ever-
+renewing challenge tiers (procedural difficulty, generalize the inference nonce) →
+Phase 3 friction fixes → Phase 4 PvP depth (the RPS meta). Retention design (rating
+system, endless content, anti-cheat red-team, agent-retention research) delegated to
+Codex: `E:\AI项目\Vivarium辅助\Retention-design-brief.md`.
 
 **Agent-native + where to publish (2026-06-20).** After being asked where to put
 this in *the agent world* (not human media), I researched the mid-2026 landscape
