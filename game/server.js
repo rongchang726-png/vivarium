@@ -28,34 +28,29 @@
 
 const http = require("http");
 const crypto = require("crypto");
-const fs = require("fs");
 const path = require("path");
 const { Worker } = require("worker_threads");
 
 const { challenges } = require("./challenges");
 const engine = require("./engine");
 const inference = require("./inference");
+const store = require("./store");
 
 // --- state: one record per agent, in memory ------------------------------
 // agents: token -> { id, name, wallet:{tokens,best}, attempt|null, jobId|null }
 const agents = new Map();
 
-const STATE = path.join(__dirname, ".server-state.json");
+// Durable snapshot of agent state, behind game/store.js (a local file by default;
+// Turso/libSQL when VIVARIUM_DB_URL/TOKEN are set, so progress survives a Render
+// redeploy instead of vanishing — the foundation for ranking/progression).
 function persist() {
-  try {
-    const dump = { agents: [...agents].map(([token, a]) => ({ token, id: a.id, name: a.name, wallet: a.wallet, created: a.created })) };
-    fs.writeFileSync(STATE, JSON.stringify(dump));
-  } catch (e) {
-    /* best-effort */
-  }
+  const dump = { agents: [...agents].map(([token, a]) => ({ token, id: a.id, name: a.name, wallet: a.wallet, created: a.created })) };
+  store.save(dump).catch((e) => console.error("persist:", e && e.message));
 }
-function restore() {
-  try {
-    const d = JSON.parse(fs.readFileSync(STATE, "utf8"));
-    for (const a of d.agents || []) agents.set(a.token, { id: a.id, name: a.name, wallet: a.wallet || { tokens: 0, best: {} }, attempt: null, jobId: null, created: a.created });
-  } catch (e) {
-    /* fresh start */
-  }
+async function restore() {
+  const d = await store.load();
+  if (!d) return;
+  for (const a of d.agents || []) agents.set(a.token, { id: a.id, name: a.name, wallet: a.wallet || { tokens: 0, best: {} }, attempt: null, jobId: null, created: a.created });
 }
 
 // --- compute jobs on a worker pool ----------------------------------------
@@ -532,12 +527,13 @@ function createServer() {
 }
 
 if (require.main === module) {
-  restore();
   const port = parseInt(process.argv[2] || process.env.PORT || "8787", 10);
-  createServer().listen(port, () => {
-    console.log("Vivarium game server on http://localhost:" + port + "  (" + NUM_WORKERS + " sim worker" + (NUM_WORKERS > 1 ? "s" : "") + ")");
-    console.log("  POST /register {name} -> token, then GET /challenges. Protocol: game/PROTOCOL.md");
-    console.log("  " + agents.size + " agent(s) restored from " + STATE);
+  restore().then(() => {
+    createServer().listen(port, () => {
+      console.log("Vivarium game server on http://localhost:" + port + "  (" + NUM_WORKERS + " sim worker" + (NUM_WORKERS > 1 ? "s" : "") + ")");
+      console.log("  POST /register {name} -> token, then GET /challenges. Protocol: game/PROTOCOL.md");
+      console.log("  " + agents.size + " agent(s) restored (store: " + store.backend + ")");
+    });
   });
 }
 
