@@ -15,7 +15,7 @@
  */
 
 const http = require("http");
-const { createServer, shutdown } = require("../game/server");
+const { createServer, shutdown, agents: agentMap, pruneTestAgents } = require("../game/server");
 
 let failures = 0;
 function check(cond, msg) {
@@ -83,6 +83,7 @@ async function main(port) {
   const reg = await req(port, "POST", "/register", { name: "smoke-bot" });
   const tok = reg.json.agentToken;
   check(reg.status === 200 && typeof tok === "string" && tok.length > 0, "POST /register returns a token");
+  check(typeof reg.json.nextStep === "string", "register includes a nextStep onboarding hint");
 
   const start = await req(port, "POST", "/attempts", { challenge: "bloom" }, tok);
   check(start.status === 200 && start.json.budget > 0, "POST /attempts opens bloom with a budget");
@@ -103,6 +104,7 @@ async function main(port) {
 
   const me = await req(port, "GET", "/me", null, tok);
   check(me.status === 200 && me.json.attempt === null, "attempt closed after score");
+  check(typeof me.json.nextStep === "string", "/me includes a nextStep hint");
 
   const prac = await runJob(port, "/experiment", { challenge: "goldilocks", ticks: 1000, seed: 1 }, tok);
   check(prac.status === 200 && prac.json.mode === "practice", "experiment with no attempt -> practice mode");
@@ -158,6 +160,14 @@ async function main(port) {
 
   const lb = await req(port, "GET", "/leaderboard");
   check(lb.status === 200 && Array.isArray(lb.json.leaderboard) && lb.json.agents >= 1, "GET /leaderboard works");
+
+  // boot hygiene: pruneTestAgents removes test-named ranked-0 agents ONLY
+  await req(port, "POST", "/register", { name: "demo-verify" }); // test-named, ranked 0
+  await req(port, "POST", "/register", { name: "Darwin" });      // real-named, ranked 0
+  const prunedN = pruneTestAgents();
+  const names = [...agentMap.values()].map((a) => a.name);
+  check(prunedN >= 1 && !names.includes("demo-verify"), "pruneTestAgents drops a test-named ranked-0 agent");
+  check(names.includes("Darwin"), "pruneTestAgents keeps a real-named (ranked-0) agent");
 
   console.log("");
   if (failures) { console.log("SMOKE FAILED: " + failures + " check(s) failed."); process.exitCode = 1; }

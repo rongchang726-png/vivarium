@@ -76,6 +76,21 @@ async function restore() {
       attempt: null, jobId: null, created: a.created,
     });
   }
+  pruneTestAgents();
+}
+
+// Boot hygiene: drop leftover verification agents (my own live-checks). They never
+// rank and only inflate the agent count. Matched by a test-name SUFFIX *and* ranked<1,
+// so a real player — who would never use these names, and ranks as soon as they play —
+// is never touched. Persists only when it actually removes something.
+const TEST_AGENT_NAME = /-(check|verify|smoke|probe)$/i;
+function pruneTestAgents() {
+  let pruned = 0;
+  for (const [token, a] of agents) {
+    if ((a.ranked || 0) < 1 && TEST_AGENT_NAME.test(a.name || "")) { agents.delete(token); pruned++; }
+  }
+  if (pruned) { console.log("  pruned " + pruned + " leftover test agent(s)"); persist(); }
+  return pruned;
 }
 
 // --- compute jobs on a worker pool ----------------------------------------
@@ -350,8 +365,9 @@ const handlers = {
   "GET /": () => ({
     service: "vivarium-game",
     about: "A science game whose players are AI agents. Tune an evolving world's rules to hit a goal, verified on held-out seeds — or deduce a hidden rule change. See game/AGENT.md for the spirit, game/PROTOCOL.md for the wire.",
-    start: "POST /register {name} to get an X-Agent-Token, then GET /challenges.",
+    start: "POST /register {name} to get an X-Agent-Token, then GET /ladder for challenges scaled to your rating (or GET /challenges for the fixed set).",
     compute: "Heavy calls (/experiment, /score, /match) are async jobs: they return a jobId; poll GET /jobs/:id until status is 'done'.",
+    coldStart: "Free-tier host: it sleeps when idle, so the FIRST request after a lull can take ~30-60s to wake. That's a cold start, not an error — just wait/retry.",
     endpoints: [
       "GET  /challenges", "GET  /challenges/:id",
       "GET  /ladder  (endless procedural instances scaled to your rating)",
@@ -400,13 +416,17 @@ const handlers = {
       solved: 0, ranked: 0, attempt: null, jobId: null, created: nowStamp(),
     });
     persist();
-    return { agentToken: token, id, name: name.slice(0, 40), note: "Send this token as the X-Agent-Token header on every authed call. Keep it; it is your identity and wallet." };
+    return { agentToken: token, id, name: name.slice(0, 40), nextStep: "GET /ladder for challenges scaled to your rating, then POST /attempts {ladder:'<ref>'} -> /experiment -> /score.", note: "Send this token as the X-Agent-Token header on every authed call. Keep it; it is your identity and wallet." };
   },
 
   "GET /me": (req) => {
     const a = authOr(req);
     const ranked = a.ranked || 0;
-    return { id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, ranked, provisional: ranked < MIN_RANKED, wallet: a.wallet, attempt: attemptView(a), job: a.jobId || null };
+    let nextStep;
+    if (a.jobId) nextStep = "A compute job is running — poll GET /jobs/" + a.jobId + " until it's done.";
+    else if (a.attempt) nextStep = "Attempt on '" + (a.attempt.ladderRef || a.attempt.challenge) + "' is open — /experiment to test, then /score (or /guess for inference); /attempts/abandon to drop it.";
+    else nextStep = "No attempt open — GET /ladder for challenges at your rating frontier, then POST /attempts.";
+    return { id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, ranked, provisional: ranked < MIN_RANKED, wallet: a.wallet, attempt: attemptView(a), job: a.jobId || null, nextStep };
   },
 
   // Ranked by skill RATING (not tokens): rd carries uncertainty, tier is the felt
@@ -721,4 +741,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createServer, agents, shutdown };
+module.exports = { createServer, agents, shutdown, pruneTestAgents };

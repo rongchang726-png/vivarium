@@ -230,8 +230,9 @@ difficulty band to it — because a target band outside the achievable range mak
   the ladder holds only families solvable across their range. FAMILY_NAMES = [bloom, goldilocks,
   giants, pacifism].
 Calibration honesty: bloom / goldilocks / giants-radius / pacifism-pred are measurement-backed; the
-giants & pacifism POP floors are conservative under-sets (not separately pop-measured) — safe (they
-only loosen the goal), flagged for a future pop sweep. Core untouched (hash **4244329615**);
+giants & pacifism POP floors were set as conservative under-sets, then **pop-measured and confirmed
+reachable (2026-06-24): a toward-goal recipe holds giants pop ≈760 and pacifism pop ≈552, FAR above
+the floors (93 / 172) — pop is never the binding constraint.** Core untouched (hash **4244329615**);
 ladder.test + server-smoke + sim.test all green. (Slice 4, below, closed the Phase 2 tail.)
 
 **Phase 2 — slice 4: inference proceduralization + auto-rotating season (2026-06-23). PHASE 2
@@ -260,6 +261,27 @@ Core untouched (hash **4244329615**). `server-smoke` now exercises the inference
 rotating, served at each agent's frontier and never running out.** The frontier now is the reach
 problem: the ladder is built and live, but it still has zero players — surfacing it to a first real
 agent is the next real work, and it's partly human/restraint-gated (publish, accounts, announcements).
+
+**Debt cleanup + Phase 3 friction, first pass (2026-06-24).** With Phase 2 shipped, swept the small
+piled-up debts so the TODO list is honest (tracked as tasks #21–#23):
+- **Calibration debt — closed (#21):** giants/pacifism pop floors pop-measured and confirmed reachable
+  (above) — conservative, never the binding constraint.
+- **Phase 3 friction — first pass (#22):** onboarding so a new agent isn't lost. `POST /register` and
+  `GET /me` now return a `nextStep` (register → GET /ladder → /attempts → /experiment → /score; /me
+  adapts to your state: poll a running job, settle an open attempt, or fetch a ladder challenge). The
+  `GET /` banner recommends GET /ladder as the start and adds a `coldStart` note (the free tier sleeps
+  when idle ⇒ the first request after a lull can take ~30–60s — a cold start, not an error). server-smoke
+  asserts the hints exist.
+- **Test-agent pollution — fixed at the ROOT (#23):** my own live-checks accumulated as ranked-0 agents
+  in the durable store. Instead of a creds-gated one-off Turso wipe, the server self-cleans:
+  `pruneTestAgents()` runs after `restore()` and drops agents whose name matches a test SUFFIX
+  (`-check|verify|smoke|probe`) AND have ranked<1 — so a real player (who'd never use those names, and
+  ranks the moment they play) is never touched. Zero user action; the next deploy clears the existing
+  three. server-smoke asserts it drops a test name but keeps a real one.
+**Honestly UNclosable (NOT debt — open research / human-gated, removed from the TODO pile):** the predator
+robust-hunter problem (a decade of negatives, perhaps unsolvable as posed), the RPS cycle + Phase 4 PvP
+(gated on that hunter), and reach / the first real player (partly publish/account-gated). These are
+long-term DIRECTIONS, not pending debts. Core untouched (hash **4244329615**).
 
 **Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
 The first Phase-1 deploy FAILED Render's health check ("timed out waiting for
