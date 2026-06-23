@@ -19,19 +19,28 @@
 
 const { parentPort } = require("worker_threads");
 const { challenges } = require("./challenges");
+const ladder = require("./ladder");
 const engine = require("./engine");
+
+// Resolve the challenge a job runs against. A fixed challenge crosses the wire
+// as an id; a procedural ladder instance crosses as a ref (ladder:fam:diff:season)
+// and is rebuilt here — never serialized — so its evaluate() closure and its
+// HIDDEN scoring seeds are reconstructed worker-side, never sent over any wire.
+function resolveChallenge(payload) {
+  if (payload.ladderRef) return ladder.resolveRef(payload.ladderRef);
+  return payload.challengeId ? challenges[payload.challengeId] : null;
+}
 
 parentPort.on("message", (m) => {
   const { jobId, op, payload } = m;
   try {
     let result;
     if (op === "experiment") {
-      const ch = payload.challengeId ? challenges[payload.challengeId] : null;
-      result = engine.experiment(ch, payload.config, payload.founders, payload.ticks, payload.seed);
+      result = engine.experiment(resolveChallenge(payload), payload.config, payload.founders, payload.ticks, payload.seed);
     } else if (op === "inferenceExperiment") {
       result = engine.inferenceExperiment(payload.mystery, payload.ticks, payload.seed);
     } else if (op === "score") {
-      result = engine.score(challenges[payload.challengeId], payload.recipe);
+      result = engine.score(resolveChallenge(payload), payload.recipe);
     } else if (op === "match") {
       result = engine.matchScore(payload.a, payload.b);
     } else {

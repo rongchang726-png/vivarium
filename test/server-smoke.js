@@ -128,6 +128,33 @@ async function main(port) {
   const guess = await req(port, "POST", "/guess", { knob: "food.energy", value: 50 }, tok);
   check(guess.status === 200 && typeof guess.json.pass === "boolean" && guess.json.trueKnob, "POST /guess returns a grade");
 
+  // --- the endless content ladder (Phase 2) -------------------------------
+  const lad = await req(port, "GET", "/ladder", null, tok);
+  check(lad.status === 200 && Array.isArray(lad.json.frontier) && lad.json.frontier.length === 3, "GET /ladder returns a 3-instance frontier scaled to rating");
+  const f0 = (lad.json.frontier || [])[0] || {};
+  check(typeof f0.ref === "string" && f0.ref.indexOf("ladder:") === 0 && typeof f0.ratingD === "number", "frontier instances carry a ref + ratingD");
+  check(!/scoringSeeds|"evaluate"/.test(JSON.stringify(lad.json)), "GET /ladder does NOT leak scoring seeds or the predicate");
+
+  const ref = "ladder:bloom:0.150:1"; // an easy bloom instance (a default recipe clears it)
+  const lstart = await req(port, "POST", "/attempts", { ladder: ref }, tok);
+  check(lstart.status === 200 && lstart.json.started === ref && lstart.json.budget > 0 && Array.isArray(lstart.json.practiceSeeds), "POST /attempts {ladder} opens a graded ladder attempt");
+  check(!lstart.json.scoringSeeds, "ladder attempt response does NOT include scoring seeds");
+
+  const lheld = await req(port, "POST", "/experiment", { ladder: ref, ticks: 500, seed: 999999 }, tok);
+  check(lheld.status === 400, "ladder experiment on a non-practice seed -> 400 (held out)");
+
+  const lexp = await runJob(port, "/experiment", { ladder: ref, config: { "food.spawnPerTick": 8 }, ticks: 1500 }, tok);
+  check(lexp.status === 200 && lexp.json.mode === "graded" && lexp.json.budget && lexp.json.budget.spent > 0, "graded ladder experiment (job) drew down the budget");
+
+  const meB = await req(port, "GET", "/me", null, tok);
+  const ratingBefore = meB.json.rating;
+  const lsc = await runJob(port, "/score", { ladder: ref, recipe: { config: {} } }, tok);
+  check(lsc.status === 200 && typeof lsc.json.pass === "boolean" && lsc.json.rating && typeof lsc.json.rating.after === "number", "ladder /score returns a graded verdict + a rating move");
+  check(lsc.json.runs && lsc.json.runs.length === 5, "ladder score ran the instance's hidden seeds (5 at this difficulty)");
+  const meA = await req(port, "GET", "/me", null, tok);
+  check(meA.json.attempt === null, "ladder attempt closed after score");
+  check(meA.json.rating !== ratingBefore, "a ranked ladder score moved the agent's rating (" + ratingBefore + " -> " + meA.json.rating + ")");
+
   const lb = await req(port, "GET", "/leaderboard");
   check(lb.status === 200 && Array.isArray(lb.json.leaderboard) && lb.json.agents >= 1, "GET /leaderboard works");
 

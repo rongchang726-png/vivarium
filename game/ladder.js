@@ -176,6 +176,7 @@ function instanceByDifficulty(family, difficulty, opts) {
     // identity / scoring scale
     id: family,
     instanceId,
+    ref: "ladder:" + family + ":" + d.toFixed(3) + ":" + season, // wire handle (server+worker resolvable)
     family,
     tier,
     difficulty: d,
@@ -248,8 +249,34 @@ function frontierMix(rating, opts) {
   ];
 }
 
+// --- wire ref: the opaque-ish handle an agent passes back ---------------------
+// Format: "ladder:<family>:<difficulty(3dp)>:<season>". All PUBLIC info — the
+// difficulty and family are not secret (the hidden SEEDS are, and they derive
+// from PACK_SALT, which the ref does NOT contain). Both the server and the sim
+// worker resolve a ref to the SAME instance (difficulty round-trips through the
+// same rounding), so a ladder challenge can be reconstructed on either side
+// without ever serializing the evaluate() closure across the thread boundary.
+function instanceRef(family, difficulty, season) {
+  return "ladder:" + family + ":" + (+clamp(difficulty, DIFF_MIN, DIFF_MAX)).toFixed(3) + ":" + (season || 1);
+}
+function parseRef(ref) {
+  if (typeof ref !== "string") return null;
+  const m = ref.split(":");
+  if (m.length !== 4 || m[0] !== "ladder" || !FAMILIES[m[1]]) return null;
+  const difficulty = parseFloat(m[2]);
+  const season = parseInt(m[3], 10);
+  if (!Number.isFinite(difficulty) || !Number.isInteger(season) || season < 1) return null;
+  return { family: m[1], difficulty: clamp(difficulty, DIFF_MIN, DIFF_MAX), season };
+}
+function resolveRef(ref) {
+  const p = parseRef(ref);
+  if (!p) throw new Error("bad ladder ref '" + ref + "'; expected ladder:<family>:<difficulty>:<season> with family in [" + FAMILY_NAMES.join(", ") + "]");
+  return instanceByDifficulty(p.family, p.difficulty, { season: p.season });
+}
+
 module.exports = {
   TIER_DIFFICULTY, DIFF_MIN, DIFF_MAX, FAMILY_NAMES,
   instanceByDifficulty, instanceByTier, publicView,
   difficultyForExpectedPass, recommendFrontier, frontierMix,
+  instanceRef, parseRef, resolveRef,
 };

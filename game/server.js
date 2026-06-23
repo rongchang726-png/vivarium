@@ -36,6 +36,11 @@ const engine = require("./engine");
 const inference = require("./inference");
 const store = require("./store");
 const rating = require("./rating");
+const ladder = require("./ladder");
+
+// The active season. Bumping it (env) rotates the ladder's hidden-seed packs so
+// recipes overfit to last season's hidden worlds don't carry over. Public.
+const SEASON = Math.max(1, parseInt(process.env.VIVARIUM_SEASON || "1", 10));
 
 // --- state: one record per agent, in memory ------------------------------
 // agents: token -> { id, name, wallet:{tokens,best}, attempt|null, jobId|null }
@@ -208,6 +213,13 @@ function puzzleFor(c) {
   const p = PUZZLE[c.id] || { difficulty: 1500, discrimination: 1.0 };
   return { difficulty: p.difficulty, discrimination: p.discrimination, bounty: c.bounty };
 }
+// A procedural ladder instance is self-describing: its difficulty already lives
+// on the rating scale (ratingD), so it IS its own calibrated puzzle. Discrimination
+// rises gently with difficulty, mirroring the fixed PUZZLE bank's 0.85–1.25 spread.
+function puzzleForLadder(inst) {
+  return { difficulty: inst.ratingD, discrimination: +(0.85 + 0.5 * inst.difficulty).toFixed(2), bounty: inst.bounty };
+}
+function puzzleOf(c) { return c.ratingD != null ? puzzleForLadder(c) : puzzleFor(c); }
 function round4(x) { return Math.round((x || 0) * 10000) / 10000; }
 // Budget efficiency in [0,1]: fraction of the attempt budget left unspent.
 function efficiencyOf(attempt) {
@@ -220,7 +232,7 @@ function efficiencyOf(attempt) {
 // response. Solving counts even if over budget (efficiency captures the cost);
 // a failed attempt costs rating, which is what makes retry-spam self-defeating.
 function applyRating(agent, challenge, outcome, recipe) {
-  const out = rating.rate({ rating: agent.rating, rd: agent.rd }, puzzleFor(challenge), outcome);
+  const out = rating.rate({ rating: agent.rating, rd: agent.rd }, puzzleOf(challenge), outcome);
   agent.rating = out.rating;
   agent.rd = out.rd;
   agent.tier = out.tier;
@@ -228,7 +240,7 @@ function applyRating(agent, challenge, outcome, recipe) {
   if (out.solvedInc) agent.solved = (agent.solved || 0) + 1;
   const recipeHash = crypto.createHash("sha256").update(JSON.stringify(recipe || {})).digest("hex").slice(0, 16);
   store.appendAttempt({
-    ts: new Date().toISOString(), agent_id: agent.id, challenge: challenge.id,
+    ts: new Date().toISOString(), agent_id: agent.id, challenge: challenge.instanceId || challenge.id,
     passed: outcome.passed ? 1 : 0, score: round4(outcome.score), efficiency: round4(outcome.efficiency),
     rating_before: Math.round(out.ratingBefore), rating_after: Math.round(out.rating), recipe_hash: recipeHash,
   }).catch((e) => console.error("appendAttempt:", e && e.message));
@@ -291,6 +303,25 @@ function challengeOr(id) {
   if (!c) throw httpError(404, "unknown challenge '" + id + "'; GET /challenges to list");
   return c;
 }
+// Resolve a procedural ladder instance from its wire ref (a challenge-like object
+// with the same fields fixed challenges have, PLUS ratingD/ref/difficulty). A bad
+// ref is the agent's mistake -> 400.
+function ladderOr(ref) {
+  try { return ladder.resolveRef(ref); }
+  catch (e) { throw httpError(400, e.message); }
+}
+// The challenge an authed call targets: a ladder instance (body.ladder = ref) or
+// a fixed challenge (body.challenge = id). Ladder takes precedence if both given.
+function targetOf(body) {
+  if (body && body.ladder) return ladderOr(body.ladder);
+  return challengeOr(body && body.challenge);
+}
+// Is `c` the same challenge the agent's open attempt is on? For ladder we key on
+// the (normalized) ref so difficulty/season must match; for fixed, on the id.
+function isOpenAttemptOn(agent, c) {
+  if (!agent.attempt) return false;
+  return c.ref ? agent.attempt.ladderRef === c.ref : agent.attempt.challenge === c.id && !agent.attempt.ladderRef;
+}
 function authOr(req) {
   const tk = req.headers["x-agent-token"];
   const a = tk && agents.get(tk);
@@ -314,12 +345,14 @@ const handlers = {
     compute: "Heavy calls (/experiment, /score, /match) are async jobs: they return a jobId; poll GET /jobs/:id until status is 'done'.",
     endpoints: [
       "GET  /challenges", "GET  /challenges/:id",
+      "GET  /ladder  (endless procedural instances scaled to your rating)",
       "POST /register {name}", "GET /me",
-      "POST /attempts {challenge}", "POST /attempts/abandon",
-      "POST /experiment {challenge,config?,founders?,ticks?,seed?}  (job)",
-      "POST /score {challenge,recipe}  (job)", "POST /guess {knob,value}",
+      "POST /attempts {challenge|ladder}", "POST /attempts/abandon",
+      "POST /experiment {challenge|ladder,config?,founders?,ticks?,seed?}  (job)",
+      "POST /score {challenge|ladder,recipe}  (job)", "POST /guess {knob,value}",
       "POST /match {a,b}  (job)", "GET /jobs/:id", "POST /jobs/:id/cancel", "GET /leaderboard",
     ],
+    ladder: "GET /ladder returns frontier instances (each with a `ref`); attempt one with POST /attempts {ladder:'<ref>'}. The ladder scales to your rating and never runs out.",
   }),
 
   "GET /challenges": () => publicList(),
@@ -381,11 +414,38 @@ const handlers = {
     return { leaderboard: established, provisional, agents: agents.size, ranked: established.length, note: "leaderboard = established (>= " + MIN_RANKED + " ranked attempts); provisional = still calibrating" };
   },
 
+  // The endless ladder: procedural instances scaled to the agent's rating — the
+  // frontier MIX (mostly at-frontier, one easier confidence builder, one harder
+  // stretch). Each carries a `ref` to attempt. The hidden scoring seeds are
+  // derived server-side from the ref + the season secret and are NEVER sent here.
+  "GET /ladder": (req) => {
+    const a = authOr(req);
+    const mix = ladder.frontierMix(a.rating, { season: SEASON }).map((inst) => Object.assign(ladder.publicView(inst), { scoreCost: scoreCost(inst) }));
+    return {
+      rating: Math.round(a.rating), tier: a.tier, season: SEASON,
+      frontier: mix,
+      howToPlay: "POST /attempts {ladder:'<ref>'} to open a graded attempt, then /experiment (practice seeds) and /score (hidden seeds) — exactly like a fixed challenge.",
+      note: "Difficulty scales with your rating, so the ladder never runs out. Hidden scoring seeds are derived server-side and never sent. You may also attempt any ref at a difficulty you choose.",
+    };
+  },
+
   "POST /attempts": (req, res, params, body) => {
     const a = authOr(req);
     ensureNoInflight(a);
-    const c = challengeOr(body && body.challenge);
-    if (a.attempt) throw httpError(409, "an attempt on '" + a.attempt.challenge + "' is already open; /score, /guess, or /attempts/abandon to close it.");
+    body = body || {};
+    if (a.attempt) throw httpError(409, "an attempt on '" + (a.attempt.ladderRef || a.attempt.challenge) + "' is already open; /score, /guess, or /attempts/abandon to close it.");
+    // Ladder attempt: a procedural instance referenced by ref.
+    if (body.ladder) {
+      const inst = ladderOr(body.ladder);
+      a.attempt = { challenge: inst.id, ladderRef: inst.ref, budget: inst.budget, spent: 0, charges: [] };
+      return {
+        started: inst.ref, family: inst.id, tier: inst.tier, difficulty: inst.difficulty, ratingD: Math.round(inst.ratingD),
+        budget: inst.budget, bounty: inst.bounty, scoreCost: scoreCost(inst), goal: inst.brief,
+        tunable: inst.tunable, practiceSeeds: inst.practiceSeeds,
+        note: "Graded ladder attempt open. /experiment and /score (with the same {ladder:'" + inst.ref + "'}) draw down your budget. One /score ends it; fail or bust = no reward.",
+      };
+    }
+    const c = challengeOr(body.challenge);
     if (c.type === "inference") {
       const nonce = crypto.randomBytes(4).readUInt32BE(0) >>> 0; // server-only secret
       a.attempt = { challenge: c.id, budget: c.budget, spent: 0, charges: [], nonce };
@@ -428,18 +488,24 @@ const handlers = {
       return acceptedView(job);
     }
 
+    // tuning OR ladder: the target is a fixed challenge (body.challenge) or a
+    // procedural ladder instance (body.ladder). Both share every field /experiment uses.
+    const target = body.ladder ? ladderOr(body.ladder) : c;
     const config = body.config || {};
     const founders = body.founders || null;
     const ticks = clampTicks(body.ticks, 6000);
-    const seed = c ? resolveSeed(c, body.seed) : (body.seed | 0 || 1);
-    if (c) assertTunable(c, config);
-    const graded = !!(c && a.attempt && a.attempt.challenge === c.id);
+    const seed = target ? resolveSeed(target, body.seed) : (body.seed | 0 || 1);
+    if (target) assertTunable(target, config);
+    const graded = !!(target && isOpenAttemptOn(a, target));
     if (graded) {
       const remaining = a.attempt.budget - a.attempt.spent;
       if (ticks > remaining) throw httpError(402, "graded attempt: this experiment costs " + ticks + " ticks but only " + remaining + " remain. Use a shorter ticks, /score, or /attempts/abandon.");
     }
     ensureNoInflight(a);
-    const job = enqueueJob("experiment", { challengeId: c ? c.id : null, config, founders, ticks, seed }, (j) => {
+    const expPayload = body.ladder
+      ? { ladderRef: target.ref, config, founders, ticks, seed }
+      : { challengeId: target ? target.id : null, config, founders, ticks, seed };
+    const job = enqueueJob("experiment", expPayload, (j) => {
       if (j.status === "done") {
         if (graded && a.attempt) { charge(a, "experiment", j.result.ticksUsed); j.result.mode = "graded"; j.result.budget = budgetView(a); }
         else j.result.mode = "practice";
@@ -453,13 +519,15 @@ const handlers = {
   "POST /score": (req, res, params, body) => {
     const a = authOr(req);
     body = body || {};
-    const c = challengeOr(body.challenge);
+    const c = targetOf(body); // a fixed challenge or a procedural ladder instance
     if (c.type === "inference") throw httpError(400, "inference is judged by /guess, not /score.");
     const recipe = body.recipe || { config: body.config || {}, founders: body.founders || null };
     assertTunable(c, recipe.config || {});
     ensureNoInflight(a);
-    const graded = !!(a.attempt && a.attempt.challenge === c.id);
-    const job = enqueueJob("score", { challengeId: c.id, recipe }, (j) => {
+    const graded = isOpenAttemptOn(a, c);
+    const walletKey = c.ref || c.id;             // ladder instances bank per-ref
+    const payload = c.ref ? { ladderRef: c.ref, recipe } : { challengeId: c.id, recipe };
+    const job = enqueueJob("score", payload, (j) => {
       if (j.status === "done") {
         const r = j.result;
         if (graded && a.attempt) {
@@ -467,10 +535,11 @@ const handlers = {
           const withinBudget = a.attempt.spent <= a.attempt.budget;
           const reward = r.pass && withinBudget ? c.bounty + Math.floor((a.attempt.budget - a.attempt.spent) / 1000) : 0;
           // Ranked rating update: solving counts (efficiency captures budget cost);
-          // failing costs rating, so retry-spam is self-defeating.
+          // failing costs rating, so retry-spam is self-defeating. A ladder instance
+          // rates against its own ratingD (applyRating auto-detects).
           r.rating = applyRating(a, c, { passed: r.pass, score: r.avgScore, efficiency: efficiencyOf(a.attempt) }, recipe);
           r.graded = true; r.budget = a.attempt.budget; r.spent = a.attempt.spent; r.withinBudget = withinBudget; r.reward = reward;
-          r.wallet = reward > 0 ? creditWallet(a, c.id, reward) : a.wallet;
+          r.wallet = reward > 0 ? creditWallet(a, walletKey, reward) : a.wallet;
           r.verdict = r.pass && withinBudget ? "PASS — earned " + reward + " tokens" : r.pass ? "PASS but OVER BUDGET — no reward" : "FAIL — no reward";
           a.attempt = null;
           persist();
@@ -528,7 +597,9 @@ function budgetView(agent) {
 function attemptView(agent) {
   const at = agent.attempt;
   if (!at) return null;
-  return { challenge: at.challenge, budget: at.budget, spent: at.spent, remaining: at.budget - at.spent, charges: at.charges.length };
+  const v = { challenge: at.challenge, budget: at.budget, spent: at.spent, remaining: at.budget - at.spent, charges: at.charges.length };
+  if (at.ladderRef) v.ladder = at.ladderRef;
+  return v;
 }
 function clampTicks(v, dflt) {
   let n = parseInt(v, 10);

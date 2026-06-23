@@ -185,9 +185,32 @@ COSMETIC — every tier trivially passable. Remeasured the achievable floor/ceil
 recalibrated to [200,690] so easy sits near the floor (a default recipe passes — a gentle
 tutorial tier) and diamond near the ceiling (only a tuned food economy passes). The other
 families likely bite already (their targets run against the grain) but a per-family
-floor/ceiling calibration sweep is the next tuning pass. **Still TODO:** wire ladder into the
-live server (serve `recommendFrontier` instances, score on the derived hidden seeds, season
-rotation + optional per-season ladders) — slice 2.
+floor/ceiling calibration sweep is the next tuning pass. (Slice 2, below, wired it into the
+live server.)
+
+**Phase 2 — slice 2: the ladder is wired into the server (2026-06-23).** The endless ladder is
+now playable over the wire. New `GET /ladder` (token) returns a rating-personalized **frontier
+mix** — one confidence instance below rating, one at ~60% expected pass, one stretch above —
+each carrying a `ref` (`ladder:<family>:<difficulty>:<season>`). `POST /attempts`, `/experiment`,
+and `/score` now accept `{ladder:"<ref>"}` anywhere they took `{challenge:"<id>"}`; a single
+`targetOf()` + `isOpenAttemptOn()` seam unifies the fixed and ladder paths, and `applyRating`
+AUTO-DETECTS a ladder instance (by its `ratingD`) and rates against it instead of the fixed PUZZLE
+bank. **The real engineering bite — functions can't cross a thread boundary:** a procedural
+instance carries an `evaluate()` CLOSURE and its HIDDEN seeds, and the worker gets its job via
+`postMessage` (structured clone), which can't serialize a function. Fix mirrors the existing
+`challengeId` pattern: the parent sends only the `ref`; the worker rebuilds the instance with
+`ladder.resolveRef(ref)` (a worker_thread shares `process.env`, so the same `PACK_SALT` regenerates
+the IDENTICAL hidden seeds) — so the predicate and the hidden seeds are reconstructed worker-side
+and **never cross any wire**. The black box holds: an agent with a ref still can't compute the
+hidden seeds (no salt), `publicView`/the `/ladder` + attempt responses strip them, and farming easy
+refs barely moves rating (low `ratingD` ⇒ high expected pass ⇒ tiny gain). Core untouched (hash
+**4244329615**). `server-smoke.js` now plays a full ladder session end-to-end (GET /ladder →
+attempt → graded experiment → score → rating moved 1509→1523; + black-box asserts: /ladder and the
+ladder-attempt response leak no scoring seeds, and a ladder experiment on a non-practice seed →
+400) — green alongside `ladder.test` + `sim.test`. `PROTOCOL.md` documents `/ladder` and the
+`{ladder:ref}` variant. **Still TODO:** an auto-rotating SEASON (date-derived) + per-season ladders
+(today season is a static env knob); a per-family floor/ceiling calibration sweep (only bloom is
+calibrated). Then surface the ladder to real players (the reach problem remains the true frontier).
 
 **Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
 The first Phase-1 deploy FAILED Render's health check ("timed out waiting for
