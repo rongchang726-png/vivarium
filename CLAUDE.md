@@ -152,9 +152,42 @@ barely moves rank, and a failed attempt COSTS rating so retry-spam is self-defea
 `server-smoke` (23/23) green; an in-process check confirmed a ranked guess moves
 1500→1497, shrinks rd, and lists on the ladder. **Live-verified on Render
 (2026-06-22):** a ranked guess on the deployed server moved rating 1500→1498 and
-wrote the attempt row to Turso. Still TODO in this arc: a provisional-vs-ranked
-leaderboard split (rd-gated), and Phase 2's procedural difficulty tiers
-(`retentionB-content`) so the ladder never runs out.
+wrote the attempt row to Turso. The **provisional-vs-ranked leaderboard split shipped**
+(2026-06-22, `MIN_RANKED=5`): `/leaderboard` returns `established` (≥5 ranked attempts)
+vs still-calibrating `provisional`, so a high-rd newcomer can't top the ladder on one
+lucky attempt — confirmed live.
+
+**Phase 2 — the endless content ladder, slice 1 (2026-06-23).** `game/ladder.js` turns the
+fixed challenge set into a deterministic, ever-renewing difficulty LADDER, so an improving
+agent never hits "done with all the puzzles". Each PvE tuning challenge
+(bloom/goldilocks/giants/pacifism/foodweb) becomes a FAMILY; an INSTANCE is generated from
+(family, difficulty, season) by sliding the family's REAL demands along ONE difficulty axis —
+goal threshold (harder targets), sustain window (longer), experiment budget (smaller), and
+hidden-seed count + passFraction (must generalize across more worlds). The mechanic and the
+tunable-knob whitelist are inherited verbatim from `challenges.js` (single source of truth).
+Difficulty plugs straight into `rating.js` (`difficultyToRatingD`), so the ladder axis and the
+skill-rating axis are literally ONE axis: a frontier instance for rating R is the difficulty
+whose rating-scale value sits near R, served a touch easier so expected-pass lands ~0.6
+(`recommendFrontier` / `frontierMix` = the 70/20/10 frontier·confidence·stretch mix from the
+content spec). **Anti-overfit, same black-box ethos:** practice seeds are PUBLIC and live in
+[0,500k); hidden scoring seeds live in [500k,1M), are salted by a season-versioned secret, and
+the two ranges are disjoint by construction (a practice world can never be a scoring world);
+`publicView()` strips both the hidden seeds and the predicate. **Core untouched** — ladder
+computes only CONFIG/goal PARAMETERS and draws no RNG: sim.test hash still **4244329615**.
+Tests: `test/ladder.test.js` (determinism, monotonicity, seed-range disjointness, season
+rotation, rating-scale linkage, publicView, tunable inheritance, frontier serving) + an
+**END-TO-END real-engine check**: a generated bloom EASY passes with a default recipe, the
+SAME recipe FAILS a hard instance (5/5 → 0/8), and an optimized recipe clears it (8/8) —
+difficulty actually BITES. **Calibration lesson (the real one):** a procedural ladder is only
+as real as its target calibration. I first set bloom's pop range (150–340) entirely BELOW the
+measured carrying capacity (default recipe ≈ 338, optimized ≈ 756 ceiling), making difficulty
+COSMETIC — every tier trivially passable. Remeasured the achievable floor/ceiling and
+recalibrated to [200,690] so easy sits near the floor (a default recipe passes — a gentle
+tutorial tier) and diamond near the ceiling (only a tuned food economy passes). The other
+families likely bite already (their targets run against the grain) but a per-family
+floor/ceiling calibration sweep is the next tuning pass. **Still TODO:** wire ladder into the
+live server (serve `recommendFrontier` instances, score on the derived hidden seeds, season
+rotation + optional per-season ladders) — slice 2.
 
 **Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
 The first Phase-1 deploy FAILED Render's health check ("timed out waiting for
