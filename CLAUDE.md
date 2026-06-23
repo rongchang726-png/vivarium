@@ -232,9 +232,34 @@ difficulty band to it — because a target band outside the achievable range mak
 Calibration honesty: bloom / goldilocks / giants-radius / pacifism-pred are measurement-backed; the
 giants & pacifism POP floors are conservative under-sets (not separately pop-measured) — safe (they
 only loosen the goal), flagged for a future pop sweep. Core untouched (hash **4244329615**);
-ladder.test + server-smoke + sim.test all green. **Still TODO (Phase 2 tail):** inference
-proceduralization (generalize its nonce into a difficulty-scaled family) and an auto-rotating
-date-derived SEASON; then the reach problem (the true frontier).
+ladder.test + server-smoke + sim.test all green. (Slice 4, below, closed the Phase 2 tail.)
+
+**Phase 2 — slice 4: inference proceduralization + auto-rotating season (2026-06-23). PHASE 2
+COMPLETE.** Two finishes that close the "ever-renewing tiers (procedural difficulty, generalize the
+inference nonce)" definition:
+- **Inference is now difficulty-scaled** (the "generalize the nonce" goal). `inference.inferenceParams(d)`
+  + `deriveMystery(nonce, d)`: a HARDER puzzle moves the secret factor CLOSER to 1 (subtler to spot —
+  easy ≈2.6–3.6× / 0.30–0.45×, hard ≈1.3–1.55× / 0.62–0.74×), tightens tolerance (0.40→0.15), trims
+  budget, raises bounty, and rates against its own `ratingD` (=1050+d·1100, the SAME scale as the
+  tuning ladder). Difficulty defaults to the agent's rating frontier, so inference "scales to you"
+  too; the candidate SET is unchanged (all fingerprints still shown — difficulty lives in subtlety +
+  precision, not search-space size). Wired through `/attempts {challenge:'inference', difficulty?}`,
+  `/experiment`, `/guess` (each re-derives the SAME secret at the attempt's stored difficulty), and
+  `GET /ladder` now also returns a rating-scaled inference instance. Inference stays a challenge TYPE
+  (not a ladder ref) — different structure (no evaluate/scoringSeeds), so it carries its own
+  `difficulty` rather than a `ladder:` ref. The CLI (`play.js`) passes no difficulty ⇒ default 0.5,
+  behaviour effectively unchanged.
+- **Season auto-rotates** (was a static env knob). `currentSeason()` derives the season from the
+  calendar month (2026-01⇒1, today⇒6), computed PER REQUEST so even a long-lived instance rotates its
+  hidden-seed packs on its own; `VIVARIUM_SEASON` still overrides. The ladder core stays Date-free —
+  the clock lives in the server layer (GET /ladder), never in `ladder.js`.
+Core untouched (hash **4244329615**). `server-smoke` now exercises the inference difficulty path
+(open at d=0.3 → tolerance scales; /guess moves rating) + the /ladder inference instance; ladder.test
++ sim.test green. `PROTOCOL.md` documents both. **Phase 2 — the endless content ladder — is COMPLETE:
+4 calibrated tuning families + a difficulty-scaled inference challenge, all rating-linked, season-
+rotating, served at each agent's frontier and never running out.** The frontier now is the reach
+problem: the ladder is built and live, but it still has zero players — surfacing it to a first real
+agent is the next real work, and it's partly human/restraint-gated (publish, accounts, announcements).
 
 **Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
 The first Phase-1 deploy FAILED Render's health check ("timed out waiting for

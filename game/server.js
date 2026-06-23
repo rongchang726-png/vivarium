@@ -38,9 +38,17 @@ const store = require("./store");
 const rating = require("./rating");
 const ladder = require("./ladder");
 
-// The active season. Bumping it (env) rotates the ladder's hidden-seed packs so
-// recipes overfit to last season's hidden worlds don't carry over. Public.
-const SEASON = Math.max(1, parseInt(process.env.VIVARIUM_SEASON || "1", 10));
+// The active SEASON rotates the ladder's hidden-seed packs, so a recipe overfit to
+// one season's hidden worlds doesn't carry over. Auto-derived from the calendar
+// month (a "season" ≈ a month: 2026-01 => 1, 2026-06 => 6), overridable via env.
+// Computed per request (NOT a boot constant) so even a long-lived instance rotates
+// on its own. The ladder core stays Date-free; the clock lives here in the server.
+function currentSeason() {
+  const env = parseInt(process.env.VIVARIUM_SEASON || "", 10);
+  if (Number.isInteger(env) && env >= 1) return env;
+  const d = new Date();
+  return (d.getUTCFullYear() - 2026) * 12 + d.getUTCMonth() + 1;
+}
 
 // --- state: one record per agent, in memory ------------------------------
 // agents: token -> { id, name, wallet:{tokens,best}, attempt|null, jobId|null }
@@ -254,7 +262,8 @@ function publicShow(c) {
     return {
       id: c.id, title: c.title, brief: c.brief, goal: c.goal, type: "inference",
       budget: c.budget, bounty: c.bounty, tolerance: c.tolerance, practiceSeeds: c.practiceSeeds, candidates: c.candidates,
-      howToPlay: "POST /attempts {challenge:'inference'} -> POST /experiment (job: baseline vs altered) -> POST /guess {knob,value}",
+      difficulty: "optional 0-1 on /attempts; scales the factor's subtlety, tolerance, budget & bounty (defaults to your rating frontier)",
+      howToPlay: "POST /attempts {challenge:'inference', difficulty?} -> POST /experiment (job: baseline vs altered) -> POST /guess {knob,value}",
     };
   }
   return {
@@ -420,12 +429,23 @@ const handlers = {
   // derived server-side from the ref + the season secret and are NEVER sent here.
   "GET /ladder": (req) => {
     const a = authOr(req);
-    const mix = ladder.frontierMix(a.rating, { season: SEASON }).map((inst) => Object.assign(ladder.publicView(inst), { scoreCost: scoreCost(inst) }));
+    const season = currentSeason();
+    const mix = ladder.frontierMix(a.rating, { season }).map((inst) => Object.assign(ladder.publicView(inst), { scoreCost: scoreCost(inst) }));
+    // Inference also scales to your rating (subtler factor + tighter tolerance at
+    // higher difficulty), but it's a different challenge TYPE — no ref/hidden seeds,
+    // just a difficulty you pass to /attempts {challenge:'inference'}.
+    const ip = inference.inferenceParams(ladder.difficultyForExpectedPass(a.rating));
+    const inferenceInst = {
+      challenge: "inference", type: "inference", difficulty: ip.difficulty, ratingD: Math.round(ip.ratingD),
+      tolerance: ip.tolerance, budget: ip.budget, bounty: ip.bounty, candidates: inference.CANDIDATES.map((x) => x.knob),
+      howToPlay: "POST /attempts {challenge:'inference', difficulty:" + ip.difficulty + "}",
+    };
     return {
-      rating: Math.round(a.rating), tier: a.tier, season: SEASON,
+      rating: Math.round(a.rating), tier: a.tier, season,
       frontier: mix,
-      howToPlay: "POST /attempts {ladder:'<ref>'} to open a graded attempt, then /experiment (practice seeds) and /score (hidden seeds) — exactly like a fixed challenge.",
-      note: "Difficulty scales with your rating, so the ladder never runs out. Hidden scoring seeds are derived server-side and never sent. You may also attempt any ref at a difficulty you choose.",
+      inference: inferenceInst,
+      howToPlay: "Tuning: POST /attempts {ladder:'<ref>'} then /experiment (practice seeds) and /score (hidden seeds). Inference: POST /attempts {challenge:'inference', difficulty:<0-1>}.",
+      note: "Difficulty scales with your rating, so the ladder never runs out. Hidden scoring seeds are derived server-side and never sent. You may also attempt any ref / difficulty you choose.",
     };
   },
 
@@ -447,11 +467,19 @@ const handlers = {
     }
     const c = challengeOr(body.challenge);
     if (c.type === "inference") {
+      // Difficulty scales the puzzle (subtler factor + tighter tolerance + less
+      // budget at higher d). Default: the agent's rating frontier, so inference
+      // also "scales to you" like the tuning ladder. Stored on the attempt so
+      // /experiment and /guess re-derive the same secret at the same difficulty.
+      let d = body.difficulty != null ? parseFloat(body.difficulty) : ladder.difficultyForExpectedPass(a.rating);
+      if (!Number.isFinite(d)) d = ladder.difficultyForExpectedPass(a.rating);
+      const ip = inference.inferenceParams(d);
       const nonce = crypto.randomBytes(4).readUInt32BE(0) >>> 0; // server-only secret
-      a.attempt = { challenge: c.id, budget: c.budget, spent: 0, charges: [], nonce };
+      a.attempt = { challenge: c.id, budget: ip.budget, spent: 0, charges: [], nonce, difficulty: ip.difficulty, tolerance: ip.tolerance, bounty: ip.bounty };
       return {
-        started: c.id, budget: c.budget, bounty: c.bounty, goal: c.goal, candidates: c.candidates.map((x) => x.knob),
-        note: "One rule below has been secretly multiplied by a hidden factor. /experiment is a job costing 2x ticks (two worlds run). Deduce it and /guess — the secret never leaves the server.",
+        started: c.id, difficulty: ip.difficulty, ratingD: Math.round(ip.ratingD), budget: ip.budget, bounty: ip.bounty, tolerance: ip.tolerance,
+        goal: c.goal, candidates: c.candidates.map((x) => x.knob),
+        note: "One rule below has been secretly multiplied by a hidden factor — subtler at higher difficulty. /experiment is a job costing 2x ticks (two worlds run). Deduce it and /guess within ±" + Math.round(ip.tolerance * 100) + "%; the secret never leaves the server.",
       };
     }
     a.attempt = { challenge: c.id, budget: c.budget, spent: 0, charges: [] };
@@ -479,7 +507,7 @@ const handlers = {
       const remaining = a.attempt.budget - a.attempt.spent;
       if (cost > remaining) throw httpError(402, "inference experiment costs " + cost + " ticks (two worlds) but only " + remaining + " remain. Use a shorter ticks, or /guess.");
       ensureNoInflight(a);
-      const mystery = inference.deriveMystery(a.attempt.nonce);
+      const mystery = inference.deriveMystery(a.attempt.nonce, a.attempt.difficulty);
       const job = enqueueJob("inferenceExperiment", { mystery, ticks, seed }, (j) => {
         if (j.status === "done" && a.attempt) { charge(a, "experiment", j.result.ticksUsed); j.result.mode = "graded"; j.result.budget = budgetView(a); }
         a.jobId = null;
@@ -560,15 +588,21 @@ const handlers = {
     const c = challenges.inference;
     if (!a.attempt || a.attempt.challenge !== c.id) throw httpError(409, "no inference attempt open; POST /attempts {challenge:'inference'} first.");
     if (!body.knob || body.value == null) throw httpError(400, "guess needs {knob:<name>, value:<number>}.");
-    const mystery = inference.deriveMystery(a.attempt.nonce);
-    const grade = engine.gradeGuess(mystery, { knob: body.knob, value: parseFloat(body.value) }, c.tolerance);
-    const reward = grade.pass ? c.bounty + Math.floor((a.attempt.budget - a.attempt.spent) / 1000) : 0;
+    const d = a.attempt.difficulty != null ? a.attempt.difficulty : 0.5;
+    const tol = a.attempt.tolerance != null ? a.attempt.tolerance : c.tolerance;
+    const bounty = a.attempt.bounty != null ? a.attempt.bounty : c.bounty;
+    const mystery = inference.deriveMystery(a.attempt.nonce, d);
+    const grade = engine.gradeGuess(mystery, { knob: body.knob, value: parseFloat(body.value) }, tol);
+    const reward = grade.pass ? bounty + Math.floor((a.attempt.budget - a.attempt.spent) / 1000) : 0;
     grade.spent = a.attempt.spent;
     grade.budget = a.attempt.budget;
     grade.reward = reward;
     grade.wallet = reward > 0 ? creditWallet(a, c.id, reward) : a.wallet;
     grade.verdict = grade.pass ? "CORRECT — earned " + reward + " tokens" : grade.knobCorrect ? "right knob, value off by " + (grade.relErr * 100).toFixed(0) + "% — no reward" : "wrong knob — no reward";
-    grade.rating = applyRating(a, c, { passed: grade.pass, score: grade.score, efficiency: efficiencyOf(a.attempt) }, { knob: body.knob, value: body.value });
+    // Rate against the inference puzzle at ITS difficulty (ratingD), so a harder
+    // deduction is worth more — applyRating auto-detects the ratingD-bearing puzzle.
+    const infPuzzle = { id: c.id, instanceId: "inference:d" + d.toFixed(3), difficulty: d, ratingD: 1050 + d * 1100, bounty };
+    grade.rating = applyRating(a, infPuzzle, { passed: grade.pass, score: grade.score, efficiency: efficiencyOf(a.attempt) }, { knob: body.knob, value: body.value });
     a.attempt = null;
     persist();
     return grade;

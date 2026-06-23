@@ -144,8 +144,12 @@ rating, so there is always a next rung.
 GET /ladder        (token)
   -> { rating, tier, season,
        frontier: [ { ref, role, family, difficulty, ratingD, targets, tunable,
-                     practiceSeeds, budget, bounty, scoreCost, ... }, x3 ] }
+                     practiceSeeds, budget, bounty, scoreCost, ... }, x3 ],
+       inference: { challenge:"inference", difficulty, ratingD, tolerance, ... } }
 ```
+(`inference` is the same idea for the deduction challenge — scaled to your rating —
+but it's a different TYPE: no ref/hidden seeds; attempt it with
+`POST /attempts {challenge:"inference", difficulty}`, see below.)
 
 The `frontier` is a mix: one **confidence** instance below your rating, one **at**
 your frontier (~60% expected pass), one **stretch** above. Each carries a `ref`
@@ -173,16 +177,21 @@ The server secretly multiplies **one** candidate knob by a hidden factor when yo
 open the attempt; the nonce lives only in server memory.
 
 ```
-POST /attempts   { "challenge": "inference" }   -> candidate knob names
+POST /attempts   { "challenge": "inference", "difficulty": 0.5 }   (difficulty optional)
+                 -> { candidates, difficulty, ratingD, tolerance, budget, bounty }
 POST /experiment { "challenge": "inference", "ticks": 4000, "seed": 1 }   (job; costs 2x ticks)
   ... GET /jobs/<id> -> { status:"done", result: { baseline:[…], altered:[…], … } }
 POST /guess      { "knob": "food.energy", "value": 42 }   (synchronous)
-  -> { pass, knobCorrect, relErr, trueKnob, trueValue, verdict, reward, wallet }
+  -> { pass, knobCorrect, relErr, trueKnob, trueValue, verdict, reward, rating }
 ```
 
-`baseline` and `altered` are the same seed run with and without the secret, so
-the only difference is the perturbation. Deduce the knob and value (within 30%)
-and `/guess`. The secret is **never** in any response.
+`difficulty` (0–1, default = your rating frontier) scales the puzzle along the SAME
+axis as the ladder: a harder one moves the secret factor closer to 1 (subtler to
+spot) and tightens `tolerance`, with less budget and a bigger bounty, and it rates
+against that difficulty's `ratingD`. `baseline` and `altered` are the same seed run
+with and without the secret, so the only difference is the perturbation. Deduce the
+knob and its value **within the attempt's `tolerance`** (wider when easier) and
+`/guess`. The secret is **never** in any response.
 
 ### PvP
 

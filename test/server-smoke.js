@@ -118,15 +118,15 @@ async function main(port) {
   check(afterCancel.status === 200 && afterCancel.json.jobId, "can submit again after cancelling");
   if (afterCancel.json && afterCancel.json.jobId) await req(port, "POST", "/jobs/" + afterCancel.json.jobId + "/cancel", {}, tok); // free the slot for the next section
 
-  const istart = await req(port, "POST", "/attempts", { challenge: "inference" }, tok);
-  check(istart.status === 200 && Array.isArray(istart.json.candidates), "open inference attempt");
+  const istart = await req(port, "POST", "/attempts", { challenge: "inference", difficulty: 0.3 }, tok);
+  check(istart.status === 200 && Array.isArray(istart.json.candidates) && istart.json.difficulty === 0.3 && typeof istart.json.tolerance === "number", "open inference attempt at a chosen difficulty (tol " + (istart.json && istart.json.tolerance) + ")");
 
   const iexp = await runJob(port, "/experiment", { challenge: "inference", ticks: 2000, seed: 1 }, tok);
   check(iexp.status === 200 && Array.isArray(iexp.json.baseline) && Array.isArray(iexp.json.altered), "inference experiment (job) returns baseline + altered");
   check(!/nonce|factor|"mystery"/.test(JSON.stringify(iexp.json)), "inference experiment does NOT leak nonce/factor/mystery");
 
   const guess = await req(port, "POST", "/guess", { knob: "food.energy", value: 50 }, tok);
-  check(guess.status === 200 && typeof guess.json.pass === "boolean" && guess.json.trueKnob, "POST /guess returns a grade");
+  check(guess.status === 200 && typeof guess.json.pass === "boolean" && guess.json.trueKnob && guess.json.rating && typeof guess.json.rating.after === "number", "POST /guess returns a grade + a rating move");
 
   // --- the endless content ladder (Phase 2) -------------------------------
   const lad = await req(port, "GET", "/ladder", null, tok);
@@ -134,6 +134,7 @@ async function main(port) {
   const f0 = (lad.json.frontier || [])[0] || {};
   check(typeof f0.ref === "string" && f0.ref.indexOf("ladder:") === 0 && typeof f0.ratingD === "number", "frontier instances carry a ref + ratingD");
   check(!/scoringSeeds|"evaluate"/.test(JSON.stringify(lad.json)), "GET /ladder does NOT leak scoring seeds or the predicate");
+  check(lad.json.inference && lad.json.inference.challenge === "inference" && typeof lad.json.inference.difficulty === "number", "GET /ladder includes a rating-scaled inference instance");
 
   const ref = "ladder:bloom:0.150:1"; // an easy bloom instance (a default recipe clears it)
   const lstart = await req(port, "POST", "/attempts", { ladder: ref }, tok);
