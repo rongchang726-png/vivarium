@@ -116,6 +116,7 @@ console.log("frontier serving:");
   const roles = mix.map((m) => m.role);
   eq(roles, ["frontier", "confidence", "stretch"], "frontierMix roles");
   ok(mix[1].difficulty < mix[0].difficulty && mix[0].difficulty < mix[2].difficulty, "confidence < frontier < stretch in difficulty");
+  ok(new Set(mix.map((m) => m.family)).size === 3, "frontierMix serves 3 DISTINCT families");
 }
 
 // ---------------------------------------------------------------------------

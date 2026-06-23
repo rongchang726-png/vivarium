@@ -242,12 +242,17 @@ function recommendFrontier(rating, opts) {
 function frontierMix(rating, opts) {
   opts = opts || {};
   const season = opts.season || 1;
-  const pick = (n) => FAMILY_NAMES[stableInt("mix", n, Math.round(rating / 25), season) % FAMILY_NAMES.length];
-  return [
-    Object.assign(recommendFrontier(rating, { season, family: pick(0), expectedPass: 0.6 }), { role: "frontier" }),
-    Object.assign(recommendFrontier(rating, { season, family: pick(1), expectedPass: 0.78 }), { role: "confidence" }),
-    Object.assign(recommendFrontier(rating, { season, family: pick(2), expectedPass: 0.4 }), { role: "stretch" }),
+  // Pick DISTINCT families (deterministically) from a rotating start, so the mix
+  // reads as variety — not the same challenge twice at different difficulties.
+  const start = stableInt("mix", Math.round(rating / 25), season) % FAMILY_NAMES.length;
+  const fams = [];
+  for (let i = 0; i < FAMILY_NAMES.length && fams.length < 3; i++) fams.push(FAMILY_NAMES[(start + i) % FAMILY_NAMES.length]);
+  const roles = [
+    { role: "frontier", expectedPass: 0.6 },
+    { role: "confidence", expectedPass: 0.78 },
+    { role: "stretch", expectedPass: 0.4 },
   ];
+  return roles.map((r, i) => Object.assign(recommendFrontier(rating, { season, family: fams[i % fams.length], expectedPass: r.expectedPass }), { role: r.role }));
 }
 
 // --- wire ref: the opaque-ish handle an agent passes back ---------------------
