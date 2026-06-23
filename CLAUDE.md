@@ -208,9 +208,33 @@ refs barely moves rating (low `ratingD` ⇒ high expected pass ⇒ tiny gain). C
 attempt → graded experiment → score → rating moved 1509→1523; + black-box asserts: /ladder and the
 ladder-attempt response leak no scoring seeds, and a ladder experiment on a non-practice seed →
 400) — green alongside `ladder.test` + `sim.test`. `PROTOCOL.md` documents `/ladder` and the
-`{ladder:ref}` variant. **Still TODO:** an auto-rotating SEASON (date-derived) + per-season ladders
-(today season is a static env knob); a per-family floor/ceiling calibration sweep (only bloom is
-calibrated). Then surface the ladder to real players (the reach problem remains the true frontier).
+`{ladder:ref}` variant. **Still TODO:** per-family calibration (slice 3, below); inference
+proceduralization; an auto-rotating SEASON; then surface the ladder to real players.
+
+**Phase 2 — slice 3: per-family calibration + foodweb removed from the ladder (2026-06-23).** Ran
+the floor/ceiling calibration sweep slice 1 flagged. For each family I MEASURED the achievable range
+of its metric (a default recipe vs toward-goal recipes, on a practice seed) and aligned the
+difficulty band to it — because a target band outside the achievable range makes difficulty cosmetic
+(the bloom lesson) or impossible:
+- **goldilocks** (pop): achievable ≈56–357 by food density; band centre 160 sits mid-range (food≈4–5
+  lands in the easy band [114,206], precise food in the diamond band [138,182]) — already biting, kept.
+- **giants** (avgRadius): default evolves to ≈3.6, a big-favoured economy reaches ≈6.2, a strong one
+  ≈9.0 (near the 9.5 cap); the radius band [4.0,6.3] sits inside (easy needs moderate re-engineering,
+  diamond a strong one, with margin). pop floor lowered [60,120]→[55,95]: giants is a DOUBLE
+  constraint and big-bodied worlds run leaner, so a high pop floor could fail a radius-passing world.
+- **pacifism** (predationRate): default ≈0.136, a gentle de-fang ≈0.065, hard-pacified ≈0.054 (floor);
+  the old diamond 0.054 was exactly the floor (a knife-edge) — widened to [0.12,0.065] for margin.
+- **foodweb: REMOVED from the ladder.** Measured carn% = 0.000 under both default and a carcass+bite
+  recipe — it's the unsolved grand challenge, so EVERY tier is unreachable and an agent served it on
+  the frontier would just bleed rating. It stays a FIXED challenge (bounty 1500) for the open problem;
+  the ladder holds only families solvable across their range. FAMILY_NAMES = [bloom, goldilocks,
+  giants, pacifism].
+Calibration honesty: bloom / goldilocks / giants-radius / pacifism-pred are measurement-backed; the
+giants & pacifism POP floors are conservative under-sets (not separately pop-measured) — safe (they
+only loosen the goal), flagged for a future pop sweep. Core untouched (hash **4244329615**);
+ladder.test + server-smoke + sim.test all green. **Still TODO (Phase 2 tail):** inference
+proceduralization (generalize its nonce into a difficulty-scaled family) and an auto-rotating
+date-derived SEASON; then the reach problem (the true frontier).
 
 **Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
 The first Phase-1 deploy FAILED Render's health check ("timed out waiting for

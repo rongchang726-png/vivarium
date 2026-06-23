@@ -70,7 +70,6 @@ for (const fam of ladder.FAMILY_NAMES) {
   ok((h("goldilocks").hi - h("goldilocks").lo) < (e("goldilocks").hi - e("goldilocks").lo), "goldilocks: band narrows");
   ok(h("giants").radius > e("giants").radius && h("giants").pop > e("giants").pop, "giants: radius & pop ↑");
   ok(h("pacifism").pred < e("pacifism").pred && h("pacifism").pop > e("pacifism").pop, "pacifism: pred ↓ & pop ↑");
-  ok(h("foodweb").carn > e("foodweb").carn && h("foodweb").herb > e("foodweb").herb, "foodweb: carn & herb floors ↑");
 }
 
 // ---------------------------------------------------------------------------

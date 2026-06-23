@@ -55,8 +55,6 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const fracOf = (xs, p) => (xs.length ? xs.filter(p).length / xs.length : 0);
-const carnFrac = (s) => (s.pop ? (s.dietHist[3] + s.dietHist[4]) / s.pop : 0); // diet > 0.6
-const herbFrac = (s) => (s.pop ? s.dietHist[0] / s.pop : 0); // diet < 0.2
 
 // --- per-family difficulty profiles -----------------------------------------
 // Each family names the base challenge it scales (for tunable/settle/window/
@@ -99,7 +97,14 @@ const FAMILIES = {
 
   giants: {
     base: "giants",
-    targets: (d) => ({ radius: +lerp(4.0, 6.3, d).toFixed(2), pop: Math.round(lerp(60, 120, d)), frac: 0.8 }),
+    // radius calibrated against the measured range (default evolves to ≈3.6, a
+    // big-favoured economy reaches ≈6.2, a strong one ≈9.0 near the 9.5 cap):
+    // [4.0,6.3] sits inside it — easy needs moderate re-engineering (default 3.6
+    // fails), diamond needs a strong one (reachable with margin). pop floor is kept
+    // conservative because giants is a DOUBLE constraint (big bodies AND population)
+    // and big-bodied worlds run leaner — a high pop floor could make it unreachable
+    // even when the radius is hit. (radius is measured; the pop floor is a safe under-set.)
+    targets: (d) => ({ radius: +lerp(4.0, 6.3, d).toFixed(2), pop: Math.round(lerp(55, 95, d)), frac: 0.8 }),
     makeEvaluate: (t) => (samples) => {
       const ok = fracOf(samples, (s) => s.avgRadius >= t.radius && s.pop >= t.pop);
       const avgR = mean(samples.map((s) => s.avgRadius));
@@ -110,7 +115,12 @@ const FAMILIES = {
 
   pacifism: {
     base: "pacifism",
-    targets: (d) => ({ pred: +lerp(0.13, 0.05, d).toFixed(3), pop: Math.round(lerp(120, 200, d)), frac: 0.8 }),
+    // Calibrated against the measured achievable predation range (default ≈ 0.136,
+    // a gentle de-fang ≈ 0.065, a hard-pacified world ≈ 0.054 floor): easy needs a
+    // light touch (below default), hard needs strong pacification but keeps a margin
+    // above the 0.054 floor so a clean win isn't a knife-edge. pop floor stays
+    // reachable (a pacified, well-fed world sustains a healthy population).
+    targets: (d) => ({ pred: +lerp(0.12, 0.065, d).toFixed(3), pop: Math.round(lerp(115, 175, d)), frac: 0.8 }),
     makeEvaluate: (t) => (samples) => {
       const ok = fracOf(samples, (s) => s.predationRate <= t.pred && s.pop >= t.pop);
       const avgPred = mean(samples.map((s) => s.predationRate));
@@ -118,23 +128,14 @@ const FAMILIES = {
     },
     brief: (t) => "Keep predation ≤ " + t.pred + " kills/tick with population ≥ " + t.pop + ", and have evolution hold it there.",
   },
-
-  foodweb: {
-    base: "foodweb",
-    targets: (d) => ({
-      carn: +lerp(0.08, 0.18, d).toFixed(3),
-      herb: +lerp(0.25, 0.40, d).toFixed(3),
-      pop: Math.round(lerp(100, 150, d)),
-      frac: +lerp(0.6, 0.8, d).toFixed(2),
-    }),
-    makeEvaluate: (t) => (samples) => {
-      const ok = fracOf(samples, (s) => carnFrac(s) >= t.carn && herbFrac(s) >= t.herb && s.pop >= t.pop);
-      const bestCarn = Math.max(0, ...samples.map(carnFrac));
-      return { pass: ok >= t.frac, score: ok, detail: "coexistWindow=" + (ok * 100).toFixed(0) + "% peakCarn=" + (bestCarn * 100).toFixed(0) + "%" };
-    },
-    brief: (t) => "Sustain carnivores (diet>0.6) ≥ " + Math.round(t.carn * 100) + "% AND herbivores (diet<0.2) ≥ " + Math.round(t.herb * 100) + "% with population ≥ " + t.pop + ".",
-  },
 };
+// NOTE: foodweb is deliberately NOT a ladder family. It's the unsolved GRAND
+// CHALLENGE (carn/herb coexistence) — measured carn% stays 0 even under a
+// carcass+bite recipe, so every difficulty tier would be unreachable and an agent
+// served it on the frontier would just lose rating on an impossible task. It stays
+// a FIXED challenge in challenges.js (bounty 1500) for anyone who wants to try the
+// open problem; the endless ladder only contains families that are actually solvable
+// across their difficulty range.
 
 const FAMILY_NAMES = Object.keys(FAMILIES);
 
