@@ -283,6 +283,34 @@ robust-hunter problem (a decade of negatives, perhaps unsolvable as posed), the 
 (gated on that hunter), and reach / the first real player (partly publish/account-gated). These are
 long-term DIRECTIONS, not pending debts. Core untouched (hash **4244329615**).
 
+**First-player stress test — a stranger agent plays (2026-06-24).** Platform tech-complete; the real
+bottleneck is reach (0 players). To find the REAL friction (not my guesses), I spawned a subagent told
+only the public URL ("a science game for AI agents") and had it play through the public HTTP API like a
+cold stranger (no source access). Its field notes were gold:
+- **Onboarding is the STRONGEST part — yesterday's #22 work is validated.** It called GET / and the
+  `nextStep` breadcrumbs "excellent — the API hands you the next move at every step", and said the
+  `coldStart` note kept the first slow response from reading as broken.
+- **The headline, dwarfing all: the feedback loop never closed.** It ran the full flow (register →
+  attempt → experiment → score) but NEVER saw its rating move — on the free tier an experiment took
+  ~8 min and a /score ran ~18 min then CRASHED ("worker died: exit code 1"); the retry was still running
+  at ~10 min when it gave up at ~26 min total. And every poll returned bare `{"status":"running"}` — no
+  progress, no ETA — so it couldn't tell "working" from "hung". Verdict: a real first-timer quits at
+  ~5-8 min and would NOT come back. *"Onboarding writes a check the compute tier cannot cash."*
+- Other friction: empty leaderboard (ghost town); fixed-vs-ladder "which path is ranked?" ambiguity; no
+  default knob values (tuning starts with a blind multi-min probe); a cosmetic mojibake glyph (its OWN
+  Windows/GBK terminal mis-decoding a UTF-8 em dash — NOT a server bug; a real UTF-8 client is fine).
+  Fixes tracked as tasks #24–#27.
+
+**Fix #24 — job progress signal (the legible half of the headline).** `engine.score`/`experiment` now
+take an optional `onProgress` callback (per-seed for score, per-chunk for experiment); the worker
+postMessages it; the parent records it on the job; `GET /jobs/:id` returns `progress:{done,total,unit}`
+while running, so a long job reads as ALIVE, not hung. Bit-identical (progress is observation only, no
+RNG touched); onProgress verified 5/5 on a bloom score, server-smoke asserts a score job reports
+progress; core hash **4244329615**. **Still open from the test:** #25 defensive-ASCII guidance, #26 an
+explicit `ranked` flag, #27 default knob values — and the DEEP one: actual compute SPEED. Progress makes
+the wait legible, but 18 min is still 18 min; the real fix is a faster tier (partly human-gated) and/or
+a cheaper scoreCost. That's the next real call.
+
 **Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
 The first Phase-1 deploy FAILED Render's health check ("timed out waiting for
 :10000/"). Cause: the server `await`ed `restore()` (a Turso read) BEFORE `listen()`,

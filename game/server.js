@@ -111,6 +111,9 @@ function spawnWorker() {
   w.unref(); // don't keep the process alive on its own (matters for the tests)
   w.__job = null;
   w.on("message", (msg) => {
+    // A progress ping (not a completion): record it and keep waiting — don't free the
+    // worker, clear the timeout, or finish the job.
+    if (msg.progress) { const j = jobs.get(msg.jobId); if (j && j.status === "running") j.progress = msg.progress; return; }
     if (w.__timer) { clearTimeout(w.__timer); w.__timer = null; }
     const job = jobs.get(msg.jobId);
     w.__job = null;
@@ -182,10 +185,11 @@ function shutdown() {
   for (const w of pool.slice()) { try { w.terminate(); } catch (e) { /* already gone */ } }
 }
 function acceptedView(job) {
-  return { jobId: job.id, status: job.status, poll: "/jobs/" + job.id, note: "compute runs in the background; GET the poll URL until status is 'done', then read .result." };
+  return { jobId: job.id, status: job.status, poll: "/jobs/" + job.id, note: "compute runs in the background; GET the poll URL until status is 'done', then read .result. While it runs, the poll returns progress:{done,total,unit} so you can tell it's alive, not hung." };
 }
 function jobView(job) {
   const v = { jobId: job.id, status: job.status };
+  if (job.status === "running" && job.progress) v.progress = job.progress;
   if (job.status === "done") v.result = job.result;
   else if (job.status === "error") v.error = job.error;
   return v;

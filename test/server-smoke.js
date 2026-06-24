@@ -50,11 +50,13 @@ async function runJob(port, p, body, token) {
   const sub = await req(port, "POST", p, body, token);
   if (sub.status !== 200 || !sub.json || !sub.json.jobId) return sub; // a synchronous error (e.g. 400/401/402/409)
   const jid = sub.json.jobId;
+  let sawProgress = false;
   for (let i = 0; i < 1500; i++) {
     const poll = await req(port, "GET", "/jobs/" + jid, null, token);
     const st = poll.json && poll.json.status;
-    if (st === "done") return { status: 200, json: poll.json.result };
-    if (st === "error") return { status: 500, json: { error: poll.json.error } };
+    if (poll.json && poll.json.progress && poll.json.progress.total > 0) sawProgress = true;
+    if (st === "done") return { status: 200, json: poll.json.result, sawProgress };
+    if (st === "error") return { status: 500, json: { error: poll.json.error }, sawProgress };
     await sleep(200);
   }
   return { status: 504, json: { error: "job poll timeout" } };
@@ -101,6 +103,7 @@ async function main(port) {
   const sc = await runJob(port, "/score", { challenge: "bloom", recipe: { config: { "food.spawnPerTick": 7 } } }, tok);
   check(sc.status === 200 && typeof sc.json.pass === "boolean" && typeof sc.json.verdict === "string", "score (job) returns a graded verdict");
   check(sc.json.runs && sc.json.runs.length === 5, "score ran all 5 hidden seeds");
+  check(sc.sawProgress, "score job reported progress {done,total} while running (not just 'running')");
 
   const me = await req(port, "GET", "/me", null, tok);
   check(me.status === 200 && me.json.attempt === null, "attempt closed after score");

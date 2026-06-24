@@ -58,9 +58,17 @@ function runRecipe(challenge, recipe, seed) {
 
 // The judge. Runs the recipe on every hidden scoring seed; you pass if enough
 // of them satisfy the goal — i.e. if your idea generalizes.
-function score(challenge, recipe) {
+function score(challenge, recipe, onProgress) {
   const seeds = challenge.scoringSeeds;
-  const runs = seeds.map((s) => runRecipe(challenge, recipe, s));
+  // Per-seed loop (was .map) so we can emit progress after each seed: a /score is
+  // many minutes on a small box, and a job that only ever says "running" reads as
+  // hung (a real first-time agent quit at ~5 min over exactly this). The runs are
+  // bit-identical to the old map — progress is observation only, no RNG touched.
+  const runs = [];
+  for (let i = 0; i < seeds.length; i++) {
+    runs.push(runRecipe(challenge, recipe, seeds[i]));
+    if (onProgress) onProgress({ done: i + 1, total: seeds.length, unit: "seeds" });
+  }
   const passes = runs.filter((r) => r.pass).length;
   const need = Math.ceil(seeds.length * (challenge.passFraction || 0.6));
   const avgScore = runs.reduce((a, r) => a + (r.score || 0), 0) / runs.length;
@@ -81,7 +89,7 @@ function score(challenge, recipe) {
 // Free experimentation: run once and return a readable trajectory. If a
 // challenge is given, also report whether its goal currently holds over the
 // tail, so you can iterate quickly without a full scoring run.
-function experiment(challenge, config, founders, ticks, seed) {
+function experiment(challenge, config, founders, ticks, seed, onProgress) {
   const api = loadCore();
   const recipe = { config: config || {}, founders: founders || null };
   const world = applyRecipe(api, challenge, recipe, seed);
@@ -94,6 +102,7 @@ function experiment(challenge, config, founders, ticks, seed) {
     api.step(world, chunk);
     done += chunk;
     trajectory.push(api.snapshot(world));
+    if (onProgress) onProgress({ done, total: ticks, unit: "ticks" });
   }
 
   const out = { seed, ticks, ticksUsed: done, trajectory };

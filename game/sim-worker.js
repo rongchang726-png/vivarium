@@ -35,12 +35,14 @@ parentPort.on("message", (m) => {
   const { jobId, op, payload } = m;
   try {
     let result;
+    // Emit progress to the parent so a long job reads as alive, not hung.
+    const onProgress = (p) => parentPort.postMessage({ jobId, progress: p });
     if (op === "experiment") {
-      result = engine.experiment(resolveChallenge(payload), payload.config, payload.founders, payload.ticks, payload.seed);
+      result = engine.experiment(resolveChallenge(payload), payload.config, payload.founders, payload.ticks, payload.seed, onProgress);
     } else if (op === "inferenceExperiment") {
       result = engine.inferenceExperiment(payload.mystery, payload.ticks, payload.seed);
     } else if (op === "score") {
-      result = engine.score(resolveChallenge(payload), payload.recipe);
+      result = engine.score(resolveChallenge(payload), payload.recipe, onProgress);
     } else if (op === "match") {
       result = engine.matchScore(payload.a, payload.b);
     } else {
