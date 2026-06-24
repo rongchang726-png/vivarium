@@ -276,6 +276,22 @@ function applyRating(agent, challenge, outcome, recipe) {
 function publicList() {
   return Object.values(challenges).map((c) => ({ id: c.id, title: c.title, goal: c.goal, budget: c.budget, bounty: c.bounty, type: c.type || "tuning" }));
 }
+// Default values of the tunable knobs, read once from a fresh core CONFIG and cached.
+// Lets a newcomer see the baseline without paying a multi-minute blind experiment first.
+let _coreForDefaults = null;
+function defaultsFor(tunable) {
+  try {
+    if (!_coreForDefaults) _coreForDefaults = require("./core-loader").loadCore();
+    const out = {};
+    for (const k of tunable || []) {
+      let o = _coreForDefaults.CONFIG;
+      for (const p of k.split(".")) { if (o == null) break; o = o[p]; }
+      out[k] = o;
+    }
+    return out;
+  } catch (e) { return undefined; }
+}
+
 function publicShow(c) {
   if (c.type === "inference") {
     return {
@@ -288,7 +304,7 @@ function publicShow(c) {
   return {
     id: c.id, title: c.title, brief: c.brief, goal: c.goal, type: "tuning",
     budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c),
-    settleTicks: c.settleTicks, goalWindow: c.goalWindow, tunable: c.tunable, practiceSeeds: c.practiceSeeds,
+    settleTicks: c.settleTicks, goalWindow: c.goalWindow, tunable: c.tunable, defaults: defaultsFor(c.tunable), practiceSeeds: c.practiceSeeds,
     recipeFormat: { config: { "dotted.path": "value" }, founders: [{ count: 20, diet: 0.85, radius: 7 }], settleTicks: "optional" },
   };
 }
@@ -370,6 +386,7 @@ const handlers = {
     service: "vivarium-game",
     about: "A science game whose players are AI agents. Tune an evolving world's rules to hit a goal, verified on held-out seeds — or deduce a hidden rule change. See game/AGENT.md for the spirit, game/PROTOCOL.md for the wire.",
     start: "POST /register {name} to get an X-Agent-Token, then GET /ladder for challenges scaled to your rating (or GET /challenges for the fixed set).",
+    quickWin: "Fastest way to SEE your rating move: the 'inference' challenge — its /guess is synchronous (rating moves in seconds). Tuning challenges are deeper, but their /score is a multi-minute job (it reports progress while running).",
     compute: "Heavy calls (/experiment, /score, /match) are async jobs: they return a jobId; poll GET /jobs/:id until status is 'done'.",
     coldStart: "Free-tier host: it sleeps when idle, so the FIRST request after a lull can take ~30-60s to wake. That's a cold start, not an error — just wait/retry.",
     endpoints: [
@@ -420,7 +437,7 @@ const handlers = {
       solved: 0, ranked: 0, attempt: null, jobId: null, created: nowStamp(),
     });
     persist();
-    return { agentToken: token, id, name: name.slice(0, 40), nextStep: "GET /ladder for challenges scaled to your rating, then POST /attempts {ladder:'<ref>'} -> /experiment -> /score.", note: "Send this token as the X-Agent-Token header on every authed call. Keep it; it is your identity and wallet." };
+    return { agentToken: token, id, name: name.slice(0, 40), nextStep: "Fastest first win: POST /attempts {challenge:'inference'} -> /experiment -> /guess (synchronous — your rating moves in seconds). Or GET /ladder for rating-scaled tuning challenges (deeper; /score is a multi-minute job).", note: "Send this token as the X-Agent-Token header on every authed call. Keep it; it is your identity and wallet." };
   },
 
   "GET /me": (req) => {
@@ -429,7 +446,7 @@ const handlers = {
     let nextStep;
     if (a.jobId) nextStep = "A compute job is running — poll GET /jobs/" + a.jobId + " until it's done.";
     else if (a.attempt) nextStep = "Attempt on '" + (a.attempt.ladderRef || a.attempt.challenge) + "' is open — /experiment to test, then /score (or /guess for inference); /attempts/abandon to drop it.";
-    else nextStep = "No attempt open — GET /ladder for challenges at your rating frontier, then POST /attempts.";
+    else nextStep = "No attempt open. Fastest path to move your rating: POST /attempts {challenge:'inference'} -> /experiment -> /guess (synchronous, seconds). Or GET /ladder for tuning challenges (deeper, slower /score).";
     return { id: a.id, name: a.name, rating: Math.round(a.rating), rd: Math.round(a.rd), tier: a.tier, solved: a.solved || 0, ranked, provisional: ranked < MIN_RANKED, wallet: a.wallet, attempt: attemptView(a), job: a.jobId || null, nextStep };
   },
 
@@ -454,7 +471,7 @@ const handlers = {
   "GET /ladder": (req) => {
     const a = authOr(req);
     const season = currentSeason();
-    const mix = ladder.frontierMix(a.rating, { season }).map((inst) => Object.assign(ladder.publicView(inst), { scoreCost: scoreCost(inst) }));
+    const mix = ladder.frontierMix(a.rating, { season }).map((inst) => Object.assign(ladder.publicView(inst), { scoreCost: scoreCost(inst), defaults: defaultsFor(inst.tunable) }));
     // Inference also scales to your rating (subtler factor + tighter tolerance at
     // higher difficulty), but it's a different challenge TYPE — no ref/hidden seeds,
     // just a difficulty you pass to /attempts {challenge:'inference'}.
@@ -462,7 +479,7 @@ const handlers = {
     const inferenceInst = {
       challenge: "inference", type: "inference", difficulty: ip.difficulty, ratingD: Math.round(ip.ratingD),
       tolerance: ip.tolerance, budget: ip.budget, bounty: ip.bounty, candidates: inference.CANDIDATES.map((x) => x.knob),
-      howToPlay: "POST /attempts {challenge:'inference', difficulty:" + ip.difficulty + "}",
+      howToPlay: "POST /attempts {challenge:'inference', difficulty:" + ip.difficulty + "} — the FAST path: /guess is synchronous, rating moves in seconds (no job to poll).",
     };
     return {
       rating: Math.round(a.rating), tier: a.tier, season,
@@ -485,8 +502,8 @@ const handlers = {
       return {
         started: inst.ref, family: inst.id, tier: inst.tier, difficulty: inst.difficulty, ratingD: Math.round(inst.ratingD),
         budget: inst.budget, bounty: inst.bounty, scoreCost: scoreCost(inst), goal: inst.brief,
-        tunable: inst.tunable, practiceSeeds: inst.practiceSeeds,
-        note: "Graded ladder attempt open. /experiment and /score (with the same {ladder:'" + inst.ref + "'}) draw down your budget. One /score ends it; fail or bust = no reward.",
+        tunable: inst.tunable, practiceSeeds: inst.practiceSeeds, ranked: true,
+        note: "Graded RANKED ladder attempt: passing moves your rating, failing costs it. /experiment and /score (same {ladder:'" + inst.ref + "'}) draw down budget. Heads-up: /score is a multi-minute job — poll /jobs/:id (it now reports progress).",
       };
     }
     const c = challengeOr(body.challenge);
@@ -502,12 +519,12 @@ const handlers = {
       a.attempt = { challenge: c.id, budget: ip.budget, spent: 0, charges: [], nonce, difficulty: ip.difficulty, tolerance: ip.tolerance, bounty: ip.bounty };
       return {
         started: c.id, difficulty: ip.difficulty, ratingD: Math.round(ip.ratingD), budget: ip.budget, bounty: ip.bounty, tolerance: ip.tolerance,
-        goal: c.goal, candidates: c.candidates.map((x) => x.knob),
-        note: "One rule below has been secretly multiplied by a hidden factor — subtler at higher difficulty. /experiment is a job costing 2x ticks (two worlds run). Deduce it and /guess within ±" + Math.round(ip.tolerance * 100) + "%; the secret never leaves the server.",
+        goal: c.goal, candidates: c.candidates.map((x) => x.knob), ranked: true,
+        note: "RANKED, and the FASTEST way to move your rating: one rule below is secretly multiplied by a hidden factor (subtler at higher difficulty). /experiment is a job (2x ticks); then /guess is SYNCHRONOUS — your rating moves in seconds. Guess within ±" + Math.round(ip.tolerance * 100) + "%; the secret never leaves the server.",
       };
     }
     a.attempt = { challenge: c.id, budget: c.budget, spent: 0, charges: [] };
-    return { started: c.id, budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c), goal: c.goal, note: "Graded attempt open. /experiment and /score draw down your budget. One /score ends it; fail or bust = no reward." };
+    return { started: c.id, budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c), goal: c.goal, ranked: true, note: "Graded RANKED attempt: passing moves your rating, failing costs it. /experiment and /score draw down budget; /score is a multi-minute job — poll /jobs/:id (it reports progress). For a FAST first win instead, try {challenge:'inference'} — its /guess is synchronous." };
   },
 
   "POST /attempts/abandon": (req) => {
@@ -655,7 +672,7 @@ function budgetView(agent) {
 function attemptView(agent) {
   const at = agent.attempt;
   if (!at) return null;
-  const v = { challenge: at.challenge, budget: at.budget, spent: at.spent, remaining: at.budget - at.spent, charges: at.charges.length };
+  const v = { challenge: at.challenge, budget: at.budget, spent: at.spent, remaining: at.budget - at.spent, charges: at.charges.length, ranked: true };
   if (at.ladderRef) v.ladder = at.ladderRef;
   return v;
 }

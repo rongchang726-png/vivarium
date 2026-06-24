@@ -311,6 +311,26 @@ explicit `ranked` flag, #27 default knob values — and the DEEP one: actual com
 the wait legible, but 18 min is still 18 min; the real fix is a faster tier (partly human-gated) and/or
 a cheaper scoreCost. That's the next real call.
 
+**The zero-cost answer to SPEED + friction batch (2026-06-24).** The headline's deep half — compute
+SPEED (~18-min /score) — looked like it needed a paid tier. But the user has no spare cash, and the
+reframe makes paid UNnecessary: the goal isn't a fast score, it's a newcomer SEEING their rating move —
+and that's already FREE, because **inference's /guess is SYNCHRONOUS** (rating moves in seconds) while
+tuning's /score is the slow hold-out job. DriftWanderer hit 18 min only because onboarding pointed it at
+tuning. Zero-cost fixes:
+- **#28 onboard to the fast path:** banner `quickWin`, register/`/me` `nextStep`, and the `/ladder`
+  inference instance now point a newcomer at inference first ("fastest way to see your rating move —
+  /guess is synchronous"); tuning is framed as the deeper, slower challenge (with the progress signal).
+- **#26 ranked explicit:** every /attempts response + `/me.attempt` carries `ranked:true` + a note
+  ("passing moves your rating, failing costs it"), killing the fixed-vs-ladder ambiguity.
+- **#27 default knob values:** GET /challenges/:id and /ladder instances include `defaults:{knob:value}`
+  (read once from a fresh core CONFIG, cached) — no blind multi-min probe to start tuning.
+- **#25 mojibake:** diagnosed as DriftWanderer's OWN Windows/GBK terminal mis-decoding a UTF-8 em dash —
+  NOT a server bug (a real UTF-8 client is fine). Closed.
+All server-layer text/fields — no engine/core/ladder logic touched; sim hash 4244329615. server-smoke
+asserts each; its score-poll timeout was widened (a slow score under load was flaking the test, not a
+bug). **Paid tier stays OFF the table** — the free inference path closes the loop without it. Tasks
+#24–#28 done; the standing frontier is unchanged: an actual first wild player.
+
 **Deploy-robustness lesson (2026-06-22), in the spirit of the sync-compute one.**
 The first Phase-1 deploy FAILED Render's health check ("timed out waiting for
 :10000/"). Cause: the server `await`ed `restore()` (a Turso read) BEFORE `listen()`,

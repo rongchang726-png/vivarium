@@ -51,7 +51,9 @@ async function runJob(port, p, body, token) {
   if (sub.status !== 200 || !sub.json || !sub.json.jobId) return sub; // a synchronous error (e.g. 400/401/402/409)
   const jid = sub.json.jobId;
   let sawProgress = false;
-  for (let i = 0; i < 1500; i++) {
+  // Generous poll budget: a real /score is minutes of CPU, and on a loaded box it
+  // can dilate — the poll loop must outlast it or the test flakes on a slow score.
+  for (let i = 0; i < 4000; i++) {
     const poll = await req(port, "GET", "/jobs/" + jid, null, token);
     const st = poll.json && poll.json.status;
     if (poll.json && poll.json.progress && poll.json.progress.total > 0) sawProgress = true;
@@ -76,6 +78,7 @@ async function main(port) {
   const show = await req(port, "GET", "/challenges/bloom");
   check(show.status === 200 && Array.isArray(show.json.tunable) && show.json.practiceSeeds, "GET /challenges/bloom shows tunable + practiceSeeds");
   check(show.json.scoringSeeds === undefined, "show does NOT leak scoring seeds");
+  check(show.json.defaults && typeof show.json.defaults["food.spawnPerTick"] === "number", "GET /challenges/bloom exposes default knob values (no blind probe needed)");
 
   const noAuth = await req(port, "GET", "/me");
   check(noAuth.status === 401, "GET /me without token -> 401");
@@ -85,10 +88,11 @@ async function main(port) {
   const reg = await req(port, "POST", "/register", { name: "smoke-bot" });
   const tok = reg.json.agentToken;
   check(reg.status === 200 && typeof tok === "string" && tok.length > 0, "POST /register returns a token");
-  check(typeof reg.json.nextStep === "string", "register includes a nextStep onboarding hint");
+  check(typeof reg.json.nextStep === "string" && /inference/i.test(reg.json.nextStep), "register nextStep points at the fast inference path");
 
   const start = await req(port, "POST", "/attempts", { challenge: "bloom" }, tok);
   check(start.status === 200 && start.json.budget > 0, "POST /attempts opens bloom with a budget");
+  check(start.json.ranked === true, "attempt response marks it ranked (no fixed-vs-ladder ambiguity)");
 
   const peek = await req(port, "POST", "/experiment", { challenge: "bloom", ticks: 500, seed: 101 }, tok);
   check(peek.status === 400, "experiment on scoring seed 101 -> 400 (held out)");
