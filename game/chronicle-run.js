@@ -48,6 +48,7 @@ const RECIPES = {
     ],
     ticks: 9000,
     cf: { knob: "food.types", you: 2, baseline: 1, naive: "+" },
+    rankKnobs: ["food.types", "food.spawnPerTick"],
   },
 
   // The default world: seeded omnivores; natural selection's verdict (herbivory).
@@ -76,25 +77,35 @@ function main() {
   const recipe = RECIPES[RECIPE];
   if (!recipe) { console.error("unknown recipe: " + RECIPE + " (have: " + Object.keys(RECIPES).join(", ") + ")"); process.exit(1); }
 
+  const defApi = loadCore(); // untouched CONFIG = the defaults each knob is reverted to
+  const dottedGet = (o, p) => { const a = p.split("."); let x = o; for (const kk of a) x = x[kk]; return x; };
+  const defaultOf = (k) => dottedGet(defApi.CONFIG, k);
+
   process.stderr.write("running '" + RECIPE + "' seed " + SEED + " (" + recipe.ticks + " ticks)...\n");
-  const youLog = runOnce(recipe, { knob: recipe.cf.knob, value: recipe.cf.you });
-
-  process.stderr.write("running counterfactual (" + recipe.cf.knob + " = " + recipe.cf.baseline + ")...\n");
-  const baseLog = runOnce(recipe, { knob: recipe.cf.knob, value: recipe.cf.baseline });
-
+  const youLog = runOnce(recipe, null);
   const youSum = summarize(youLog);
-  const baseSum = summarize(baseLog);
-  const delta = describeDelta(youSum, baseSum);
+
+  // RANKED counterfactual (the gift's engine): revert each chosen knob to default in turn
+  // (the rest held), rank by how much that one change moved the outcome — "which of your
+  // choices was the actual cause". The game does the science; the next re-run is armed.
+  const rankKnobs = recipe.rankKnobs || Object.keys(recipe.knobs);
+  process.stderr.write("ranking " + rankKnobs.length + " levers by causal impact (" + rankKnobs.length + " more runs)...\n");
+  const ranked = [];
+  for (const k of rankKnobs) {
+    const log = runOnce(recipe, { knob: k, value: defaultOf(k) });
+    ranked.push({ knob: k, you: recipe.knobs[k], def: defaultOf(k), sum: summarize(log) });
+  }
+  for (const r of ranked) scoreImpact(r, youSum);
+  ranked.sort((a, b) => b.score - a.score);
+  const topR = ranked[0];
+  for (const r of ranked) r.label = labelOf(r, topR);
 
   const meta = {
     seed: SEED,
     recipe: recipe.knobs,
-    counterfactual: {
-      knob: recipe.cf.knob, you: recipe.cf.you, baseline: recipe.cf.baseline,
-      youOutcome: youSum.line, baselineOutcome: baseSum.line, delta,
-      youPop: youSum.pop, basePop: baseSum.pop,
-      bothCollapsed: !!(youSum.collapsed && baseSum.collapsed),
-      naive: recipe.cf.naive || null,
+    rankedCf: {
+      nSet: rankKnobs.length,
+      ranked: ranked.map((r) => ({ knob: r.knob, you: r.you, def: r.def, outcome: r.sum.line, label: r.label, effect: r.effect, top: r === topR, flip: r.flip })),
     },
   };
 
@@ -121,6 +132,30 @@ function describeDelta(you, base) {
   if (Math.abs(dp) > 20) parts.push((dp > 0 ? "+" : "") + dp + " in final population");
   if (Math.abs(dd) > 0.05) parts.push("a diet shift of " + (dd > 0 ? "+" : "") + dd.toFixed(2) + " toward " + (dd > 0 ? "the hunt" : "the plants"));
   return parts.length ? parts.join(", ") : "a difference too small to matter";
+}
+
+// Impact of reverting one knob to default (the rest held), vs the world you made.
+function scoreImpact(r, youSum) {
+  const flip = r.sum.collapsed !== youSum.collapsed;
+  r.flip = flip;
+  if (flip) {
+    r.score = 1e6 + Math.abs((r.sum.pop || 0) - (youSum.pop || 0));
+    r.effect = youSum.collapsed ? "without it the world LIVED (" + r.sum.line + ")" : "without it the world DIED (" + r.sum.line + ")";
+  } else if (youSum.collapsed) {
+    const dt = (r.sum.extinctTick || 0) - (youSum.extinctTick || 0);
+    r.score = Math.abs(dt);
+    r.effect = Math.abs(dt) > 200 ? "still died, but " + (dt > 0 ? dt + " ticks later" : (-dt) + " ticks sooner") : "changed almost nothing (died about the same time)";
+  } else {
+    const dp = (r.sum.pop || 0) - (youSum.pop || 0);
+    r.score = Math.abs(dp);
+    r.effect = Math.abs(dp) > 20 ? (dp > 0 ? "+" : "") + dp + " in final population" : "changed almost nothing";
+  }
+}
+function labelOf(r, top) {
+  if (r.flip) return "DECISIVE";
+  if (top.score > 0 && r.score >= top.score * 0.5) return "major";
+  if (r.score >= (top.score || 1) * 0.15) return "minor";
+  return "barely moved it";
 }
 
 main();

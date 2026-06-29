@@ -276,6 +276,37 @@ function renderCounterfactual(cf) {
   return L;
 }
 
+function shortKnob(k) { return k.replace(/^[a-z]+\./, ""); }
+
+// The RANKED counterfactual — the gift's real engine (cold-stranger verdict): of the N
+// rules you set, WHICH ONE was the actual cause? Each knob is reverted to default in turn
+// (the rest held) and the worlds are ranked by how much that one change moved the outcome.
+// "The game does the science for you" — and it arms the next re-run with the lever that
+// matters, not a fortune-cookie question. Measured, not asserted.
+function renderRankedCounterfactual(rcf) {
+  const L = ["You set " + rcf.nSet + " rule" + (rcf.nSet === 1 ? "" : "s") + ". Tested one at a time — each reverted to default while the rest held — here is which one actually decided your world:"];
+  for (const r of rcf.ranked) {
+    L.push("  - " + shortKnob(r.knob) + " (" + r.you + " -> default " + r.def + "): " + r.label + " — " + r.effect + ".");
+  }
+  return L;
+}
+
+// Forward-hook GROUNDED in the ranked finding: name the measured cause + a pointed re-run,
+// instead of a generic open question. (With the ranking, "change X" is measured, not speculative.)
+function groundedForwardHook(f, rcf) {
+  const ranked = rcf.ranked || [];
+  const top = ranked.find((r) => r.top) || ranked[0];
+  if (!top) return forwardHook(f);
+  const k = shortKnob(top.knob);
+  if (top.flip) {
+    return "Of everything you set, " + k + " alone decided your world's fate. Change " + k + " and run again — that is the lever that matters.";
+  }
+  if (f.collapsed) {
+    return "No single rule you set decided this death — " + k + " moved it most, but the cause runs deeper. " + forwardHook(f);
+  }
+  return forwardHook(f);
+}
+
 // --- SECOND-PERSON (rooted to the agent's rule choices + the counterfactual) --
 function renderSecondPerson(f, meta) {
   const e = endState(f);
@@ -289,9 +320,14 @@ function renderSecondPerson(f, meta) {
     L.push("You changed nothing; you let the default world run.");
   }
 
-  // the measured counterfactual — REAL causation, by intervention — with salience framing
+  // the measured counterfactual — REAL causation, by intervention. The RANKED multi-knob
+  // form is the engine (preferred); the single-knob form is the fallback.
+  const rcf = meta && meta.rankedCf;
   const cf = meta && meta.counterfactual;
-  if (cf) {
+  if (rcf && rcf.ranked && rcf.ranked.length) {
+    L.push("");
+    for (const ln of renderRankedCounterfactual(rcf)) L.push(ln);
+  } else if (cf) {
     L.push("");
     for (const ln of renderCounterfactual(cf)) L.push(ln);
   }
@@ -304,9 +340,9 @@ function renderSecondPerson(f, meta) {
     L.push("Your world became " + describeDiet(e.diet, e.carnFrac) + ", " + e.pop + " alive at tick " + f.endTick + " (" + f.shape + ").");
   }
 
-  // hand the choice back — the half-loop: name the live tension, point a direction
+  // hand the choice back — the half-loop: name the measured cause (if ranked) or the live tension
   L.push("");
-  L.push(forwardHook(f));
+  L.push(rcf && rcf.ranked && rcf.ranked.length ? groundedForwardHook(f, rcf) : forwardHook(f));
   return L.join("\n");
 }
 
@@ -322,13 +358,41 @@ function summarize(log) {
   };
 }
 
+// Drama must be EARNED (cold-stranger verdict): a world that just settled into the deep
+// herbivore equilibrium must NOT get the same solemn 4-act treatment as a real tragedy, or
+// the solemnity retroactively devalues the worlds that earned it. A quiet world gets a SHORT
+// chronicle that honestly admits it was quiet — and points at what would break the calm.
+function isDramatic(f, meta) {
+  if (f.collapsed) return true; // extinction is a tragedy
+  if (f.crash > 0 && f.crash >= (f.crashFrom || 1) * 0.25) return true; // a real crash
+  const rcf = meta && meta.rankedCf;
+  if (rcf && rcf.ranked && rcf.ranked.some((r) => r.flip)) return true; // a pivotal lever
+  return false; // survived, no crash, no decisive lever => a quiet world
+}
+
+function renderQuietGodseye(f, meta) {
+  const e = endState(f);
+  const seed = meta && meta.seed != null ? meta.seed : "?";
+  const L = ["=== WORLD " + seed + ": a quiet history ===", ""];
+  L.push("This world did what you told it to. " + (f.first.pop || 0) + " creatures became " +
+    describeDiet(e.diet, e.carnFrac) + " and held that balance for " + e.maxGen +
+    " generations — no collapse, no upheaval, nothing forced to become anything else.");
+  const cast = buildCast(f);
+  const surv = cast.find((m) => m.death == null) || cast[0];
+  if (surv) L.push("  (" + memberLine(surv) + ")");
+  L.push("");
+  L.push("The worlds worth a story are the ones that do NOT settle into the easy equilibrium.");
+  return L.join("\n");
+}
+
 function chronicle(log, meta) {
   const f = extract(log);
+  const dramatic = isDramatic(f, meta || {});
   return {
-    godseye: renderGodseye(f, meta || {}),
+    godseye: dramatic ? renderGodseye(f, meta || {}) : renderQuietGodseye(f, meta || {}),
     secondPerson: renderSecondPerson(f, meta || {}),
     facts: {
-      births: f.births, deaths: f.deaths, kills: f.kills,
+      births: f.births, deaths: f.deaths, kills: f.kills, dramatic,
       peak: f.peak, peakTick: f.peakTick, crash: f.crash, crashTick: f.crashTick,
       endTick: f.endTick, shape: f.shape, end: endState(f),
     },
