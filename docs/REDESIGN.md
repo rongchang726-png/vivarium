@@ -119,3 +119,70 @@ attractor and generates no genuinely surprising arcs — and the honest forward-
 literally asks "what pressure would break this equilibrium?", which points straight at disturbance/
 terrain. The chronicle (the gift) and the rich world are two ends of ONE thing; we sequence the
 cheap upstream test first, we do NOT abandon the richness. Terrain, events, etc. stay on the plan.
+
+## Chronicle gift v1 — DONE (2026-06-29). Three cold-stranger passes, committed.
+The gift's value, located by 3 cold-stranger tests, is the MEASURED RANKED COUNTERFACTUAL — "of the
+N rules you set, WHICH ONE was the actual cause" (chronicle.js `renderRankedCounterfactual` +
+chronicle-run.js). The prose is garnish (read once, skipped). Shipped: engine-first ordering, honest
+self-labelling (single-seed + one-at-a-time MARGINAL test — "a lever may only bite alongside the
+others", the repo's own OAT/false-positive discipline turned on the gift), the two caveats turned
+INTO the re-run hook (the loop-invitation), drama-scaled tone (quiet worlds get a short honest
+chronicle). Demonstrated + it surprised me: predator-collapse world → pursuitReward is DECISIVE (not
+the carcass energetics). Deferred (cold-stranger ranked below, or robustness/cost): multi-seed CF,
+interaction/paired decomposition, lineage-weaving, the per-score ×N compute cost.
+
+## Richness phase — BUILD PLAN from the mechanics deep-dive (2026-06-29)
+A deep-dive workflow (worldgen + storyteller dives succeeded; legends dive died on an API 500 — re-run
+when reaching that build) returned a phased, build-ready plan. ORDER (each composes along rich-world →
+stories → gift):
+
+**BUILD 1 — TERRAIN (`src/biome.js`), FIRST. Default-OFF, RNG-neutral, bit-exact.** The rich-world link
+everything is staked on; the most direct cure for "nothing happened" (3 coexisting regional ecotypes +
+different seeds end different = real DIVERGENCE); lowest risk (reuses proven resource-partitioning 5/5);
+safest determinism (a SEPARATE rng `new RNG((seed^0x9e3779b9)>>>0)`, NO new serialized state, recompute-
+from-seed, every hook `if(world.biome)`-guarded). Spec:
+- `class BiomeField`: K periodic INTEGER-wavenumber band-limited noise fields (periodic ⇒ torus seam
+  continuous) from the separate rng → classify into 3 LARGE regions (PLAIN/MEADOW/FOREST) via a
+  precomputed coarse lookup grid (cellPx~40); each region confers a fitness VECTOR {foodType,
+  densityMult, moveMult, fovMult}, scaled by `contrast` (contrast 0 ⇒ all 1 ⇒ flat == off).
+- Register in ALL THREE concat lists: index.html (after util.js), core-loader.js CORE (after "util"),
+  test/sim.test.js coreFiles (after "util") — else the headless test can't see it.
+- 4 guarded hooks: world.js ctor (`this.biome` before _populate), food spawn (food TYPE + density-reject,
+  mirror `_maybeReject`), creature moveCost (`*= biome.moveAt`, composes with carnMoveDiscount),
+  creature sense range (`*= biome.fovAt`). CONFIG.biome {enabled:false, cellPx:40, components:6,
+  maxWavenumber:2, contrast:1.0}; set food.types = 3 (region count) when on so the proven forage path aligns.
+- ALSO add x,y to the kill event (creature.js) now — predation is the ONE causal edge the chronicle may
+  narrate, so "where the hunters rose" needs it.
+- GOTCHAS (load-bearing): few LARGE biomes; ONE food type per region at FULL local density — do NOT
+  intermix types within a region (re-creates the --food2 effective-food-halving → 0:0 bootstrap collapse);
+  each region's carrying capacity must independently clear a VIABLE floor (~80-150 sustained, NOT
+  injectFloor 22); CONTRAST must be strong/convex enough that a generalist is STRICTLY worse, else biomes
+  are cosmetic (the bloom "difficulty cosmetic" + linear-branching lessons). VERIFY by reading per-region
+  diet/forage/size FINE histograms, never an average ("the 5-bin histogram lied to me"). Honest scope:
+  biomes vary the GRAZER/size/FOV optimum (achievable); they do NOT make predators viable.
+- VALIDATE as part of the build: sim.test hash 4244329615 (off); then per-region sustained pop + fine
+  histograms on a practice seed (3 distinct ecotypes, not one generalist everywhere).
+- For the gift: the headline ranked-CF lever becomes `contrast 1→0` ("heterogeneity itself was decisive");
+  the recomputed field lets the chronicle bucket births/deaths/kills by PLACE.
+
+**BUILD 2 — DISTURBANCE (`src/storyteller.js`).** Needs terrain first (on a flat torus a famine just dents
+the monoculture and re-settles = punctuation, not divergence). A `Storyteller` (RimWorld "storytellers are
+data" + L4D intensity FSM) reads sim metrics (pop, an RNG-FREE dominance index, ticks-since-event), accrues
+tension toward dominance (the ENDOGENOUS hook: a monoculture raises its own famine hazard), fires LOCAL+
+TRANSIENT famines (FoodField.crash + a regrowth-suppressing scar) and ERA regime-shifts. Draws ONLY from
+world.rng; ALL decision state serialized; era by world.tick only. Gives the chronicle data-driven Acts
+(disturbance=chapter, era=act) + a TRUE second-person causal line (dominance measurably caused the famine).
+Risks: famineFrac/scarTicks need a floor/ceiling sweep; warmup so it never shocks during bootstrap; keep it
+a CONDITION-setter (don't tune to a target event count = scripted). Integrity check: end-state VARIANCE
+across seeds on vs off (more distinct endings = real win), not one cherry-picked dramatic run.
+
+**BUILD 3 — LINEAGE + LOOP (mostly game/chronicle.js + chronicle-run.js; LAST, it consumes).** [legends dive
+NULL — re-run for the implementation spec.] Data-driven Acts from era/disturbance events; PLACE-bucketed
+narration (recompute biome from seed); real dynasty/lineage arcs (genome.distance hooks exist, unused); THE
+LOOP: register biome.contrast + storyteller levers as first-class `rankKnobs` so the gift ranks FRAME-level
+rules; the epic-wall as a thick leaderboard artifact. **Critical composition risk:** the current
+`isDramatic()`/shape detector reads a 3-ecotype coexistence as "long equilibrium" → renderQuietGodseye →
+"a quiet history" — so terrain & disturbance ship BLIND to the chronicle until this build teaches it spatial/
+era salience. Hence each earlier build needs a THIN chronicle readout to prove its richness is visible. The
+test is NOT a "biome-diversity score" but "do these worlds yield MORE distinct, less-predictable chronicles
+than the flat torus" — measured by the counterfactual the gift already runs (guard the want→metric slip).

@@ -42,6 +42,21 @@ const CONFIG = {
     wall: null,
   },
 
+  // Spatial heterogeneity / terrain (richness phase, BUILD 1; src/biome.js + docs/REDESIGN.md).
+  // Default OFF (enabled:false) => world.biome is null, every apply-site is `if (world.biome)`-
+  // guarded, a SEPARATE rng is used (never world.rng), nothing is serialized => the default world
+  // is bit-exact (hash 4244329615). When on, a few seeded PERIODIC noise fields classify the torus
+  // into 3 LARGE regions, each conferring a fitness vector (food type / density / move / FOV); set
+  // food.types = 3 to align the proven forage-partition path. `contrast` scales the physics
+  // multipliers (0 => flat == off) — the ranked-counterfactual's "was heterogeneity decisive" lever.
+  biome: {
+    enabled: false,
+    cellPx: 40,        // coarse region-lookup grid resolution (world units per cell)
+    components: 6,     // sinusoid terms per noise field
+    maxWavenumber: 2,  // integer wavenumbers in [1,maxWavenumber] => few LARGE coherent regions
+    contrast: 1.0,     // strength of the per-region physics multipliers (0 => flat)
+  },
+
   food: {
     max: 1500, // hard cap on food items present
     spawnPerTick: 10, // expected new food per tick (fractional, via RNG)

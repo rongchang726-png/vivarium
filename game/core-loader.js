@@ -18,7 +18,7 @@ const path = require("path");
 const vm = require("vm");
 
 const SRC = path.resolve(__dirname, "..", "src");
-const CORE = ["config", "util", "genome", "brain", "food", "creature", "world"];
+const CORE = ["config", "util", "biome", "genome", "brain", "food", "creature", "world"];
 
 // Appended after the core: defines a host-facing API using the in-context
 // classes. Plain ES5 so it evaluates cleanly in the vm. No template literals or
