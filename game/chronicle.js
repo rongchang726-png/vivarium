@@ -389,16 +389,20 @@ function renderRankedCounterfactual(rcf) {
   // Header names WHICH outcome the table ranks by, so the ledger and the narrative measure the SAME
   // thing (BUILD 4: a population-ranked table calling the fork-lever "inert" while the story pushed it
   // was the cold-stranger's killer contradiction — ranking by the fork removes it at the source).
-  const what = rcf.metric === "fork" ? "moved the FORK (whether two peoples held)" : "moved your world";
-  const L = ["You set " + rcf.nSet + " rule" + (rcf.nSet === 1 ? "" : "s") + ". Reverting each ONE to default in turn (the rest held), on this one seed — which alone " + what + ". (A marginal, one-at-a-time test: a lever may only bite alongside the others.)"];
+  const what = rcf.metric === "fork" ? "held the FORK (whether two peoples lasted)" : "moved your world";
+  const seeds = rcf.seeds || 1;
+  const scope = seeds > 1 ? "across " + seeds + " seeds" : "on this one seed";
+  const tail = seeds > 1
+    ? "(A rule-level test: it ranks which of your RULES robustly causes the outcome, not what one lucky world did.)"
+    : "(A marginal, one-at-a-time test: a lever may only bite alongside the others.)";
+  const L = ["You set " + rcf.nSet + " rule" + (rcf.nSet === 1 ? "" : "s") + ". Reverting each ONE to default in turn (the rest held), " + scope + " — which alone " + what + ". " + tail];
   for (const r of rcf.ranked) {
     L.push("  - " + shortKnob(r.knob) + " (" + r.you + " -> default " + r.def + "): " + r.label + " — " + r.effect + ".");
   }
-  // When EVERY lever reads decisive for the fork, that uniformity is itself the finding — not four
-  // clean causes but a KNIFE-EDGE fork: on one seed it tips out at any change (even reshuffling the
-  // famine RNG), so single-seed OAT cannot separate a true prerequisite from a lucky one. Say so — and
-  // point at the only honest discriminator (multi-seed). (The fork's fragility IS BUILD 1's finding.)
-  if (rcf.metric === "fork" && rcf.ranked.length > 1 && rcf.ranked.every((r) => r.flip)) {
+  // SINGLE-SEED fork only: an all-decisive table is the fork's FRAGILITY (a knife-edge tips out at any
+  // change, even reshuffling the famine RNG), not four clean causes. Multi-seed DISCRIMINATES (a true
+  // prerequisite kills the fork on every seed; a lucky lever only on some), so no caveat is needed there.
+  if (rcf.metric === "fork" && seeds <= 1 && rcf.ranked.length > 1 && rcf.ranked.every((r) => r.flip)) {
     L.push("  (Every lever reads decisive — but that is the fork's FRAGILITY, not four clean causes: a knife-edge fork tips out at any change on one seed. Re-run other seeds to find which lever ROBUSTLY holds it.)");
   }
   return L;
@@ -470,7 +474,23 @@ function closingInvitation(f, meta) {
     // by the FORK ITSELF (BUILD 4), the hook and the table AGREE — no more "push the lever the table
     // calls inert" (round 4's killer contradiction): the table shows which rule held the two peoples,
     // and forageSpecialization is the continuous dial that sharpens the split.
-    return "You set out to split one people into two — and for thousands of ticks you HAD them, before one line slipped at the close. The ledger above, ranked by the fork itself, reads every rule as decisive — the fork is a knife-edge that any change tips out. forageSpecialization is the dial that sharpens it: push it past " + spec + ", or run other seeds, and see whether the fork that formed can be made to LAST instead of always closing.";
+    const seeds = (meta && meta.rankedCf && meta.rankedCf.seeds) || 1;
+    const ranked = (meta && meta.rankedCf && meta.rankedCf.ranked) || [];
+    const head = "You set out to split one people into two — and for thousands of ticks you HAD them, before one line slipped at the close. ";
+    // GENERATE the hook FROM the ledger, never hardcode the lever — every time the prose asserted a
+    // cause, the data overturned it (round 4, then multi-seed: the fork's true prerequisite turned out to
+    // be the SPATIAL structure + two foods, NOT the forageSpecialization trade-off I'd assumed). So name
+    // what the ledger actually found decisive, and what surprisingly was not.
+    if (seeds > 1 && ranked.length) {
+      const decisive = ranked.filter((r) => r.flip).map((r) => shortKnob(r.knob));
+      const minors = ranked.filter((r) => !r.flip).map((r) => shortKnob(r.knob));
+      let s = head + "The ledger above (across " + seeds + " seeds) names what the fork truly NEEDS";
+      if (decisive.length) s += ": " + decisive.join(" and ") + " — revert either and it never forms on any seed";
+      if (minors.length) s += ". And the levers you might bet on, " + minors.join(" and ") + ", barely held it";
+      s += ". So WHETHER it forks is solved; what makes it LAST instead of slipping is the open question — run more seeds, or give it more space, and find what holds the two peoples open.";
+      return s;
+    }
+    return head + "The ledger above, ranked by the fork itself, reads every rule as decisive — the fork is a knife-edge that any one change tips out. forageSpecialization is the dial that sharpens that split: push it past " + spec + ", or run more seeds, and see whether the fork that formed can be made to LAST.";
   }
   if (fo && (fo.kind === "near-miss" || fo.kind === "leaned") && spec != null) {
     // Meet the skeptic head-on: the ledger ranks levers by HEADCOUNT (where forageSpecialization barely

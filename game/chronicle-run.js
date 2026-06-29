@@ -84,13 +84,13 @@ const RECIPES = {
   },
 };
 
-function runOnce(recipe, cfOverride) {
+function runOnce(recipe, cfOverride, seed) {
   const api = loadCore(); // fresh isolated CONFIG per run
   for (const k in recipe.knobs) api.setParam(k, recipe.knobs[k]);
   if (cfOverride) api.setParam(cfOverride.knob, cfOverride.value);
   // partition doubles per-type density; if the counterfactual drops to 1 food type,
   // keep total food the same so it's a fair "did partitioning matter" test, not starvation.
-  const w = recipe.arena ? api.newArenaWorldLogged(SEED) : api.newWorldLogged(SEED);
+  const w = recipe.arena ? api.newArenaWorldLogged(seed) : api.newWorldLogged(seed);
   for (const fdr of recipe.founders) api.seedFounders(w, fdr.count, fdr.spec, fdr.clan);
   api.step(w, recipe.ticks);
   return w.eventLog;
@@ -105,20 +105,45 @@ function main() {
   const defaultOf = (k) => dottedGet(defApi.CONFIG, k);
 
   process.stderr.write("running '" + RECIPE + "' seed " + SEED + " (" + recipe.ticks + " ticks)...\n");
-  const youLog = runOnce(recipe, null);
+  const youLog = runOnce(recipe, null, SEED); // the STORY world — one seed
   const youSum = summarize(youLog);
 
-  // RANKED counterfactual (the gift's engine): revert each chosen knob to default in turn
-  // (the rest held), rank by how much that one change moved the outcome — "which of your
-  // choices was the actual cause". The game does the science; the next re-run is armed.
+  // RANKED counterfactual (the gift's engine): revert each chosen knob to default in turn (the rest
+  // held), rank by how much that one change moved the outcome — "which of your choices was the actual
+  // cause". The game does the science; the next re-run is armed.
   const rankKnobs = recipe.rankKnobs || Object.keys(recipe.knobs);
-  process.stderr.write("ranking " + rankKnobs.length + " levers by causal impact (" + rankKnobs.length + " more runs)...\n");
   const ranked = [];
-  for (const k of rankKnobs) {
-    const log = runOnce(recipe, { knob: k, value: defaultOf(k) });
-    ranked.push({ knob: k, you: recipe.knobs[k], def: defaultOf(k), sum: summarize(log) });
+  let metricSeeds = 1;
+
+  if (recipe.metric === "fork") {
+    // MULTI-SEED fork ledger (BUILD 5). Single-seed can't discriminate a KNIFE-EDGE fork (BUILD 4: every
+    // lever read decisive on one seed, because any change tips a fragile fork out). So run each revert
+    // across a SEED SET and rank by how ROBUSTLY it holds the fork — on how many seeds the fork survives
+    // the revert. The STORY stays one world; the LEDGER is rule-level (seed-independent), which is what a
+    // "which of my RULES caused it" question actually wants.
+    const LEDGER_SEEDS = [SEED].concat([7, 11, 19, 23].filter((s) => s !== SEED)).slice(0, 4);
+    metricSeeds = LEDGER_SEEDS.length;
+    const FORK_T = 0.05; // a seed "forked" if it sustained the split for >5% of the run
+    const forkStats = (cfOverride) => {
+      const fracs = LEDGER_SEEDS.map((s) => summarize(runOnce(recipe, cfOverride, s)).forkFrac);
+      return { avg: fracs.reduce((a, b) => a + b, 0) / fracs.length, survived: fracs.filter((f) => f > FORK_T).length, n: fracs.length };
+    };
+    process.stderr.write("multi-seed fork ledger: " + rankKnobs.length + " levers x " + metricSeeds + " seeds (" + ((rankKnobs.length + 1) * metricSeeds) + " runs)...\n");
+    const youFork = forkStats(null);
+    for (const k of rankKnobs) {
+      const cf = forkStats({ knob: k, value: defaultOf(k) });
+      const r = { knob: k, you: recipe.knobs[k], def: defaultOf(k), sum: youSum };
+      scoreForkMulti(r, youFork, cf);
+      ranked.push(r);
+    }
+  } else {
+    process.stderr.write("ranking " + rankKnobs.length + " levers by causal impact (" + rankKnobs.length + " more runs)...\n");
+    for (const k of rankKnobs) {
+      const log = runOnce(recipe, { knob: k, value: defaultOf(k) }, SEED);
+      ranked.push({ knob: k, you: recipe.knobs[k], def: defaultOf(k), sum: summarize(log) });
+    }
+    for (const r of ranked) scoreImpact(r, youSum, recipe.metric);
   }
-  for (const r of ranked) scoreImpact(r, youSum, recipe.metric);
   ranked.sort((a, b) => b.score - a.score);
   const topR = ranked[0];
   for (const r of ranked) r.label = labelOf(r, topR);
@@ -131,6 +156,7 @@ function main() {
     rankedCf: {
       nSet: rankKnobs.length,
       metric: recipe.metric || "pop",
+      seeds: metricSeeds,
       ranked: ranked.map((r) => ({ knob: r.knob, you: r.you, def: r.def, outcome: r.sum.line, label: r.label, effect: r.effect, top: r === topR, flip: r.flip })),
     },
   };
@@ -198,6 +224,25 @@ function scoreImpact(r, youSum, metric) {
     const dp = (r.sum.pop || 0) - (youSum.pop || 0);
     r.score = Math.abs(dp);
     r.effect = Math.abs(dp) > 20 ? (dp > 0 ? "+" : "") + dp + " in final population" : "changed almost nothing";
+  }
+}
+
+// Multi-seed fork scorer (BUILD 5): rank a lever by how ROBUSTLY reverting it kills the fork — on how
+// many seeds the fork stops surviving. A true PREREQUISITE kills it on ALL seeds (a flip => DECISIVE); a
+// lucky/partial lever only on some (a "partial hold"). This is the discrimination single-seed couldn't
+// give (where a knife-edge fork tipped out at any change, making every lever read decisive).
+function scoreForkMulti(r, youFork, cf) {
+  const dSurv = youFork.survived - cf.survived;
+  const dAvg = youFork.avg - cf.avg;
+  r.score = dSurv * 1000 + Math.abs(dAvg) * 100; // survival-count dominates; avg breaks ties
+  const killedAll = cf.survived === 0 && youFork.survived > 0;
+  r.flip = killedAll;
+  if (killedAll) {
+    r.effect = "the fork NEVER formed without it (0/" + youFork.n + " seeds; with your full recipe it held in " + youFork.survived + "/" + youFork.n + ")";
+  } else if (dSurv > 0) {
+    r.effect = "the fork survived in only " + cf.survived + "/" + youFork.n + " seeds without it (vs " + youFork.survived + "/" + youFork.n + " yours) — a partial hold, not a clean cause";
+  } else {
+    r.effect = "the fork still held in " + cf.survived + "/" + youFork.n + " seeds — barely changed";
   }
 }
 function labelOf(r, top) {

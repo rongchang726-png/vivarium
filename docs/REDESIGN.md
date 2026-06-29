@@ -339,6 +339,31 @@ points at forageSpecialization (the dial) + multi-seed (the discriminator). So B
 contradiction AND sharply motivates the next real build: **MULTI-SEED fork CF** (the long-deferred multi-seed
 counterfactual — single-seed cannot discriminate a fragile outcome; and/or show population AND fork columns so
 the agent gets both the discrimination it valued and the fork-consistency). Core untouched (hash 4244329615).
-STILL deferred (lower-ranked, real, not blockers): multi-seed CF (above, now top of the list); dynasty/lineage
-ARCS (a named survivor with no consequence reads flat — genome.distance hooks unused); "shown not told"; the
-epic-wall leaderboard artifact.
+### BUILD 5 (2026-06-30) — the MULTI-SEED fork ledger: it discriminates AND overturns a prior (real science)
+Built it. The ranked CF for a fork-metric recipe now runs each lever-revert across a SEED SET ([7,11,19,23]) and
+ranks by how ROBUSTLY it holds the fork — on how many seeds the fork survives the revert (`scoreForkMulti`: a
+"flip" = the fork held with your full recipe but NEVER formed on any seed without this lever). The STORY stays one
+world; the LEDGER is rule-level (seed-independent), which is what "which of my RULES caused it" actually wants.
+A pre-check first (`scratchpad`): the fork is SEED-SPECIFIC — it forms on **2/4 seeds** (7 & 19 fork; 11 never
+reaches the split, 23 peaks at 72% but doesn't sustain) — itself a finding (the fork is fragile ACROSS seeds, not
+just within one). Then the full ledger DISCRIMINATED, and the result OVERTURNED my own prior:
+  - food.types: DECISIVE (0/4 without it) — obvious (need two foods).
+  - **biome: DECISIVE (0/4 without it) — the SURPRISE.** The SPATIAL structure is a true prerequisite: well-mixed
+    two-food (biome off) never forks on any seed. The biome's "one food type per region" IS the disruptive force.
+  - **forageSpecialization: only MINOR (still forks on 1/4 without it).** The convex trade-off I'd assumed was THE
+    fork dial is secondary — the spatial food-separation drives the split even at a LINEAR trade-off (a forest
+    creature meets only type-2 food, so it specialises regardless of the trade-off shape). This REFINES BUILD 1:
+    the keystone is SPACE (the recurring mixing-wall lever), not the trade-off convexity.
+  - storyteller: MINOR (1/4) — the disturbance is a lucky/partial lever, not a fork cause.
+So the multi-seed CF did exactly its job: it discriminated true prerequisites (food.types + biome) from lucky
+levers (forageSpecialization + storyteller), AND produced a genuine scientific refinement (space > trade-off for
+the fork) — the gift's engine doing real science, not just description. **The deeper fix it forced:** the
+narrative hook is now GENERATED FROM the ledger (it names whatever the ledger found decisive + what surprisingly
+was not), never hardcoded — because every time the prose ASSERTED a cause (round 4: forageSpecialization), the
+data overturned it. A ledger-driven hook can never contradict the ledger. Verified via a mock (no 40-min re-run):
+the hook reads "the fork truly NEEDS types and biome … forageSpecialization and storyteller barely held it … what
+makes it LAST is the open question — run more seeds, or give it more space." Game-only change; core untouched.
+STILL deferred (lower-ranked, real, not blockers): show population AND fork columns (the agent valued the
+discrimination the pop-table gave); dynasty/lineage ARCS (a named survivor with no consequence reads flat —
+genome.distance hooks unused); "shown not told"; the epic-wall leaderboard artifact; the long-tail "what makes
+the fork LAST" (the open question the gift now poses — space, per the biome finding, is the lead).
