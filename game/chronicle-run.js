@@ -110,7 +110,7 @@ function main() {
   };
 
   const out = chronicle(youLog, meta);
-  const text = out.godseye + "\n\n" + out.secondPerson + "\n";
+  const text = out.whatYouMade + "\n\n" + out.narrative + "\n\n" + out.closing + "\n";
   console.log(text);
   console.log("--- facts (provenance) ---");
   console.log(JSON.stringify(out.facts));

@@ -284,7 +284,7 @@ function shortKnob(k) { return k.replace(/^[a-z]+\./, ""); }
 // "The game does the science for you" — and it arms the next re-run with the lever that
 // matters, not a fortune-cookie question. Measured, not asserted.
 function renderRankedCounterfactual(rcf) {
-  const L = ["You set " + rcf.nSet + " rule" + (rcf.nSet === 1 ? "" : "s") + ". Tested one at a time — each reverted to default while the rest held — here is which one actually decided your world:"];
+  const L = ["You set " + rcf.nSet + " rule" + (rcf.nSet === 1 ? "" : "s") + ". Reverting each ONE to default in turn (the rest held), on this one seed — which alone moved your world. (A marginal, one-at-a-time test: a lever may only bite alongside the others.)"];
   for (const r of rcf.ranked) {
     L.push("  - " + shortKnob(r.knob) + " (" + r.you + " -> default " + r.def + "): " + r.label + " — " + r.effect + ".");
   }
@@ -307,42 +307,47 @@ function groundedForwardHook(f, rcf) {
   return forwardHook(f);
 }
 
-// --- SECOND-PERSON (rooted to the agent's rule choices + the counterfactual) --
-function renderSecondPerson(f, meta) {
-  const e = endState(f);
+// --- WHAT YOU MADE — the measured engine, rendered FIRST (cold-stranger verdict: the pull
+// to act lives entirely here, not in the prose; the narrative is garnish read once then skipped).
+function renderWhatYouMade(f, meta) {
   const L = [];
   const knobs = (meta && meta.recipe) || {};
   const ks = Object.keys(knobs);
   L.push("=== WHAT YOU MADE ===");
-  if (ks.length) {
-    L.push("You set: " + ks.map((k) => k + " = " + knobs[k]).join(", ") + ".");
-  } else {
-    L.push("You changed nothing; you let the default world run.");
-  }
-
-  // the measured counterfactual — REAL causation, by intervention. The RANKED multi-knob
-  // form is the engine (preferred); the single-knob form is the fallback.
+  L.push(ks.length ? "You set: " + ks.map((k) => k + " = " + knobs[k]).join(", ") + "." : "You changed nothing; you let the default world run.");
   const rcf = meta && meta.rankedCf;
   const cf = meta && meta.counterfactual;
-  if (rcf && rcf.ranked && rcf.ranked.length) {
-    L.push("");
-    for (const ln of renderRankedCounterfactual(rcf)) L.push(ln);
-  } else if (cf) {
-    L.push("");
-    for (const ln of renderCounterfactual(cf)) L.push(ln);
-  }
+  if (rcf && rcf.ranked && rcf.ranked.length) { L.push(""); for (const ln of renderRankedCounterfactual(rcf)) L.push(ln); }
+  else if (cf) { L.push(""); for (const ln of renderCounterfactual(cf)) L.push(ln); }
+  return L.join("\n");
+}
 
-  L.push("");
-  if (e.pop === 0) {
-    L.push("Your world emptied at tick " + f.extinctTick + " (" + f.shape + "). " +
-      (f.kills > f.deaths * 0.3 ? "The hunt consumed it." : "It could not feed itself."));
-  } else {
-    L.push("Your world became " + describeDiet(e.diet, e.carnFrac) + ", " + e.pop + " alive at tick " + f.endTick + " (" + f.shape + ").");
+// The honest loop-invitation — replaces the editorializing "that is the lever that matters"
+// directive (a cold-stranger flagged it as cheapening the credible table by concluding FOR the
+// reader). It names the project's own two caveats — single seed, one-at-a-time (marginal, effects
+// may be contingent) — and turns them INTO the reason to re-run: verify it, or break it. The
+// honesty IS the hook (re-running other seeds / paired levers is exactly the next move it wants).
+function loopInvitation(f, rcf) {
+  const ranked = (rcf && rcf.ranked) || [];
+  const top = ranked.find((r) => r.top) || ranked[0];
+  if (!top) return forwardHook(f);
+  const k = shortKnob(top.knob);
+  if (top.flip) {
+    return "But this is one seed, and each lever was tested alone — " + k + " may only bite alongside the rest. Change " + k + " and run it again (another seed, or paired with the next) and see if it holds.";
   }
+  if (f.collapsed) {
+    return "No single lever you set decided this — on one seed, each tested alone. " + forwardHook(f);
+  }
+  return forwardHook(f);
+}
 
-  // hand the choice back — the half-loop: name the measured cause (if ranked) or the live tension
+function renderClosing(f, meta) {
+  const e = endState(f);
+  const L = [];
+  if (e.pop === 0) L.push("Your world emptied at tick " + f.extinctTick + " (" + f.shape + ").");
+  else L.push("Your world became " + describeDiet(e.diet, e.carnFrac) + ", " + e.pop + " alive at tick " + f.endTick + " (" + f.shape + ").");
   L.push("");
-  L.push(rcf && rcf.ranked && rcf.ranked.length ? groundedForwardHook(f, rcf) : forwardHook(f));
+  L.push(loopInvitation(f, meta && meta.rankedCf));
   return L.join("\n");
 }
 
@@ -387,10 +392,14 @@ function renderQuietGodseye(f, meta) {
 
 function chronicle(log, meta) {
   const f = extract(log);
-  const dramatic = isDramatic(f, meta || {});
+  const m = meta || {};
+  const dramatic = isDramatic(f, m);
+  // Order = the measured engine FIRST, the narrative (garnish) second, the honest loop-
+  // invitation last. (Verdict: bring the finger forward, demote the eulogy.)
   return {
-    godseye: dramatic ? renderGodseye(f, meta || {}) : renderQuietGodseye(f, meta || {}),
-    secondPerson: renderSecondPerson(f, meta || {}),
+    whatYouMade: renderWhatYouMade(f, m),
+    narrative: dramatic ? renderGodseye(f, m) : renderQuietGodseye(f, m),
+    closing: renderClosing(f, m),
     facts: {
       births: f.births, deaths: f.deaths, kills: f.kills, dramatic,
       peak: f.peak, peakTick: f.peakTick, crash: f.crash, crashTick: f.crashTick,
