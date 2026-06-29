@@ -251,6 +251,10 @@ class World {
     const cs = this.creatures;
     const n = cs.length;
     let diet = 0, rad = 0, gen = 0, maxGen = 0, energy = 0, age = 0, carn = 0;
+    // Forage distribution (resource-niche axis): the chronicle needs it to narrate whether a
+    // multi-food world FORKED into specialists or only leaned (the agent's actual forage lever).
+    // Pure observation — no RNG, present on every creature — so the default world stays bit-exact.
+    let forage = 0, fLo = 0, fHi = 0;
     const buckets = new Int32Array(18); // 20°-wide hue bins -> visible "lineages"
     for (let i = 0; i < n; i++) {
       const c = cs[i];
@@ -261,6 +265,9 @@ class World {
       energy += c.energy / c.capacity;
       age += c.age;
       if (c.diet > 0.5) carn++;
+      forage += c.forage;
+      if (c.forage < 0.35) fLo++;
+      else if (c.forage > 0.65) fHi++;
       let b = (c.hue / 20) | 0;
       if (b < 0) b = 0;
       else if (b > 17) b = 17;
@@ -279,6 +286,9 @@ class World {
       avgEnergy: n ? energy / n : 0,
       avgAge: n ? age / n : 0,
       carnFrac: n ? carn / n : 0,
+      avgForage: n ? forage / n : 0,
+      forageLo: n ? fLo / n : 0, // fraction specialised on food type 0
+      forageHi: n ? fHi / n : 0, // fraction specialised on the other end
       lineages,
       births: this.births,
       deaths: this.deaths,

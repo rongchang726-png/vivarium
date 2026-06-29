@@ -15,10 +15,12 @@
  * -> same story). A grammar/template renderer, NOT an LLM (the gift stays trustworthy
  * and runs from file://; an agent reader can re-render the structured facts itself).
  *
- * Event schema (from src/world.js + src/creature.js):
+ * Event schema (from src/world.js + src/creature.js + src/storyteller.js):
  *   birth  {k,t,id,pid,clan,gen,diet,r,hue,def,x,y}   (pid -1 = founder/genesis)
  *   death  {k,t,id,cause,clan,gen,diet,r,age,off,x,y} (cause: starved|age|preyed)
- *   kill   {k,t,pred,prey,predClan,preyClan,predDiet,preyDef}
+ *   kill   {k,t,pred,prey,predClan,preyClan,predDiet,preyDef,x,y}
+ *   famine {k,t,x,y,r,removed,dom}                    (a BUILD 2 disturbance: where/when/how much/the
+ *                                                       dominance that earned it — a data-driven chapter)
  *   census {k,tick,pop,food,avgDiet,avgRadius,maxGen,carnFrac,lineages,...}
  */
 
@@ -56,12 +58,13 @@ function pct(x) { return Math.round(x * 100) + "%"; }
 
 // --- extract structured facts from a log --------------------------------------
 function extract(log) {
-  const census = [], births = [], deaths = [], kills = [];
+  const census = [], births = [], deaths = [], kills = [], famines = [];
   for (const e of log) {
     if (e.k === "census") census.push(e);
     else if (e.k === "birth") births.push(e);
     else if (e.k === "death") deaths.push(e);
     else if (e.k === "kill") kills.push(e);
+    else if (e.k === "famine") famines.push(e);
   }
 
   // per-individual records (offspring, kills, lifespan, fate)
@@ -117,10 +120,21 @@ function extract(log) {
   for (const d of deaths) clanLastDeath[d.clan] = Math.max(clanLastDeath[d.clan] || 0, d.t);
 
   return {
-    census, births: births.length, deaths: deaths.length, kills: totalKills,
+    census, births: births.length, deaths: deaths.length, kills: totalKills, famines,
     first, last, peak, peakTick, trough, troughTick, crash, crashTick, crashFrom,
     endTick, collapsed, extinctTick, shape, rev, causeTally, rec, aliveClan, clanLastDeath,
   };
+}
+
+// Rough compass for a famine's location (faithful: x,y are logged). World dims come via meta
+// (the chronicle is DOM-free and has no CONFIG); fall back to the default 1280x800 torus.
+function compass(x, y, W, H) {
+  W = W || 1280; H = H || 800;
+  const ew = x < W / 3 ? "western" : x > 2 * W / 3 ? "eastern" : "central";
+  const ns = y < H / 3 ? "northern" : y > 2 * H / 3 ? "southern" : "";
+  if (ns && ew === "central") return ns + " reaches";
+  if (ns) return ns + "-" + ew + " reaches";
+  return ew + " reaches";
 }
 
 // dominant diet at end, and generations reached
@@ -157,6 +171,17 @@ function buildCast(f) {
   if (surv) add(surv, "survivor");
   else if (lastFallen[0]) add(lastFallen[0], "last");
   return cast.slice(0, 4);
+}
+
+// The ANOMALY: the most counterintuitive single fact in the record — a GRAZER (low diet) that
+// nonetheless killed. The cold-stranger flagged this as the one genuinely hooking detail, and that
+// it was buried; this surfaces it as its own beat. Observational only (no asserted cause — THE LAW).
+function findAnomaly(f) {
+  let best = null;
+  for (const r of f.rec.values()) {
+    if (r.diet != null && r.diet < 0.25 && r.kills > 0 && (!best || r.kills > best.kills)) best = r;
+  }
+  return best && best.kills >= 2 ? best : null;
 }
 
 function memberLine(m) {
@@ -204,6 +229,25 @@ function renderGodseye(f, meta) {
     L.push("  The peak held only briefly. From tick " + f.peakTick + " the numbers only fell, never recovering — " +
       preyed + " taken by the hunt, " + starved + " by hunger — bleeding out across the " + (f.extinctTick - f.peakTick) + " ticks that followed.");
   }
+  // The disturbances — data-driven chapters (BUILD 2): each famine is a logged turning-point.
+  // The dominance read AT the famine is the honest second-person line: not "dominance CAUSED it"
+  // (only predation is a logged cause — THE LAW), but the world had narrowed THIS far when it came.
+  if (f.famines && f.famines.length) {
+    // Lead with the ARC (count + the dominance trend), then ONE vivid instance — the worst. A list of
+    // near-identical famine lines reads as a fill-in-the-blank template however you vary the verbs (the
+    // cold-stranger saw straight through synonyms); an arc plus a standout reads as a history.
+    const W = meta && meta.worldW, H = meta && meta.worldH;
+    const n = f.famines.length;
+    const doms = f.famines.map((fm) => fm.dom);
+    let arc = "  The land did not sit quiet: " + n + (n === 1 ? " time it convulsed" : " times it convulsed");
+    if (n >= 2 && doms[n - 1] < doms[0] - 0.05) {
+      arc += ", and each blow left it less ruled by any single line — one bloodline's grip slipping " + doms.map((d) => pct(d)).join(" to ");
+    }
+    L.push(arc + ".");
+    const worst = f.famines.reduce((a, b) => (b.removed > a.removed ? b : a), f.famines[0]);
+    L.push("    The worst struck at tick " + worst.t + ", scouring the " + compass(worst.x, worst.y, W, H) +
+      " — " + worst.removed + " plants gone to barren ground.");
+  }
 
   // Act III — the cast
   const cast = buildCast(f);
@@ -211,6 +255,11 @@ function renderGodseye(f, meta) {
     L.push("");
     L.push("III. THOSE WHO WERE NAMED.");
     for (const m of cast) L.push("  " + memberLine(m));
+    const anom = findAnomaly(f);
+    if (anom) {
+      L.push("  Strangest of all: " + nameOf(anom.id) + ", by diet a grazer (" + anom.diet.toFixed(2) +
+        "), yet " + anom.kills + " creatures fell to it — a killer among the eaters of grass, in a world that chose the plants.");
+    }
   }
 
   // Act IV — the end
@@ -221,7 +270,10 @@ function renderGodseye(f, meta) {
       " ticks that followed, the world was silent.");
   } else {
     L.push("  At tick " + f.endTick + ", " + e.pop + " survive — " + describeDiet(e.diet, e.carnFrac) +
-      ", descended through " + e.maxGen + " generations. The shape of this history was " + f.shape + ".");
+      ", descended through " + e.maxGen + " generations.");
+    const fo = describeForage(f, meta);
+    if (fo) L.push("  And " + fo.text + ".");
+    L.push("  The shape of this history was " + f.shape + ".");
   }
   return L.join("\n");
 }
@@ -231,6 +283,44 @@ function describeDiet(avgDiet, carnFrac) {
   if (avgDiet > 0.6) return "a people of hunters (mean diet " + avgDiet.toFixed(2) + ")";
   if (carnFrac > 0.2) return "a mixed people, " + pct(carnFrac) + " of them carnivorous";
   return "an omnivorous people (mean diet " + avgDiet.toFixed(2) + ")";
+}
+
+// The FORAGE outcome — the resource-niche axis (which plant you eat), ORTHOGONAL to diet. When the
+// agent set food.types>1, THIS is the lever they actually pulled ("do two foods split the world into
+// two species?"); a chronicle answering only with mean DIET misses the whole experiment (cold-stranger
+// round 1). And it must read the TRAJECTORY, not the final tick — for a restless world the endpoint
+// LIES (seed 7 forked both-ends >30% from tick ~9000 to ~13000, then the final snapshot caught one line
+// at 29% and the old code called it "never split"). So: scan the census series for a SUSTAINED fork (a
+// near-miss that merged back is the evidence cold-stranger round 3 demanded — shown, not asserted).
+function describeForage(f, meta) {
+  const recipe = (meta && meta.recipe) || {};
+  if ((recipe["food.types"] || 1) <= 1) return null; // no niche split was even possible
+  const cs = (f.census || []).filter((c) => c.avgForage != null);
+  if (!cs.length) return null;
+  const l = f.last || {};
+  const loEnd = l.forageLo || 0, hiEnd = l.forageHi || 0;
+  let forkTick = null, forkCount = 0, peakHi = 0, peakHiT = 0, peakLo = 0, peakLoT = 0;
+  for (const c of cs) {
+    const lo = c.forageLo || 0, hi = c.forageHi || 0;
+    if (lo > 0.3 && hi > 0.3) { if (forkTick == null) forkTick = c.tick; forkCount++; }
+    if (hi > peakHi) { peakHi = hi; peakHiT = c.tick; }
+    if (lo > peakLo) { peakLo = lo; peakLoT = c.tick; }
+  }
+  if (forkCount >= 2) {
+    // A real, sustained fork happened.
+    if (loEnd > 0.3 && hiEnd > 0.3) {
+      return { kind: "forked", text: "the foragers FORKED into two peoples — from tick " + forkTick + " on, two niches crystallized and held to the end (" + pct(loEnd) + " bound to one plant, " + pct(hiEnd) + " to the other)" };
+    }
+    return { kind: "forked-slipped", text: "the foragers FORKED — by tick " + forkTick + " two peoples had crystallized (each above a third of the world), and they held for thousands of ticks before one line slipped back near the close (ending " + pct(loEnd) + " / " + pct(hiEnd) + ")" };
+  }
+  const pk = Math.max(peakHi, peakLo), pkT = peakHi >= peakLo ? peakHiT : peakLoT;
+  if (pk > 0.38) {
+    return { kind: "near-miss", text: "the foragers kept reaching for a split and falling back — the specialists swelled to " + pct(pk) + " near tick " + pkT + ", a second people all but born, before the world pulled them in again (settling at " + pct(loEnd) + " / " + pct(hiEnd) + ")" };
+  }
+  if (loEnd > 0.15 || hiEnd > 0.15) {
+    return { kind: "leaned", text: "the foragers only leaned, never split — drifting a little toward their regions' plants (" + pct(loEnd) + " / " + pct(hiEnd) + ") but holding as one people" };
+  }
+  return { kind: "generalist", text: "the foragers stayed generalist — one undivided people, taking both plants alike" };
 }
 
 // The FORWARD-HOOK: instead of a generic "what would you change?", a closing line
@@ -246,6 +336,11 @@ function forwardHook(f) {
       return "They killed faster than the world could breed, then starved among the bones. What kind of payoff feeds a hunter that does not eat its own world empty?";
     }
     return "Nothing here could break even for long. What would let life pay its own way in this world?";
+  }
+  if (f.famines && f.famines.length) {
+    return "The land convulsed " + f.famines.length + (f.famines.length === 1 ? " time" : " times") +
+      " and life reformed after each — " + describeDiet(e.diet, e.carnFrac) + ", " + e.maxGen +
+      " generations deep. What would a heavier hand do here — break it, or forge something stranger?";
   }
   if (f.shape === "restless oscillation" || f.shape === "long equilibrium") {
     return "This world found a balance and held it — " + describeDiet(e.diet, e.carnFrac) + ", " + e.maxGen +
@@ -276,7 +371,14 @@ function renderCounterfactual(cf) {
   return L;
 }
 
-function shortKnob(k) { return k.replace(/^[a-z]+\./, ""); }
+function shortKnob(k) {
+  const parts = k.split(".");
+  const last = parts[parts.length - 1];
+  // "x.enabled" collides across features (storyteller.enabled vs biome.enabled both -> "enabled").
+  // Name a feature toggle by its FEATURE; otherwise drop the leading namespace.
+  if (last === "enabled" && parts.length >= 2) return parts[parts.length - 2];
+  return last;
+}
 
 // The RANKED counterfactual — the gift's real engine (cold-stranger verdict): of the N
 // rules you set, WHICH ONE was the actual cause? Each knob is reverted to default in turn
@@ -341,13 +443,41 @@ function loopInvitation(f, rcf) {
   return forwardHook(f);
 }
 
+// The closing hook: name the SPECIFIC knob to turn next, grounded in what the run measured. When the
+// agent's forage experiment only LEANED (didn't fork), point straight at forageSpecialization and a
+// direction — the cold-stranger's exact ask ("tell me which knob, and which way"). Otherwise fall back
+// to the ranked-counterfactual loop-invitation (which names the lever that moved this world most).
+function closingInvitation(f, meta) {
+  const fo = describeForage(f, meta);
+  const recipe = (meta && meta.recipe) || {};
+  const spec = recipe["food.forageSpecialization"];
+  if (fo && fo.kind === "forked") {
+    return "You set out to split one people into two — and you did; the fork held to the close. Does it hold on another seed, or was this one lucky? Change the seed and run it again.";
+  }
+  if (fo && fo.kind === "forked-slipped") {
+    // The fork DID form (shown in Act IV from the trajectory) and slipped at the end. Round 4's catch:
+    // the hook must NOT point at forageSpecialization as if the LEDGER backed it — the ledger ranks by
+    // POPULATION, which never saw this fork rise or fall, so it is SILENT on what holds the fork (not
+    // evidence that the knob is inert). Name that blindness; frame the re-run as the unmeasured question.
+    return "You set out to split one people into two — and for thousands of ticks you HAD them, before one line slipped at the close. The ledger above measures only POPULATION, and population never saw this fork rise or fall — so it cannot tell you what would hold it open; that question is unmeasured. Push forageSpecialization, raise food.types, or change the seed, and run it again — does the fork hold, or does this world always close it?";
+  }
+  if (fo && (fo.kind === "near-miss" || fo.kind === "leaned") && spec != null) {
+    // Meet the skeptic head-on: the ledger ranks levers by HEADCOUNT (where forageSpecialization barely
+    // shows), but headcount is not the fork — it is the knob that governs the split, an axis the count
+    // cannot see. (Round 2's catch: a hook must not point where its own table says "inert" unexplained.)
+    return "You split the food in two to make two peoples — and they kept reaching for it and falling back. The ledger above ranks levers by HEADCOUNT, where forageSpecialization barely shows — but headcount is not the fork: it is the knob that governs the split, an axis the count cannot see. Push it past " + spec + " and watch the SPLIT, not the numbers — does a second people finally hold, or does this world insist on staying one?";
+  }
+  return loopInvitation(f, meta && meta.rankedCf);
+}
+
 function renderClosing(f, meta) {
   const e = endState(f);
   const L = [];
-  if (e.pop === 0) L.push("Your world emptied at tick " + f.extinctTick + " (" + f.shape + ").");
-  else L.push("Your world became " + describeDiet(e.diet, e.carnFrac) + ", " + e.pop + " alive at tick " + f.endTick + " (" + f.shape + ").");
+  // The shape is already stated in Act IV — don't echo it here (a repeated phrase reads as a template).
+  if (e.pop === 0) L.push("Your world emptied at tick " + f.extinctTick + ".");
+  else L.push("Your world became " + describeDiet(e.diet, e.carnFrac) + ", " + e.pop + " alive at tick " + f.endTick + ".");
   L.push("");
-  L.push(loopInvitation(f, meta && meta.rankedCf));
+  L.push(closingInvitation(f, meta));
   return L.join("\n");
 }
 
@@ -370,9 +500,10 @@ function summarize(log) {
 function isDramatic(f, meta) {
   if (f.collapsed) return true; // extinction is a tragedy
   if (f.crash > 0 && f.crash >= (f.crashFrom || 1) * 0.25) return true; // a real crash
+  if (f.famines && f.famines.length) return true; // a world the land convulsed is NOT a quiet one
   const rcf = meta && meta.rankedCf;
   if (rcf && rcf.ranked && rcf.ranked.some((r) => r.flip)) return true; // a pivotal lever
-  return false; // survived, no crash, no decisive lever => a quiet world
+  return false; // survived, no crash, no decisive lever, no disturbance => a quiet world
 }
 
 function renderQuietGodseye(f, meta) {
@@ -401,7 +532,7 @@ function chronicle(log, meta) {
     narrative: dramatic ? renderGodseye(f, m) : renderQuietGodseye(f, m),
     closing: renderClosing(f, m),
     facts: {
-      births: f.births, deaths: f.deaths, kills: f.kills, dramatic,
+      births: f.births, deaths: f.deaths, kills: f.kills, famines: (f.famines || []).length, dramatic,
       peak: f.peak, peakTick: f.peakTick, crash: f.crash, crashTick: f.crashTick,
       endTick: f.endTick, shape: f.shape, end: endState(f),
     },

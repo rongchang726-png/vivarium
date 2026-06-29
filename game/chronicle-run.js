@@ -51,6 +51,25 @@ const RECIPES = {
     rankKnobs: ["food.types", "food.spawnPerTick"],
   },
 
+  // The richness build (BUILD 1 + 2): terrain lays out two regional niches, and the
+  // storyteller's rare-severe famines punctuate the history with data-driven chapters. A
+  // non-arena world (random founders, genesis on). The gift ranks the FRAME-level levers —
+  // was the disturbance the cause? was the terrain? — so the re-run is armed at the frame level.
+  terrain: {
+    arena: false,
+    knobs: {
+      "biome.enabled": true, "food.types": 2, "food.forageSpecialization": 1.2,
+      "storyteller.enabled": true,
+    },
+    founders: [],
+    ticks: 14000,
+    cf: { knob: "storyteller.enabled", you: true, baseline: false },
+    // Rank the THEMATIC levers the agent actually pulled FIRST (forage niche split, two foods),
+    // not just the on/off frame toggles — the cold-stranger's critique: "you didn't test the rules
+    // I care about". forageSpecialization is the keystone (convex trade-off => does it fork?).
+    rankKnobs: ["food.forageSpecialization", "food.types", "biome.enabled", "storyteller.enabled"],
+  },
+
   // The default world: seeded omnivores; natural selection's verdict (herbivory).
   default: {
     arena: false,
@@ -103,6 +122,8 @@ function main() {
   const meta = {
     seed: SEED,
     recipe: recipe.knobs,
+    worldW: defApi.CONFIG.world.width,
+    worldH: defApi.CONFIG.world.height,
     rankedCf: {
       nSet: rankKnobs.length,
       ranked: ranked.map((r) => ({ knob: r.knob, you: r.you, def: r.def, outcome: r.sum.line, label: r.label, effect: r.effect, top: r === topR, flip: r.flip })),

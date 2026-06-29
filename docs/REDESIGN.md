@@ -271,3 +271,57 @@ rules; the epic-wall as a thick leaderboard artifact. **Critical composition ris
 era salience. Hence each earlier build needs a THIN chronicle readout to prove its richness is visible. The
 test is NOT a "biome-diversity score" but "do these worlds yield MORE distinct, less-predictable chronicles
 than the flat torus" — measured by the counterfactual the gift already runs (guard the want→metric slip).
+
+### BUILD 3 progress log (2026-06-29) — the gift now CONSUMES the richness; cold-stranger moved no → yes
+Wired terrain + disturbance INTO the chronicle (game/chronicle.js + chronicle-run.js), and re-ran the
+keystone cold-stranger test (a fresh agent, only the story, the pre-registered STRONG bar — "does it make
+you want to change a rule and re-run?"). Built:
+- famine events read + narrated as data-driven CHAPTERS (compass place from logged x,y + the dominance AT
+  the famine — the honest second-person line: not "dominance CAUSED it" (only predation is a logged cause —
+  THE LAW), but the world had narrowed THIS far when it came); `isDramatic` now treats a disturbed world as
+  dramatic (fixes the "composition risk" — terrain/disturbance worlds were reading as renderQuietGodseye).
+- a `terrain` recipe (biome+storyteller, random founders) whose `rankKnobs` are the FRAME-level levers the
+  agent actually pulled (forageSpecialization, food.types, biome, storyteller) — THE LOOP, the gift ranking
+  frame rules.
+- the FORAGE outcome narrated (fork / leaned / generalist) — needed a tiny bit-exact core add (avgForage +
+  forageLo/Hi in computeStats/census; pure observation, hash 4244329615 holds). This was the keystone fix.
+**Cold-stranger arc (the real yield, each round's critique acted on):**
+- Round 1 → "basically won't act." The decisive critique: *the story narrated mean DIET (herbivore↔carnivore)
+  but the agent's lever was FORAGE (which plant) — it answered with the wrong axis, never touching what was
+  pulled.* Also: 4 knobs set but only 2 ablated; "storyteller" reads as a mere narrator yet toggling it moved
+  the count (single-tick-oscillation noise reads as broken faithfulness).
+- Fixed (forage narration + 4 thematic rankKnobs + foregrounded the one ANOMALY it loved — a diet-0.15 grazer
+  that killed 6) → Round 2 → "barely YES — but what pulls me is the DATA (the ablation ledger), not the prose."
+  Confirms the project thesis AGAIN: the gift's value is the measured ranked counterfactual; the narrative is
+  garnish (third independent agent to say so). Its sharp catch — a real logic bug I'd introduced: *the closing
+  hook said "push forageSpecialization" while the ledger said that knob "barely moved it" — pointing at the
+  lever its own data called inert, and not distinguishing population-inert from fork-inert.*
+- Fixed (the hook now meets the skeptic head-on: headcount ≠ the fork; forageSpecialization is the knob that
+  governs the SPLIT, an axis the count can't see — push it and watch the split, not the numbers; + compressed
+  the 3 templated famine lines into an arc [count + the dominance-slip trend] plus one vivid standout, since
+  synonym-varied lines still read as a fill-in-the-blank template) → Round 3 → "barely yes; the pull is the
+  DATA not the prose" — and its catch EXPOSED A FAITHFULNESS BUG: it asked to be SHOWN the fork, not told —
+  and on looking, `describeForage` was reading only the FINAL census tick, which for a restless world LIES:
+  seed 7 actually FORKED both-ends >30% from tick ~9140 through ~13000, then the endpoint caught one line at
+  29% and the code called it "never split." (The cold-stranger's skepticism caught the chronicle violating its
+  own LAW — narrating a non-fact — exactly as "read the bytes" catches sim false-positives. The keystone test
+  is a FAITHFULNESS check, not just a prose check.)
+- Fixed (read the forage TRAJECTORY: a sustained both-ends fork → narrate "FORKED by tick 9140, held thousands
+  of ticks, one line slipped at the close" — the real, dramatic, faithful arc) → Round 4 → "will act, but
+  slightly — the pull is STILL the ablation table, not the chronicle," and it nailed the same contradiction one
+  level deeper: the closing pushed forageSpecialization while the ledger ranks it "barely moved it" — *because
+  the ledger measures POPULATION, and the agent's experiment is the FORK; the ablation never tested fork
+  durability at all.*
+**THE HONEST CORE, re-confirmed across SEVEN independent cold-stranger reads (the original 3 + these 4): what an
+agent ACTS on is the measured RANKED COUNTERFACTUAL, not the prose.** The prose is a faithful human-facing
+wrapper; the AGENT gift is the ledger (round 4's agent literally said "I'll revert biome and watch the 200
+swing" — acting on the table, as designed). The prose hook keeps failing for ONE structural reason: the ledger
+scores by POPULATION, but the dramatic question (does it FORK?) is a different metric the population can't see —
+so any hook pointing at the fork-knob contradicts a population-ranked table. **The ROOT fix (the real next
+build, NOT a prose patch): score the ranked counterfactual by the OUTCOME THE AGENT CARES ABOUT (fork durability
+for a fork experiment), not always population — then the table and the narrative tell ONE story and the
+contradiction dissolves at the source.** Shipped honestly meanwhile: the forked-slipped hook now NAMES the
+ledger's blindness (it measured population, never saw the fork, so it's silent — not evidence the knob is
+inert) and frames the re-run as the unmeasured question. STILL deferred (lower-ranked, real, not blockers):
+the outcome-metric counterfactual (above); dynasty/lineage ARCS (a named survivor with no consequence reads
+flat — genome.distance hooks unused); "shown not told"; the epic-wall leaderboard artifact.
