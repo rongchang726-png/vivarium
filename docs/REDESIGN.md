@@ -355,6 +355,11 @@ just within one). Then the full ledger DISCRIMINATED, and the result OVERTURNED 
     creature meets only type-2 food, so it specialises regardless of the trade-off shape). This REFINES BUILD 1:
     the keystone is SPACE (the recurring mixing-wall lever), not the trade-off convexity.
   - storyteller: MINOR (1/4) — the disturbance is a lucky/partial lever, not a fork cause.
+HONESTY CAVEAT (added in the phase review): this discrimination rests on only **2 baseline-forking seeds** (7 &
+19) — "biome DECISIVE, 0/4" means even those 2 stop forking without it. So the finding is SUGGESTIVE and
+directionally consistent with BUILD 1's mixing-wall (space matters), NOT a robust large-N result; firming it up
+wants a seed set with more forkers (or tuning so more seeds fork). The DIRECTION (space > trade-off) I trust; the
+exact ranking on 2 forkers I do not over-trust.
 So the multi-seed CF did exactly its job: it discriminated true prerequisites (food.types + biome) from lucky
 levers (forageSpecialization + storyteller), AND produced a genuine scientific refinement (space > trade-off for
 the fork) — the gift's engine doing real science, not just description. **The deeper fix it forced:** the
