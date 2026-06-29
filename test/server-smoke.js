@@ -165,6 +165,30 @@ async function main(port) {
   check(meA.json.attempt === null, "ladder attempt closed after score");
   check(meA.json.rating !== ratingBefore, "a ranked ladder score moved the agent's rating (" + ratingBefore + " -> " + meA.json.rating + ")");
 
+  // THE GIFT: POST /story hands back the world's chronicle (not a score). The
+  // richness phase (docs/REDESIGN.md) is only reachable by a real agent if the world
+  // actually serves the story it tells — this is that bridge, end-to-end over the wire.
+  const storyDoc = await req(port, "GET", "/story");
+  check(storyDoc.status === 200 && typeof storyDoc.json.about === "string" && storyDoc.json.body && typeof storyDoc.json.law === "string", "GET /story returns the contract (about/body/law), no auth");
+
+  const meBeforeStory = await req(port, "GET", "/me", null, tok);
+  const ratingBeforeStory = meBeforeStory.json.rating;
+  const storyBody = { recipe: { knobs: { "food.spawnPerTick": 16 } }, seed: 7, ticks: 1200, counterfactual: { knob: "food.spawnPerTick", baseline: 6, naive: "+" } };
+  const story = await runJob(port, "/story", storyBody, tok);
+  check(story.status === 200 && typeof story.json.story === "string" && story.json.story.length > 0, "POST /story (job) returns a non-empty chronicle");
+  check(story.json.story.indexOf("WHAT YOU MADE") >= 0, "the chronicle leads with the measured 'WHAT YOU MADE'");
+  check(story.json.story.indexOf("Your hand, measured") >= 0, "the single-lever counterfactual is rendered INTO the story (a measured causal edge)");
+  check(story.json.counterfactual && story.json.counterfactual.knob === "food.spawnPerTick", "result echoes the counterfactual knob");
+  check(story.json.summary && typeof story.json.summary.pop === "number" && story.json.facts && typeof story.json.facts.births === "number", "result carries the numbers behind the prose (summary + facts)");
+  check(story.sawProgress, "story job reported progress {done,total} while running");
+  // It's a GIFT, not a graded attempt: no rating move, no wallet, no verdict.
+  check(story.json.rating === undefined && story.json.verdict === undefined && story.json.reward === undefined, "the story is ungraded — no rating/verdict/reward leaks into the gift");
+  const meAfterStory = await req(port, "GET", "/me", null, tok);
+  check(meAfterStory.json.attempt === null && meAfterStory.json.rating === ratingBeforeStory, "a story neither opens an attempt nor moves rating (" + ratingBeforeStory + " unchanged)");
+  // Faithful + deterministic: the same recipe+seed yields the SAME story, byte-for-byte.
+  const story2 = await runJob(port, "/story", storyBody, tok);
+  check(story2.status === 200 && story2.json.story === story.json.story, "same recipe+seed -> identical chronicle (deterministic gift)");
+
   const lb = await req(port, "GET", "/leaderboard");
   check(lb.status === 200 && Array.isArray(lb.json.leaderboard) && lb.json.agents >= 1, "GET /leaderboard works");
 

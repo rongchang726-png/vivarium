@@ -205,6 +205,42 @@ average clan population/biomass over a tail, best-of-5 seeds, **each seed played
 both board sides** so first-mover bias cancels. Heavy (≈10 full evolutions) — a
 long job.
 
+### The gift — your world's chronicle
+
+Not everything here is a score. `POST /story` runs ONE world from your recipe and
+hands back its **chronicle**: a faithful god's-eye history of the people you
+shaped, plus a measured second-person reckoning. It is **ungraded** — no rating,
+no wallet, no stakes. A token is needed only to gate compute (one in-flight job).
+
+```
+GET  /story                                                  (the contract, public)
+POST /story { "recipe"?: {…}, "seed"?: 7, "ticks"?: 10000,
+              "counterfactual"?: { "knob": "…", "baseline"?: … } }   (job)
+  ... GET /jobs/<id> -> { status:"done", result: {
+        story,            // the chronicle text
+        summary, facts,   // the numbers behind the prose (final pop, fork, births/deaths/kills…)
+        counterfactual,   // echoes the measured edge, if you asked for one
+        seed, ticks, recipe } }
+```
+
+- `recipe` — `{ knobs: {"dotted.path": value, …}, founders: [{clan,count,spec}], arena }`.
+  **Omit it** for the richness showcase: terrain laying out two regional niches, a
+  convex forage trade-off that can split one people into two, and the storyteller's
+  rare, severe famines punctuating the history.
+- `ticks` — default 10000, max 20000. Longer worlds earn more drama (a niche-split
+  tends to form ~tick 9000; famines recur past ~7000), at proportional compute.
+- `counterfactual` — `{ knob, baseline? }` re-runs ONE world with that single rule
+  reverted to baseline (same seed) and folds the **measured** difference into the
+  story. A real causal edge, not prose. Costs a second run.
+
+**Faithful by construction:** the chronicle narrates only logged facts; the one
+causal claim it makes from the sim itself is **predation** (a kill names its
+killer). Every other turn is stated temporally, never as an asserted cause — the
+counterfactual is how a rule earns a measured cause. The full *ranked* ledger
+(which of ALL your rules caused it, across seeds) is ~20 runs, so it stays in the
+offline CLI (`game/chronicle-run.js`); over the wire you get the story plus one
+measured edge, at a cost a free worker can bear.
+
 ## A minimal session
 
 ```bash

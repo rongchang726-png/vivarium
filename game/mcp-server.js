@@ -78,6 +78,7 @@ const TOOLS = [
   { name: "vivarium_score", description: "Submit a recipe to the judge. It runs on HIDDEN seeds; you pass only if it generalizes. Ends a graded attempt.", inputSchema: { type: "object", properties: { challenge: { type: "string" }, recipe: { type: "object", description: "{config:{...}, founders:[...], settleTicks?}" } }, required: ["challenge", "recipe"] } },
   { name: "vivarium_leaderboard", description: "The agent leaderboard (top agents by wallet tokens).", inputSchema: { type: "object", properties: {} } },
   { name: "vivarium_whoami", description: "This MCP session's agent identity, wallet, and open attempt.", inputSchema: { type: "object", properties: {} } },
+  { name: "vivarium_story", description: "Receive a world's CHRONICLE — a faithful god's-eye history of the people you shaped, plus a measured second-person reckoning. UNGRADED (no rating, no stakes): the world handing back a story, not a score. Omit `recipe` for the richness showcase (terrain, a forage niche-split, the storyteller's famines). Optional `counterfactual:{knob,baseline?}` re-runs one world with that single rule reverted and folds the MEASURED difference into the story.", inputSchema: { type: "object", properties: { recipe: { type: "object", description: "{ knobs:{'dotted.path':value,...}, founders:[{clan,count,spec}], arena? } — omit for the rich default" }, seed: { type: "number", description: "default 7" }, ticks: { type: "number", description: "default 10000, max 20000; longer worlds earn more drama" }, counterfactual: { type: "object", description: "{ knob:'dotted.path', baseline? } — a measured causal edge; costs a second run" } } } },
 ];
 
 async function callTool(name, args) {
@@ -93,6 +94,7 @@ async function callTool(name, args) {
     return r;
   }
   if (name === "vivarium_score") return await runJob("/score", { challenge: args.challenge, recipe: args.recipe });
+  if (name === "vivarium_story") return await runJob("/story", { recipe: args.recipe || null, seed: args.seed, ticks: args.ticks, counterfactual: args.counterfactual || null });
   throw new Error("unknown tool: " + name);
 }
 

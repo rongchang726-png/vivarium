@@ -29,3 +29,6 @@ tmp_predlab/
 
 # RPS-lab experiment outputs (logs, not code) — see CLAUDE.md "The RPS meta"
 tmp_rps*.txt
+
+# Chronicle outputs (local story renders from game/chronicle-run.js, not code)
+.chronicles/

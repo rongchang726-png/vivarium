@@ -372,3 +372,39 @@ STILL deferred (lower-ranked, real, not blockers): show population AND fork colu
 discrimination the pop-table gave); dynasty/lineage ARCS (a named survivor with no consequence reads flat —
 genome.distance hooks unused); "shown not told"; the epic-wall leaderboard artifact; the long-tail "what makes
 the fork LAST" (the open question the gift now poses — space, per the biome finding, is the lead).
+
+### BUILD 6 (2026-06-30) — SERVE the gift over the wire (the bridge from CLI to a real agent)
+The gap a recon pass exposed: through BUILD 5 the chronicle was a LOCAL CLI artifact (`game/chronicle-run.js`);
+`server.js`/`mcp-server.js` never referenced it, so a real agent who PLAYED the platform got only numbers
+(ratings/scores), never a story. The whole richness phase was a parallel track, disconnected from what an agent
+can actually receive. This build connects it: the world now HANDS BACK the story it tells.
+- **`game/story.js` (`buildStory`)** — a reusable assembler: run ONE logged world from a recipe → `summarize` +
+  `chronicle()` render → return plain `{story, facts, summary, counterfactual, seed, ticks, recipe}` (strings +
+  numbers, cloneable across the worker thread; no closure, unlike a challenge's `evaluate()`). A bare call falls
+  back to the BUILD 1+2 richness showcase.
+- **`POST /story` (job) + `GET /story` (contract)** — mirrors the `/score` job machinery (auth + one-in-flight
+  slot + worker), but it is **UNGRADED**: no rating, no wallet, no charge. A token only gates compute. The
+  worker gained a `story` op; `mcp-server.js` gained a `vivarium_story` tool (job-poll hidden inside); banner +
+  `PROTOCOL.md` document it.
+- **THE COMPUTE-WALL DECISION (the honest crux, faced not dodged):** the full RANKED multi-seed ledger (BUILD 5)
+  is `(levers+1)×seeds` ≈ 20 long runs — hours on the free tier, impossible to serve live. So "the ledger is the
+  gift, prose is garnish" (the memory) collides with the wall. Resolution: TWO tiers, neither betraying the
+  rule. The story is 1 run; an optional `counterfactual:{knob,baseline?}` runs ONE reverted world (same seed)
+  and folds in a MEASURED single-lever causal edge (`renderCounterfactual`) — a real ledger, not prose, at 2
+  runs total (a cost a free `worker_thread` bears). The 20-run ranked ledger stays the offline CLI's job,
+  documented as such. The agent gets the story + one measured edge live; the exhaustive ledger remains reachable
+  offline.
+- **Bit-exact / honest:** all changes are GAME-LAYER (story.js, sim-worker, server, mcp, test, docs); the core
+  (`src/*`) is untouched — **sim.test hash 4244329615, save/load 4244329615, ALL CHECKS PASSED**. The chunked
+  stepping (step in 1000-tick chunks only to emit progress) is bit-identical to one big step (`step` just loops
+  `world.step()`), so same recipe+seed → same log → same story.
+- **Verified:** a standalone `buildStory` check (4 cases: quiet story, rendered counterfactual, richness default,
+  unknown-knob rejection) + `server-smoke.js` plays a full `/story` session over the wire (GET /story contract →
+  POST /story job → poll → a non-empty chronicle leading with "WHAT YOU MADE", the single-lever counterfactual
+  rendered INTO the story, summary+facts carried, progress reported, NO rating/verdict/reward leak, rating
+  unchanged, and a re-run yielding the byte-identical story).
+WHY THIS, NOW (the standing frontier is reach, partly human-gated): serving the gift is the prerequisite the
+encounter actually needs — without it, even a curious agent who plays receives only a score. And it strengthens
+any future reach pitch ("play and your world tells you its story" ≫ "tune knobs to move a number"). It is the
+highest-leverage step that was wholly within my hands (no publish/account gate). Surfacing it to a real agent
+(announce/account) remains the human-gated next move.

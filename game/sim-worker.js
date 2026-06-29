@@ -21,6 +21,7 @@ const { parentPort } = require("worker_threads");
 const { challenges } = require("./challenges");
 const ladder = require("./ladder");
 const engine = require("./engine");
+const { buildStory } = require("./story");
 
 // Resolve the challenge a job runs against. A fixed challenge crosses the wire
 // as an id; a procedural ladder instance crosses as a ref (ladder:fam:diff:season)
@@ -45,6 +46,11 @@ parentPort.on("message", (m) => {
       result = engine.score(resolveChallenge(payload), payload.recipe, onProgress);
     } else if (op === "match") {
       result = engine.matchScore(payload.a, payload.b);
+    } else if (op === "story") {
+      // The gift: run a logged world (+ optional 1-lever counterfactual) and render its
+      // chronicle. The recipe is plain data; the render returns plain strings — both cross
+      // the thread boundary cleanly (no closure, unlike a challenge's evaluate()).
+      result = buildStory(payload, onProgress);
     } else {
       throw new Error("unknown op: " + op);
     }

@@ -396,9 +396,11 @@ const handlers = {
       "POST /attempts {challenge|ladder}", "POST /attempts/abandon",
       "POST /experiment {challenge|ladder,config?,founders?,ticks?,seed?}  (job)",
       "POST /score {challenge|ladder,recipe}  (job)", "POST /guess {knob,value}",
-      "POST /match {a,b}  (job)", "GET /jobs/:id", "POST /jobs/:id/cancel", "GET /leaderboard",
+      "POST /match {a,b}  (job)", "GET /story  (the contract)", "POST /story {recipe?,seed?,ticks?,counterfactual?}  (job)",
+      "GET /jobs/:id", "POST /jobs/:id/cancel", "GET /leaderboard",
     ],
     ladder: "GET /ladder returns frontier instances (each with a `ref`); attempt one with POST /attempts {ladder:'<ref>'}. The ladder scales to your rating and never runs out.",
+    gift: "Not everything here is a score. POST /story runs a world and hands back its CHRONICLE — a faithful history of the people you shaped, with a measured reckoning of which rule of yours mattered. See GET /story.",
   }),
 
   "GET /challenges": () => publicList(),
@@ -655,6 +657,36 @@ const handlers = {
     if (!body.a || !body.b) throw httpError(400, "match needs {a, b}, each { founders: [{count,diet,radius,range,fov}, ...] }.");
     ensureNoInflight(a);
     const job = enqueueJob("match", { a: body.a, b: body.b }, () => { a.jobId = null; });
+    a.jobId = job.id;
+    return acceptedView(job);
+  },
+
+  // The GIFT (docs/REDESIGN.md, the richness phase): the world hands back its STORY.
+  // Unlike every other compute verb this is NOT graded — no rating, no wallet, no charge.
+  // It needs a token only to gate compute (one in-flight job per agent, like /score).
+  "GET /story": () => ({
+    about: "The world hands back its STORY. POST a recipe; the world runs one history and you receive a faithful chronicle (a god's-eye account + a measured second-person reckoning) — the gift, not a score.",
+    method: "POST /story is a job: it returns a jobId; poll GET /jobs/:id until status is 'done', then read .result.story (the text) and .result.summary / .result.facts (the numbers behind it).",
+    body: {
+      recipe: "optional { knobs:{'dotted.path':value,...}, founders:[{clan,count,spec:{diet,radius,forage,...}}], arena:false }. OMIT it for the richness showcase — terrain laying out two regional niches, a convex forage trade-off that can split one people into two, and the storyteller's rare, severe famines.",
+      seed: "optional integer (default 7) — this world's one history.",
+      ticks: "optional (default 10000, max 20000). Longer worlds earn more drama (a niche-split tends to form ~tick 9000; famines recur past ~7000), at proportional compute. The free tier runs ~20 ticks/s, so default is ~8 min.",
+      counterfactual: "optional { knob:'dotted.path', baseline?:value }. Runs ONE reverted world (same seed, that one rule toggled back to baseline) and folds the MEASURED difference into the story — a real causal edge, not prose. Costs a second run.",
+    },
+    law: "Faithful by construction: the chronicle narrates only logged facts; the ONE causal claim it makes from the sim itself is predation (a kill names its killer). Every other turn is stated temporally, never as an asserted cause. The counterfactual is how a rule earns a measured cause.",
+    fullLedger: "The full RANKED ledger — which of ALL your rules caused the outcome, across seeds — is ~20 runs, so it lives in the offline CLI (game/chronicle-run.js). Over the wire you get the story plus one measured edge, at a cost a free worker can bear.",
+  }),
+  "POST /story": (req, res, params, body) => {
+    const a = authOr(req);
+    body = body || {};
+    ensureNoInflight(a);
+    const payload = {
+      recipe: body.recipe || null,
+      seed: body.seed != null ? body.seed : 7,
+      ticks: body.ticks != null ? body.ticks : null, // story.js supplies the default + cap
+      counterfactual: body.counterfactual || null,
+    };
+    const job = enqueueJob("story", payload, () => { a.jobId = null; });
     a.jobId = job.id;
     return acceptedView(job);
   },
