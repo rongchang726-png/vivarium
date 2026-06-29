@@ -386,9 +386,20 @@ function shortKnob(k) {
 // "The game does the science for you" — and it arms the next re-run with the lever that
 // matters, not a fortune-cookie question. Measured, not asserted.
 function renderRankedCounterfactual(rcf) {
-  const L = ["You set " + rcf.nSet + " rule" + (rcf.nSet === 1 ? "" : "s") + ". Reverting each ONE to default in turn (the rest held), on this one seed — which alone moved your world. (A marginal, one-at-a-time test: a lever may only bite alongside the others.)"];
+  // Header names WHICH outcome the table ranks by, so the ledger and the narrative measure the SAME
+  // thing (BUILD 4: a population-ranked table calling the fork-lever "inert" while the story pushed it
+  // was the cold-stranger's killer contradiction — ranking by the fork removes it at the source).
+  const what = rcf.metric === "fork" ? "moved the FORK (whether two peoples held)" : "moved your world";
+  const L = ["You set " + rcf.nSet + " rule" + (rcf.nSet === 1 ? "" : "s") + ". Reverting each ONE to default in turn (the rest held), on this one seed — which alone " + what + ". (A marginal, one-at-a-time test: a lever may only bite alongside the others.)"];
   for (const r of rcf.ranked) {
     L.push("  - " + shortKnob(r.knob) + " (" + r.you + " -> default " + r.def + "): " + r.label + " — " + r.effect + ".");
+  }
+  // When EVERY lever reads decisive for the fork, that uniformity is itself the finding — not four
+  // clean causes but a KNIFE-EDGE fork: on one seed it tips out at any change (even reshuffling the
+  // famine RNG), so single-seed OAT cannot separate a true prerequisite from a lucky one. Say so — and
+  // point at the only honest discriminator (multi-seed). (The fork's fragility IS BUILD 1's finding.)
+  if (rcf.metric === "fork" && rcf.ranked.length > 1 && rcf.ranked.every((r) => r.flip)) {
+    L.push("  (Every lever reads decisive — but that is the fork's FRAGILITY, not four clean causes: a knife-edge fork tips out at any change on one seed. Re-run other seeds to find which lever ROBUSTLY holds it.)");
   }
   return L;
 }
@@ -455,11 +466,11 @@ function closingInvitation(f, meta) {
     return "You set out to split one people into two — and you did; the fork held to the close. Does it hold on another seed, or was this one lucky? Change the seed and run it again.";
   }
   if (fo && fo.kind === "forked-slipped") {
-    // The fork DID form (shown in Act IV from the trajectory) and slipped at the end. Round 4's catch:
-    // the hook must NOT point at forageSpecialization as if the LEDGER backed it — the ledger ranks by
-    // POPULATION, which never saw this fork rise or fall, so it is SILENT on what holds the fork (not
-    // evidence that the knob is inert). Name that blindness; frame the re-run as the unmeasured question.
-    return "You set out to split one people into two — and for thousands of ticks you HAD them, before one line slipped at the close. The ledger above measures only POPULATION, and population never saw this fork rise or fall — so it cannot tell you what would hold it open; that question is unmeasured. Push forageSpecialization, raise food.types, or change the seed, and run it again — does the fork hold, or does this world always close it?";
+    // The fork DID form (shown in Act IV) and slipped at the close. Now that the ledger above is ranked
+    // by the FORK ITSELF (BUILD 4), the hook and the table AGREE — no more "push the lever the table
+    // calls inert" (round 4's killer contradiction): the table shows which rule held the two peoples,
+    // and forageSpecialization is the continuous dial that sharpens the split.
+    return "You set out to split one people into two — and for thousands of ticks you HAD them, before one line slipped at the close. The ledger above, ranked by the fork itself, reads every rule as decisive — the fork is a knife-edge that any change tips out. forageSpecialization is the dial that sharpens it: push it past " + spec + ", or run other seeds, and see whether the fork that formed can be made to LAST instead of always closing.";
   }
   if (fo && (fo.kind === "near-miss" || fo.kind === "leaned") && spec != null) {
     // Meet the skeptic head-on: the ledger ranks levers by HEADCOUNT (where forageSpecialization barely
@@ -481,15 +492,34 @@ function renderClosing(f, meta) {
   return L.join("\n");
 }
 
+// The FORK metric — how much/long the population sustained TWO forage specialists at once (both ends
+// >30% of the world), read from the census series. This is the outcome a food.types>1 experiment is
+// ABOUT; ranking the counterfactual by THIS (not population) is what makes the ledger and the narrative
+// agree (BUILD 4 / memory: agent-gift-is-the-ledger-not-prose). forkSamples = census samples (every 20
+// ticks) with a live both-ends fork; peakSplit = max(forageLo+forageHi) ever reached.
+function forkMetric(f) {
+  const cs = (f.census || []).filter((c) => c.avgForage != null);
+  if (!cs.length) return { forkSamples: 0, forkFrac: 0, peakSplit: 0 };
+  let forkSamples = 0, peakSplit = 0;
+  for (const c of cs) {
+    const lo = c.forageLo || 0, hi = c.forageHi || 0;
+    if (lo > 0.3 && hi > 0.3) forkSamples++;
+    if (lo + hi > peakSplit) peakSplit = lo + hi;
+  }
+  return { forkSamples, forkFrac: forkSamples / cs.length, peakSplit };
+}
+
 // --- public: a one-line outcome summary (for counterfactual comparison) -------
 function summarize(log) {
   const f = extract(log);
   const e = endState(f);
-  if (e.pop === 0) return { collapsed: true, line: "the world emptied by tick " + f.extinctTick, pop: 0, diet: 0, shape: f.shape, extinctTick: f.extinctTick };
+  const fork = forkMetric(f);
+  if (e.pop === 0) return { collapsed: true, line: "the world emptied by tick " + f.extinctTick, pop: 0, diet: 0, shape: f.shape, extinctTick: f.extinctTick, forkSamples: 0, forkFrac: 0, peakSplit: 0 };
   return {
     collapsed: false,
     line: e.pop + " alive at tick " + f.endTick + " (" + describeDiet(e.diet, e.carnFrac) + ", " + f.shape + ")",
     pop: e.pop, diet: +e.diet.toFixed(3), shape: f.shape, maxGen: e.maxGen,
+    forkSamples: fork.forkSamples, forkFrac: +fork.forkFrac.toFixed(3), peakSplit: +fork.peakSplit.toFixed(3),
   };
 }
 

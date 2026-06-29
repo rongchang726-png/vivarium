@@ -68,6 +68,10 @@ const RECIPES = {
     // not just the on/off frame toggles — the cold-stranger's critique: "you didn't test the rules
     // I care about". forageSpecialization is the keystone (convex trade-off => does it fork?).
     rankKnobs: ["food.forageSpecialization", "food.types", "biome.enabled", "storyteller.enabled"],
+    // Score the counterfactual by the FORK (the outcome this experiment is ABOUT), not population —
+    // so the ledger and the narrative agree (BUILD 4). A population-ranked table called the fork lever
+    // "inert" while the story pushed it; ranking by fork resolves that at the source.
+    metric: "fork",
   },
 
   // The default world: seeded omnivores; natural selection's verdict (herbivory).
@@ -114,7 +118,7 @@ function main() {
     const log = runOnce(recipe, { knob: k, value: defaultOf(k) });
     ranked.push({ knob: k, you: recipe.knobs[k], def: defaultOf(k), sum: summarize(log) });
   }
-  for (const r of ranked) scoreImpact(r, youSum);
+  for (const r of ranked) scoreImpact(r, youSum, recipe.metric);
   ranked.sort((a, b) => b.score - a.score);
   const topR = ranked[0];
   for (const r of ranked) r.label = labelOf(r, topR);
@@ -126,6 +130,7 @@ function main() {
     worldH: defApi.CONFIG.world.height,
     rankedCf: {
       nSet: rankKnobs.length,
+      metric: recipe.metric || "pop",
       ranked: ranked.map((r) => ({ knob: r.knob, you: r.you, def: r.def, outcome: r.sum.line, label: r.label, effect: r.effect, top: r === topR, flip: r.flip })),
     },
   };
@@ -155,14 +160,37 @@ function describeDelta(you, base) {
   return parts.length ? parts.join(", ") : "a difference too small to matter";
 }
 
-// Impact of reverting one knob to default (the rest held), vs the world you made.
-function scoreImpact(r, youSum) {
+function pct(x) { return Math.round((x || 0) * 100) + "%"; }
+
+// Impact of reverting one knob to default (the rest held), vs the world you made. `metric` chooses the
+// OUTCOME ranked: "pop" (default) or "fork" (the forage-niche-split experiment — BUILD 4, so the table
+// ranks the lever the agent actually cares about and stops contradicting the narrative).
+function scoreImpact(r, youSum, metric) {
   const flip = r.sum.collapsed !== youSum.collapsed;
-  r.flip = flip;
   if (flip) {
+    r.flip = true;
     r.score = 1e6 + Math.abs((r.sum.pop || 0) - (youSum.pop || 0));
     r.effect = youSum.collapsed ? "without it the world LIVED (" + r.sum.line + ")" : "without it the world DIED (" + r.sum.line + ")";
-  } else if (youSum.collapsed) {
+    return;
+  }
+  if (metric === "fork") {
+    const youF = youSum.forkFrac || 0, rF = r.sum.forkFrac || 0;
+    const df = (r.sum.forkSamples || 0) - (youSum.forkSamples || 0);
+    // A fork "flip": you sustained two peoples, but reverting this knob meant they never formed at all.
+    r.flip = youF > 0.05 && rF < 0.01;
+    if (r.flip) {
+      r.score = 1e6 + Math.abs(df);
+      r.effect = "without it the world NEVER forked (you held two peoples " + pct(youF) + " of the run; reverted: " + pct(rF) + ")";
+    } else {
+      r.score = Math.abs(df);
+      r.effect = Math.abs(df) > 10
+        ? "the fork " + (df < 0 ? "shrank to " : "grew to ") + pct(rF) + " of the run (yours: " + pct(youF) + ")"
+        : "the fork barely changed (" + pct(rF) + " of the run vs your " + pct(youF) + ")";
+    }
+    return;
+  }
+  r.flip = false;
+  if (youSum.collapsed) {
     const dt = (r.sum.extinctTick || 0) - (youSum.extinctTick || 0);
     r.score = Math.abs(dt);
     r.effect = Math.abs(dt) > 200 ? "still died, but " + (dt > 0 ? dt + " ticks later" : (-dt) + " ticks sooner") : "changed almost nothing (died about the same time)";

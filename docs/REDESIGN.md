@@ -322,6 +322,23 @@ build, NOT a prose patch): score the ranked counterfactual by the OUTCOME THE AG
 for a fork experiment), not always population — then the table and the narrative tell ONE story and the
 contradiction dissolves at the source.** Shipped honestly meanwhile: the forked-slipped hook now NAMES the
 ledger's blindness (it measured population, never saw the fork, so it's silent — not evidence the knob is
-inert) and frames the re-run as the unmeasured question. STILL deferred (lower-ranked, real, not blockers):
-the outcome-metric counterfactual (above); dynasty/lineage ARCS (a named survivor with no consequence reads
-flat — genome.distance hooks unused); "shown not told"; the epic-wall leaderboard artifact.
+inert) and frames the re-run as the unmeasured question.
+
+### BUILD 4 (2026-06-30) — the outcome-metric counterfactual: rank by FORK, not population (root fix for round 4)
+Built the root fix above. `summarize()` now computes a FORK metric (forkSamples/forkFrac/peakSplit from the
+census forage series); the terrain recipe sets `metric:"fork"`; `scoreImpact` ranks by fork-durability delta (a
+"fork flip" = you forked, reverting → never forked); the table header + the hook are made consistent. RESULT:
+forageSpecialization now reads DECISIVE for the fork (not "barely moved it") — round 4's contradiction (the hook
+pushed the lever the table called inert) DISSOLVES at the source: table and narrative now measure the SAME
+thing. BUT single-seed fork CF revealed its own honest limit: ALL FOUR levers read DECISIVE (revert any → 0%
+fork on this seed), because the fork is a KNIFE-EDGE (BUILD 1's finding, now surfacing in the gift) — on one
+seed any change (even reshuffling the famine RNG) tips it out, so OAT cannot separate a true prerequisite from a
+lucky one. Shipped honestly: when every lever flips, the chronicle SAYS so ("that uniformity is the fork's
+fragility, not four clean causes — re-run other seeds to find which lever ROBUSTLY holds it") and the hook
+points at forageSpecialization (the dial) + multi-seed (the discriminator). So BUILD 4 both fixes the
+contradiction AND sharply motivates the next real build: **MULTI-SEED fork CF** (the long-deferred multi-seed
+counterfactual — single-seed cannot discriminate a fragile outcome; and/or show population AND fork columns so
+the agent gets both the discrimination it valued and the fork-consistency). Core untouched (hash 4244329615).
+STILL deferred (lower-ranked, real, not blockers): multi-seed CF (above, now top of the list); dynasty/lineage
+ARCS (a named survivor with no consequence reads flat — genome.distance hooks unused); "shown not told"; the
+epic-wall leaderboard artifact.
