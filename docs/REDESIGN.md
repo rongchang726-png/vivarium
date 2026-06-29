@@ -165,6 +165,57 @@ from-seed, every hook `if(world.biome)`-guarded). Spec:
 - For the gift: the headline ranked-CF lever becomes `contrast 1→0` ("heterogeneity itself was decisive");
   the recomputed field lets the chronicle bucket births/deaths/kills by PLACE.
 
+### BUILD 1 calibration log (2026-06-29) — hooks bit-exact; the ecotype goal hit the engine's homogenizing walls
+Hooks wired and VERIFIED bit-exact (sim.test hash **4244329615** with biome off): world ctor builds `this.biome`
+before _populate; food spawns its region's TYPE + a relative density-rejection (`biome.densityRejectAt`, drawn
+on world.rng only on the biome path); creature moveCost `*= biome.moveAt`; sense range `*= biome.fovAt`; kill
+event gained x,y. Then `game/biome-lab.js` (turns terrain ON, buckets the live pop by region, reads FINE 12-bin
+diet/forage/size histograms) ran the calibration sweep. Findings, in order, each a real result:
+- **The size axis is DEAD** (a small body is always fastest + cheapest; moveMult changes the move cost's
+  magnitude, not the small-beats-big ranking) and the **vision axis is DEAD** (genes.range carries no metabolic
+  cost, so nothing selects it down where sight is dim). So move/fov are cosmetic-for-ecotypes; the ONLY live
+  niche axis is FORAGE (which food type you digest). [Future lever to revive the vision axis: a `creature.visionCost`
+  so range trades off against upkeep — then a dim region would select short range. Not built; noted.]
+- **THREE food types do NOT give three forage species** — reconfirmed robust negative (CLAUDE.md branching): the
+  first 3-region vectors grew the SAME small-grazer generalist in all three (forage ~0.5 everywhere, cosmetic).
+- **TWO food types + the forage trade-off is viability-vs-distinctness pinned by ONE knob, `forageSpecialization`:**
+  pivoted terrain to 2 regions (open PLAIN type-0 / dense FOREST type-1, equal density, mild move/fov). Then a sweep
+  of the convex trade-off on default (all-forage-0.5) founders: spec **1.5 and 1.3 bootstrap-COLLAPSE** (a forage-0.5
+  founder eats BOTH types at the convex-penalised rate m=1−spec·0.5, below break-even ⇒ mass starvation ⇒ pop sits at
+  the genesis floor ~25, food piled to cap); spec **1.2 is the viable threshold** — it bootstraps to ~190 (both regions
+  VIABLE ~90) and DOES form an evolved forage **CLINE** (plain mean 0.47 / forest 0.61 on seed 7). BUT the cline is
+  **WEAK and seed-dependent** (seed 11: plain 0.54 / forest 0.57 — basically cosmetic). Pre-spreading founders
+  (`spread` mode) does NOT rescue strong convexity: spec 1.5 collapses even with pre-sorted founders, so the
+  clean-split-via-strong-convexity path is genuinely closed (the world can't sustain spec>~1.2).
+- **Diagnosis (matches the project's own RPS/Reichenbach finding):** the limiter is MIXING. A creature's lifetime
+  dispersal on the default 1280×800 torus is large vs a ~50%-of-world region, so a lineage averages over both
+  regions and selection sees the global neutral point (forage 0.5); the within-region directional gradient exists
+  but is washed out. Strong convexity would sharpen it but collapses the bootstrap. So at DEFAULT scale terrain gives
+  viable spatial heterogeneity but only a weak/inconsistent evolved ecotype split — an HONEST partial result, not the
+  "3 distinct ecotypes" the spec hoped for.
+- **worldScale test (the proven mobility lever — bigger world at constant density ⇒ regions grow, dispersal doesn't ⇒
+  mixing ~1/N):** ran x2 (4× area, 4× founders/food/caps), seed 7. spec **1.5 still COLLAPSES** (non-viable at any
+  scale — closes the strong-convexity path for good). spec **1.2 modestly sharpens the cline**: plain forage 0.41 /
+  forest 0.57 (gap ~0.15, histograms now clearly SHIFTED — plain peaks low, forest high — vs scale-1 seed-11's near-
+  flat 0.026), BUT it remains a CLINE (both peak in [0.37,0.58], NOT a hard 0/1 split) AND the population BOOM-BUSTS
+  (3034→919 — low mixing makes a winning lineage spread slowly then overshoot), so it's neither a clean split nor a
+  stable world, at 4× the compute. **Lower mixing helps only a little and costs a lot** — not worth shipping a bigger
+  default world (the browser/chronicle run at default scale anyway).
+- **VERDICT (honest):** at the default scale terrain delivers a VIABLE, spatially-differentiated world with a MILD
+  evolved forage cline (plain→type-0, forest→type-1) — real heterogeneity, NOT the hoped-for 3 (or even 2) hard
+  ecotypes. The cap is structural: the well-mixed torus + the universal small-grazer attractor + bootstrap-collapse
+  under the only convexity strong enough to force a split. This is the THIRD time the project meets the same
+  homogenizing wall (predators, RPS, now biome ecotypes) — it is a deep engine property, and its one antidote (space/
+  low-mixing) is expensive and partial. So terrain ships for what it robustly IS: a SPATIAL SUBSTRATE — different
+  regions, different local food type / density / movement / a mild forage cline — which is exactly what BUILD 2
+  (disturbance) needs to turn into DIVERGENCE (a famine HERE hits the plain-grazers; an era shift THERE), CREATING the
+  drama the engine won't evolve on its own. The richness comes from BUILD 2 acting on this substrate, as the plan
+  always sequenced. [Untested future lever, noted not chased: a `creature.visionCost` to revive the dead vision axis
+  for a SECOND ecotype dimension — but it would face the same mixing wall, so likely another cline.]
+Ship config when biome is ON: pair `biome.enabled` with `food.types=2` and `food.forageSpecialization≈1.2` (the viable
+threshold), at DEFAULT world scale. Default world untouched (biome off ⇒ bit-exact, hash 4244329615 re-verified after
+the 2-region rewrite). `game/biome-lab.js` is the kept calibration instrument (`[seed] [ticks] [forageSpec] [contrast|xN|spread]`).
+
 **BUILD 2 — DISTURBANCE (`src/storyteller.js`).** Needs terrain first (on a flat torus a famine just dents
 the monoculture and re-settles = punctuation, not divergence). A `Storyteller` (RimWorld "storytellers are
 data" + L4D intensity FSM) reads sim metrics (pop, an RNG-FREE dominance index, ticks-since-event), accrues

@@ -92,6 +92,15 @@ class World {
     // narratable substrate for the story gift (see docs/REDESIGN.md). Pure observation.
     this.eventLog = opts.eventLog || null;
 
+    // Spatial heterogeneity (terrain). Default OFF (CONFIG.biome.enabled false) => null, and
+    // every apply-site is `if (world.biome)`-guarded, so the default world draws no new code
+    // path and stays bit-exact (determinism hash 4244329615). Built BEFORE _populate so the
+    // initial food seeds into its regions. Uses a SEPARATE rng (seeded off the world seed),
+    // never world.rng — the per-tick stream is unperturbed — and is NOT serialized (it
+    // recomputes from the seed on load). Pair with CONFIG.food.types = 3 (one per region) so
+    // the resource-partitioning forage path opens the three regional niches.
+    this.biome = CONFIG.biome && CONFIG.biome.enabled ? new BiomeField(this.seed) : null;
+
     if (!opts.empty) this._populate(opts);
   }
 

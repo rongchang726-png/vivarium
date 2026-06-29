@@ -23,10 +23,24 @@
 // that a generalist is strictly worse: PLAIN rewards fast far-seeing foragers, FOREST rewards
 // slow short-range ones, MEADOW is the food-rich middle. (densityMult/moveMult/fovMult are
 // scaled by CONFIG.biome.contrast; foodType is the discrete partitioning axis.)
+// CALIBRATION (2026-06-29, biome-lab seeds 7/11). Two findings forced this design:
+//  (1) The ONLY live ecotype axis is FORAGE (which food type you digest). The SIZE axis is DEAD
+//      (a small body is always fastest + cheapest; moveMult changes the magnitude of the move cost,
+//      not the small-beats-big RANKING) and the VISION axis is DEAD (genes.range carries no metabolic
+//      cost, so nothing selects it down even where sight is dim). So move/fov are kept MILD — they add
+//      a little local-fitness texture but do NOT create distinct bodies; the niche IS the food type.
+//  (2) THREE food types do NOT give three forage species here — a reconfirmed robust negative (see
+//      ../CLAUDE.md branching notes: forage 0.5 is a fitness PEAK on a 3-type linear axis via the reach
+//      advantage; a convex trade-off strong enough to punish it instead bootstrap-COLLAPSES the all-
+//      generalist founders, seed-fragile). TWO food types DO split (forage 0.5 is a valley) — the
+//      proven 2-way branching. So terrain ships as TWO regions / two food types: open PLAIN (type 0)
+//      and dense FOREST (type 1), each at full local density (one food type per region — never
+//      intermix, which halves effective food and bootstrap-collapses both specialists). With a convex
+//      forage trade-off, a plain-grazer (forage→0) and a forest-grazer (forage→1) evolve and spatially
+//      sort — the first self-organizing spatial niche split in the world, on a proven mechanism.
 const BIOME_REGIONS = [
-  { name: "plain",  foodType: 0, densityMult: 0.80, moveMult: 1.15, fovMult: 1.35 },
-  { name: "meadow", foodType: 1, densityMult: 1.25, moveMult: 1.00, fovMult: 1.00 },
-  { name: "forest", foodType: 2, densityMult: 1.00, moveMult: 0.70, fovMult: 0.60 },
+  { name: "plain",  foodType: 0, densityMult: 1.00, moveMult: 0.90, fovMult: 1.20 }, // open grass: cheap fast travel, far sight
+  { name: "forest", foodType: 1, densityMult: 1.00, moveMult: 1.10, fovMult: 0.82 }, // dense wood: costly slow travel, short sight
 ];
 
 class BiomeField {
@@ -35,6 +49,11 @@ class BiomeField {
     this.contrast = C.contrast;
     this.W = CONFIG.world.width;
     this.H = CONFIG.world.height;
+    // Densest region's multiplier (rejection baseline): the richest region spawns food at
+    // full rate, sparser regions are thinned toward it (densityRejectAt). Precomputed once.
+    let mx = 0;
+    for (let i = 0; i < BIOME_REGIONS.length; i++) if (BIOME_REGIONS[i].densityMult > mx) mx = BIOME_REGIONS[i].densityMult;
+    this.maxDensity = this._mult(mx); // _mult uses this.contrast (already set) — flat==1 at contrast 0
     // SEPARATE rng — derived from the world seed but never the world's own stream.
     this.rng = new RNG((seed ^ 0x9e3779b9) >>> 0);
     // Two band-limited PERIODIC noise fields (integer wavenumbers => continuous on the torus).
@@ -75,11 +94,10 @@ class BiomeField {
     return norm > 0 ? s / norm : 0;
   }
 
-  // Split the (a,b) plane into 3 LARGE coherent regions (two fields => organic borders).
+  // Split into 2 LARGE coherent regions. Combine both noise fields so the border meanders
+  // organically (not a straight cut); the threshold at 0 gives two ~equal-area regions.
   _classify(a, b) {
-    if (a < -0.1) return 2; // forest (low a)
-    if (b > 0.1) return 0;  // plain  (high b, among the rest)
-    return 1;               // meadow (the middle band)
+    return (a + 0.25 * b) < 0 ? 0 : 1; // 0 = plain, 1 = forest
   }
 
   regionAt(x, y) {
@@ -94,4 +112,14 @@ class BiomeField {
   fovAt(x, y) { return this._mult(BIOME_REGIONS[this.regionAt(x, y)].fovMult); }
   densityAt(x, y) { return this._mult(BIOME_REGIONS[this.regionAt(x, y)].densityMult); }
   foodTypeAt(x, y) { return BIOME_REGIONS[this.regionAt(x, y)].foodType; }
+
+  // Probability a plant spawned at (x,y) is rejected, so regional food DENSITY actually
+  // varies (the reject framework can only THIN, so the densest region is the baseline and
+  // others are thinned toward it). At contrast 0 every region's density == max => reject 0
+  // everywhere == flat == off. Drawn against world.rng only on the (non-default) biome path.
+  densityRejectAt(x, y) {
+    if (this.maxDensity <= 0) return 0;
+    const p = 1 - this.densityAt(x, y) / this.maxDensity;
+    return p > 0 ? p : 0;
+  }
 }

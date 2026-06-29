@@ -111,7 +111,11 @@ class Creature {
   sense(world) {
     const EYES = BRAIN.EYES,
       CH = BRAIN.CH;
-    const range = this.genes.range;
+    // Terrain modulates sight RANGE (not the angular FOV): open regions see far, dense ones
+    // see near — one axis that makes a far-seeing forager vs a short-range one each fit a
+    // different place. Off (world.biome null) => range === genes.range, bit-exact.
+    let range = this.genes.range;
+    if (world.biome) range *= world.biome.fovAt(this.x, this.y);
     const r2 = range * range;
     const half = this.genes.fov / 2;
     const sectorW = this.genes.fov / EYES;
@@ -262,6 +266,9 @@ class Creature {
     let moveCost = CONFIG.creature.moveCost;
     const _cvd = CONFIG.creature.carnMoveDiscount;
     if (_cvd) moveCost *= 1 - _cvd * this.diet;
+    // Terrain modulates the cost of locomotion by place (composes with carnMoveDiscount).
+    // Off (world.biome null) => unchanged, bit-exact.
+    if (world.biome) moveCost *= world.biome.moveAt(this.x, this.y);
     this.energy -= moveCost * thrust * this.speed * this._areaSqrt;
 
     // Partial-hunting reward: a small, diet-scaled bonus for actually moving
@@ -371,7 +378,7 @@ class Creature {
       // Kill event: predator -> prey, the one TRUE causal edge the core logs (this === the
       // killer). Bit-exact: only emits when chronicle logging is on. The prey's matching
       // death event (cause "preyed") fires in world.step's compaction loop.
-      if (world.eventLog) world.eventLog.push({ k: "kill", t: world.tick, pred: this.id, prey: best.id, predClan: this.clan, preyClan: best.clan, predDiet: this.diet, preyDef: best.defense });
+      if (world.eventLog) world.eventLog.push({ k: "kill", t: world.tick, pred: this.id, prey: best.id, predClan: this.clan, preyClan: best.clan, predDiet: this.diet, preyDef: best.defense, x: this.x, y: this.y });
       // Functional-response handling time (default 0 => no write, bit-exact): after a
       // kill the predator is occupied for handlingTicks before it can attack again.
       if (CONFIG.creature.handlingTicks > 0) this.handleCooldown = CONFIG.creature.handlingTicks;
