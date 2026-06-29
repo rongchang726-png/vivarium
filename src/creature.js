@@ -368,6 +368,10 @@ class Creature {
         this.digestBuffer = sum < cap ? sum : cap;
       } else this.energy += carcass;
       world.predationsThisTick++;
+      // Kill event: predator -> prey, the one TRUE causal edge the core logs (this === the
+      // killer). Bit-exact: only emits when chronicle logging is on. The prey's matching
+      // death event (cause "preyed") fires in world.step's compaction loop.
+      if (world.eventLog) world.eventLog.push({ k: "kill", t: world.tick, pred: this.id, prey: best.id, predClan: this.clan, preyClan: best.clan, predDiet: this.diet, preyDef: best.defense });
       // Functional-response handling time (default 0 => no write, bit-exact): after a
       // kill the predator is occupied for handlingTicks before it can attack again.
       if (CONFIG.creature.handlingTicks > 0) this.handleCooldown = CONFIG.creature.handlingTicks;

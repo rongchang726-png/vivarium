@@ -127,6 +127,15 @@ var __API = {
     return new World({ seed: seed, creatures: 0, noGenesis: true });
   },
 
+  // Chronicle variants: event logging ON from tick 0 (so the founding cohort's births
+  // are captured). world.eventLog is the faithful trace the chronicle renders.
+  newWorldLogged: function (seed) {
+    return new World({ seed: seed, eventLog: [] });
+  },
+  newArenaWorldLogged: function (seed) {
+    return new World({ seed: seed, creatures: 0, noGenesis: true, eventLog: [] });
+  },
+
   // Per-clan scoreboard: population and biomass (summed body area) for clan 0 and
   // clan 1; wildlife (clan -1) is reported separately and counts for neither.
   clanSnapshot: function (world) {

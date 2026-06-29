@@ -85,6 +85,13 @@ class World {
     this.history = new History();
     this.stats = {};
 
+    // Chronicle event log: null by default => every emit below is a no-op (no RNG
+    // drawn, no branch of sim logic, never serialized), so the core stays bit-exact
+    // (determinism hash 4244329615). A chronicle harness sets world.eventLog = [] to
+    // capture a faithful, replayable trace of births/deaths/kills/census — the sole
+    // narratable substrate for the story gift (see docs/REDESIGN.md). Pure observation.
+    this.eventLog = opts.eventLog || null;
+
     if (!opts.empty) this._populate(opts);
   }
 
@@ -108,6 +115,8 @@ class World {
     );
     this.creatures.push(c);
     this.births++;
+    // Founder/genesis birth (pid -1 = no parent; clan -1 = genesis wildlife). Bit-exact: only emits when logging is on.
+    if (this.eventLog) this.eventLog.push({ k: "birth", t: this.tick, id: c.id, pid: -1, clan: c.clan, gen: 0, diet: c.diet, r: c.radius, hue: c.hue, def: c.defense, x: c.x, y: c.y });
     return c;
   }
 
@@ -138,6 +147,7 @@ class World {
     const c = new Creature(this, genome, x, y, energy, parent.generation + 1, { clan: parent.clan, forage: childForage, defense: childDefense });
     this.creatures.push(c);
     this.births++;
+    if (this.eventLog) this.eventLog.push({ k: "birth", t: this.tick, id: c.id, pid: parent.id, clan: c.clan, gen: c.generation, diet: c.diet, r: c.radius, hue: c.hue, def: c.defense, x: c.x, y: c.y });
     return c;
   }
 
@@ -187,7 +197,13 @@ class World {
     for (let i = 0; i < this.creatures.length; i++) {
       const c = this.creatures[i];
       if (c.alive) alive.push(c);
-      else this.deaths++;
+      else {
+        this.deaths++;
+        // Death with cause (starved | age | preyed). For "preyed" the killer is in the
+        // matching kill event (creature._attack) — the only true causal antecedent the
+        // core knows; starve/age have no causal agent (see docs/REDESIGN.md honesty note).
+        if (this.eventLog) this.eventLog.push({ k: "death", t: this.tick, id: c.id, cause: c.cause, clan: c.clan, gen: c.generation, diet: c.diet, r: c.radius, age: c.age, off: c.offspring, x: c.x, y: c.y });
+      }
     }
     this.creatures = alive;
 
@@ -208,6 +224,9 @@ class World {
     if (this.tick % STAT_INTERVAL === 0) {
       this.computeStats();
       this.history.push(this.stats);
+      // Census snapshot into the (uncapped) event log — the macro arc the chronicle reads
+      // (history itself is capped at 720 samples and would lose a long run's early acts).
+      if (this.eventLog) this.eventLog.push(Object.assign({ k: "census" }, this.stats));
     }
   }
 
