@@ -17,7 +17,7 @@ const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
 const files = [
-  "config", "util", "genome", "brain", "food", "creature", "world",
+  "config", "util", "biome", "genome", "brain", "food", "storyteller", "creature", "world",
   "render", "charts", "ui", "main",
 ].map((f) => path.join(root, "src", f + ".js"));
 

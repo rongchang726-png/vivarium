@@ -227,6 +227,40 @@ Risks: famineFrac/scarTicks need a floor/ceiling sweep; warmup so it never shock
 a CONDITION-setter (don't tune to a target event count = scripted). Integrity check: end-state VARIANCE
 across seeds on vs off (more distinct endings = real win), not one cherry-picked dramatic run.
 
+### BUILD 2 progress log (2026-06-29) — storyteller built bit-exact; famines fire on an endogenous cadence
+Built `src/storyteller.js` + FoodField famine machinery (`crash` destroys food in a patch; `addScar` installs a
+regrowth-suppressing wound that expires by tick; `_scarSuppressionAt` thins regrowth there). Wired into `world.step`
+(once per stat-interval, after census) + serialized (tension + lastEventTick + the scar list, ONLY when on). Default
+OFF => world.storyteller null, scars empty, every path guarded => **sim.test hash 4244329615 re-verified** + dom-smoke
+file list updated (it was also missing biome — fixed). Registered in all concat lists.
+- **Design correction (measured, not guessed):** a pure dominance-THRESHOLD trigger never fired — the dominance proxy
+  (largest hue-bucket share) settles to a steady ~0.3 (hue diffuses neutrally; it does NOT track ecological monoculture),
+  so tension never crossed a high bar. The honest reading: this world is a PERPETUAL small-grazer monoculture, so it
+  perpetually "deserves" disturbance. Reframed tension as a BASE CADENCE + dominance ACCELERATION (RimWorld's
+  event-budget model): `tension += tensionRate*(1 + dominanceWeight*dom)`, fire past warmup+cooldown+threshold. This
+  guarantees the disturbance regime (the core value); dominance only modulates pace. Honest limit recorded: dominance is
+  steady here, so the cadence is near-regular and the divergence must come from famine LOCATION (stochastic, per-seed),
+  not timing.
+- **Trace (seed 7, terrain on): WORKS.** 8 famines over 14k ticks (~1 per 1500–1600, the cooldown-gated cadence), each
+  at a DIFFERENT stochastic location spread across the map (728,44 / 247,38 / 184,151 / 89,338 / 343,335 / …), removing
+  39–161 plants each. Population stays resilient (~150–215 — perturbed, never collapsed): famines are PUNCTUATION, not
+  extinction, exactly the intent.
+- **Integrity check — end-state VARIANCE across 5 seeds, ON vs OFF: PASSES, but ONLY when famines are RARE + SEVERE.**
+  The calibration lesson (and a near-miss caught by running it): FREQUENT + MILD famines (every ~1500t, radius 230,
+  frac 0.75) FAILED the bar — across-seed dominance spread 0.083 -> 0.066 (worlds ended MORE alike): constant gentle
+  stirring just averages out and homogenises every seed to the same moderately-diverse state (it raises mean diversity
+  — mean lineages 5.8->7.2, mean dom 0.345->0.232 — but that's regularising, not diverging). RARE + SEVERE famines
+  (cooldown 4000 / threshold 300 / radius 320 / frac 0.9 / scar 1800 => ~2 big shocks per run) PASS: dominance spread
+  0.083 -> **0.123** (worlds end MORE distinctly; ON seeds ran the gamut dom 0.18..0.51 — some diversified, some stayed
+  dominated), because a few big far-spaced shocks cause PATH-DEPENDENT forks (a local extirpation recolonises
+  differently) and the (when,where) of just ~2 events decides the ending. So the ship config is FEW-LARGE-LASTING, and
+  the "single-attractor wall" does NOT defeat disturbance the way it defeated evolved diversity — disturbance forks the
+  PATH even if every config has one attractor. (This also reframes the win: the divergence that matters most is across
+  AGENT CHOICES / configs, which the chronicle's ranked counterfactual already captures; BUILD 2 adds, on top, both
+  narratable disturbance CHAPTERS for any config AND genuine seed-divergence at the rare-severe setting.)
+  Config when on: `storyteller.enabled` + the terrain ship config. `game/storyteller-lab.js` is the kept instrument
+  (`trace [seed] [ticks]` | `variance [ticks] [path=val ...]` | `saveload [seed] [T]`).
+
 **BUILD 3 — LINEAGE + LOOP (mostly game/chronicle.js + chronicle-run.js; LAST, it consumes).** [legends dive
 NULL — re-run for the implementation spec.] Data-driven Acts from era/disturbance events; PLACE-bucketed
 narration (recompute biome from seed); real dynasty/lineage arcs (genome.distance hooks exist, unused); THE

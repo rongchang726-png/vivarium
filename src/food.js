@@ -15,6 +15,10 @@ class FoodField {
     this.rng = world.rng;
     this.list = []; // { x, y, eaten }
     this._acc = 0; // fractional spawn accumulator
+    // Famine scars (BUILD 2 disturbance): patches where regrowth is suppressed for a while
+    // after a Storyteller famine. Empty by default => every scar code path below is skipped
+    // (no rng, no behaviour) => the default world stays bit-exact. Populated only via addScar().
+    this.scars = []; // { x, y, r, until, suppression }
   }
 
   seed(n) {
@@ -64,6 +68,14 @@ class FoodField {
     this._acc += CONFIG.food.spawnPerTick;
     const dd = CONFIG.food.densityDependence || 0;
     const biome = this.world.biome;
+    // Expire finished scars (no rng). Guarded => default world (no scars) untouched, bit-exact.
+    if (this.scars.length) {
+      const t = this.world.tick;
+      let w = 0;
+      for (let i = 0; i < this.scars.length; i++) if (this.scars[i].until > t) this.scars[w++] = this.scars[i];
+      this.scars.length = w;
+    }
+    const hasScars = this.scars.length > 0;
     while (this._acc >= 1) {
       this._acc -= 1;
       if (this.list.length >= CONFIG.food.max) break;
@@ -74,8 +86,47 @@ class FoodField {
         const rp = biome.densityRejectAt(p.x, p.y);
         if (rp > 0 && this.rng.chance(rp)) { this.list.pop(); continue; }
       }
+      // Famine scar: regrowth landing in a live scar often fails to take (a barren patch),
+      // so the struck region recovers slowly. Off (no scars) => skipped, bit-exact.
+      if (hasScars) {
+        const sup = this._scarSuppressionAt(p.x, p.y);
+        if (sup > 0 && this.rng.chance(sup)) { this.list.pop(); continue; }
+      }
       if (dd > 0) this._maybeReject(p, dd);
     }
+  }
+
+  // --- famine disturbance (BUILD 2; only ever called by the Storyteller) -------------------
+  // Destroy a fraction of the food within radius r of (x,y) — a local famine. Draws world.rng
+  // once per plant in the patch (deterministic, serialized stream). Returns the count removed.
+  crash(x, y, r, frac) {
+    const r2 = r * r;
+    const keep = [];
+    for (let i = 0; i < this.list.length; i++) {
+      const f = this.list[i];
+      const dx = f.x - x, dy = f.y - y;
+      if (dx * dx + dy * dy <= r2 && this.rng.next() < frac) continue; // destroyed
+      keep.push(f);
+    }
+    const removed = this.list.length - keep.length;
+    this.list = keep;
+    return removed;
+  }
+
+  // Install a regrowth-suppressing scar (a famine's lingering wound) until tick `until`.
+  addScar(x, y, r, until, suppression) {
+    this.scars.push({ x: x, y: y, r: r, until: until, suppression: suppression });
+  }
+
+  // Strongest suppression of any live scar covering (x,y), else 0.
+  _scarSuppressionAt(x, y) {
+    let s = 0;
+    for (let i = 0; i < this.scars.length; i++) {
+      const sc = this.scars[i];
+      const dx = x - sc.x, dy = y - sc.y;
+      if (dx * dx + dy * dy <= sc.r * sc.r && sc.suppression > s) s = sc.suppression;
+    }
+    return s;
   }
 
   // Density-dependent regrowth — the anti-snowball homeostasis lever. The more

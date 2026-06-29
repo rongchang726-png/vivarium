@@ -18,7 +18,7 @@ const path = require("path");
 const vm = require("vm");
 
 const SRC = path.resolve(__dirname, "..", "src");
-const CORE = ["config", "util", "biome", "genome", "brain", "food", "creature", "world"];
+const CORE = ["config", "util", "biome", "genome", "brain", "food", "storyteller", "creature", "world"];
 
 // Appended after the core: defines a host-facing API using the in-context
 // classes. Plain ES5 so it evaluates cleanly in the vm. No template literals or
@@ -37,6 +37,12 @@ var __API = {
 
   newWorld: function (seed) {
     return new World({ seed: seed });
+  },
+
+  // Rebuild a world from a serialize() dump (exposes World.fromJSON to host harnesses, e.g. the
+  // storyteller save/load exactness check). The dump is a plain object, not a JSON string.
+  loadWorld: function (data) {
+    return World.fromJSON(data);
   },
   newEmptyWorld: function (seed) {
     return new World({ seed: seed, creatures: 0 });

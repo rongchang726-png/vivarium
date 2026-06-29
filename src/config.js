@@ -45,16 +45,46 @@ const CONFIG = {
   // Spatial heterogeneity / terrain (richness phase, BUILD 1; src/biome.js + docs/REDESIGN.md).
   // Default OFF (enabled:false) => world.biome is null, every apply-site is `if (world.biome)`-
   // guarded, a SEPARATE rng is used (never world.rng), nothing is serialized => the default world
-  // is bit-exact (hash 4244329615). When on, a few seeded PERIODIC noise fields classify the torus
-  // into 3 LARGE regions, each conferring a fitness vector (food type / density / move / FOV); set
-  // food.types = 3 to align the proven forage-partition path. `contrast` scales the physics
-  // multipliers (0 => flat == off) — the ranked-counterfactual's "was heterogeneity decisive" lever.
+  // is bit-exact (hash 4244329615). When on, seeded PERIODIC noise fields classify the torus into 2
+  // LARGE regions (open PLAIN / dense FOREST), each conferring a fitness vector (food type / density
+  // / move / FOV). Calibration verdict (see REDESIGN.md): the only LIVE ecotype axis is forage, and
+  // it yields a MILD cline not hard speciation (mixing wall), so pair biome.enabled with food.types=2
+  // + forageSpecialization≈1.2; terrain ships as the SPATIAL SUBSTRATE that BUILD 2 disturbance turns
+  // into divergence. `contrast` scales the physics multipliers (0 => flat == off).
   biome: {
     enabled: false,
     cellPx: 40,        // coarse region-lookup grid resolution (world units per cell)
     components: 6,     // sinusoid terms per noise field
     maxWavenumber: 2,  // integer wavenumbers in [1,maxWavenumber] => few LARGE coherent regions
     contrast: 1.0,     // strength of the per-region physics multipliers (0 => flat)
+  },
+
+  // Designed disturbance / storyteller (richness phase, BUILD 2; src/storyteller.js + docs/REDESIGN.md).
+  // Default OFF (enabled:false) => world.storyteller is null, FoodField.scars stays empty, every
+  // apply-site is guarded => the default world is bit-exact (hash 4244329615). When on, a Storyteller
+  // reads ecological DOMINANCE (the largest-lineage hue-share — RNG-free) and accrues TENSION; a
+  // sustained monoculture raises its OWN famine hazard (the endogenous hook). When tension crosses
+  // threshold (after warmup, past cooldown) it fires a LOCAL + TRANSIENT famine: crash most food in a
+  // patch + a regrowth-suppressing SCAR for scarTicks. Draws ONLY world.rng; tension + lastEventTick
+  // + the scar list are serialized (save/load exact). This CREATES the divergence terrain can't evolve
+  // on its own (the calibration verdict, REDESIGN.md) — disturbance acting on the terrain substrate.
+  storyteller: {
+    enabled: false,
+    // CALIBRATED FOR DIVERGENCE (storyteller-lab variance check, 5 seeds): RARE + SEVERE famines make
+    // worlds end MORE distinctly (across-seed dominance spread 0.083 -> 0.123) — a few big, far-spaced
+    // shocks cause PATH-DEPENDENT forks (a local extirpation recolonises differently), so the (when,where)
+    // of just ~2 events per run decides the ending. FREQUENT + MILD famines did the OPPOSITE (0.083 ->
+    // 0.066): constant gentle stirring averages out and homogenises every seed. So: few, large, lasting.
+    warmup: 3000,          // no disturbance before this tick (let the world bootstrap & settle)
+    cooldown: 4000,        // RARE: big famines spaced far apart (~2 per 12k ticks) => path-dependent forks
+    tensionRate: 1.0,      // base tension per stat-interval — this world is a PERPETUAL monoculture,
+                           // so it perpetually "deserves" disturbance; a base cadence guarantees it
+    dominanceWeight: 1.5,  // EXTRA tension proportional to ecological dominance (the endogenous accelerator)
+    famineThreshold: 300,  // accumulated tension that triggers a famine (~one per ~4100 ticks, cooldown-gated)
+    famineRadius: 320,     // SEVERE: a big patch (~32% of the world) — enough to locally extirpate a niche
+    famineFrac: 0.9,      // near-total destruction in the patch
+    scarTicks: 1800,      // a long-lasting wound (slow recovery => the fork has time to set)
+    scarSuppression: 0.7, // probability a regrowth landing in a live scar fails to take
   },
 
   food: {

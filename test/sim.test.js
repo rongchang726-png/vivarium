@@ -15,7 +15,7 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
-const coreFiles = ["config", "util", "biome", "genome", "brain", "food", "creature", "world"].map((f) =>
+const coreFiles = ["config", "util", "biome", "genome", "brain", "food", "storyteller", "creature", "world"].map((f) =>
   path.join(root, "src", f + ".js"),
 );
 const driverFile = path.join(__dirname, "driver.js");

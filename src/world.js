@@ -101,6 +101,11 @@ class World {
     // the resource-partitioning forage path opens the three regional niches.
     this.biome = CONFIG.biome && CONFIG.biome.enabled ? new BiomeField(this.seed) : null;
 
+    // Designed disturbance (BUILD 2). Default OFF => null, update() never runs, FoodField.scars
+    // stays empty => bit-exact. When on, it perturbs a settled monoculture (see src/storyteller.js);
+    // its decision state is serialized below. Watches via world.rng only, so it's deterministic.
+    this.storyteller = CONFIG.storyteller && CONFIG.storyteller.enabled ? new Storyteller(this) : null;
+
     if (!opts.empty) this._populate(opts);
   }
 
@@ -236,6 +241,9 @@ class World {
       // Census snapshot into the (uncapped) event log — the macro arc the chronicle reads
       // (history itself is capped at 720 samples and would lose a long run's early acts).
       if (this.eventLog) this.eventLog.push(Object.assign({ k: "census" }, this.stats));
+      // Designed disturbance: read dominance, accrue tension, maybe fire a famine (BUILD 2).
+      // Off => null => skipped, bit-exact. Runs after census so a famine logs after its tick's stats.
+      if (this.storyteller) this.storyteller.update(this);
     }
   }
 
@@ -297,7 +305,7 @@ class World {
 
   // --- persistence -----------------------------------------------------------
   serialize() {
-    return {
+    const data = {
       version: 1,
       seed: this.seed,
       tick: this.tick,
@@ -311,6 +319,14 @@ class World {
       creatures: this.creatures.map((c) => c.toJSON()),
       history: this.history.serialize(),
     };
+    // Disturbance state — added ONLY when the storyteller is on, so the default save format
+    // (and the determinism hash) stays byte-for-byte unchanged. tension/lastEventTick + the
+    // active scars are the only dynamic decision state; everything else recomputes from config.
+    if (this.storyteller) {
+      data.storyteller = this.storyteller.toJSON();
+      data.scars = this.food.scars;
+    }
+    return data;
   }
 
   static fromJSON(data) {
@@ -325,6 +341,10 @@ class World {
     w.creatures = (data.creatures || []).map((o) => Creature.fromJSON(w, o));
     if (data.history) w.history.load(data.history);
     w.rng.s = (data.rng >>> 0) || 1; // restore RNG only after creatures are built
+    // Disturbance state (present only when the storyteller was on). Restored after the world is
+    // rebuilt so scars/tension resume exactly; the storyteller instance exists iff config enables it.
+    if (w.storyteller && data.storyteller) w.storyteller.load(data.storyteller);
+    if (data.scars) w.food.scars = data.scars.slice(); // copy, so the loaded world doesn't alias the save data's array
     w.rebuildGrids();
     w.computeStats();
     return w;
