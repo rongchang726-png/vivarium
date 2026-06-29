@@ -86,6 +86,14 @@ class Creature {
     this.lastAttack = 0;
     this.lastBite = 0;
     this.ateThisTick = 0;
+    // Functional-response handling time: ticks still "occupied" after a kill, during
+    // which this creature cannot attack. Always 0 unless CONFIG.creature.handlingTicks
+    // > 0, so the default world draws no new path and stays bit-exact.
+    this.handleCooldown = 0;
+    // Corrected-satiation digestion buffer: un-absorbed carcass meat awaiting release
+    // at the capped intake rate. Always 0 unless CONFIG.creature.maxIntakePerTick > 0,
+    // so the default world never writes/reads/serializes it and stays bit-exact.
+    this.digestBuffer = 0;
 
     // Reusable scratch buffers (avoid per-tick allocation).
     this._inp = new Float32Array(BRAIN.I);
@@ -268,7 +276,18 @@ class Creature {
       if (approach > 0) this.energy += pr * this.diet * approach;
     }
 
-    if (bite > 0.5) this._attack(world);
+    // Handling time / satiation gate (default off): a creature busy handling a kill
+    // can't attack. Both handleCooldown and digestBuffer are always 0 when their
+    // features are off, so this gate is a no-op by default (both <= 0 always true) —
+    // bit-exact. With maxIntakePerTick on, digestBuffer > 0 means "still digesting the
+    // last kill" => a SATED predator stops hunting until it has digested. That caps the
+    // KILL rate (what actually depletes prey — a fed hunter otherwise keeps biting), the
+    // functional-response brake giving prey periodic refuge: hunt -> sated -> digest ->
+    // hungry -> hunt. The digestion period is meal-scaled (buffer/maxIntake ticks), unlike
+    // handlingTicks' fixed timer — and the hunter does NOT get the carcass for free (it's
+    // released at maxIntake/tick, overflow wasted), so it can't out-breed the way the
+    // fixed-handling free-rest did (CLAUDE.md Phase 2.6 backfire).
+    if (bite > 0.5 && this.handleCooldown <= 0 && this.digestBuffer <= 0) this._attack(world);
   }
 
   _attack(world) {
@@ -328,8 +347,30 @@ class Creature {
       // hunter is rewarded without also fattening low-diet omnivores.
       const carcassMult =
         CONFIG.creature.carcassFactor + CONFIG.creature.carnCarcassBonus * this.diet;
-      this.energy += carcassMult * best.area * carnEff * meatMult;
+      const carcass = carcassMult * best.area * carnEff * meatMult;
+      // Corrected satiation (maxIntakePerTick default 0 => instant, bit-exact): the
+      // big lump-sum carcass payoff is the documented driver of the carnivore SUPERBOOM
+      // (dense prey => frequent lucrative kills => one kill instantly tops the hunter
+      // to capacity => instant reproduction => explosive growth => prey crash). When
+      // metered, it goes into a digestion buffer that releases at a capped rate
+      // (metabolize), so a kill can't instantly fund a reproduction. ONLY the carcass
+      // is metered; the per-bite `take` above stays immediate, so combat balance (bite
+      // income vs retaliation/toxin — the hunter>grazer & defender>hunter edges) is
+      // unchanged. else-branch is byte-identical to the prior code.
+      if (CONFIG.creature.maxIntakePerTick > 0) {
+        // Finite gut: a kill fills the buffer up to capacity; carcass beyond that is
+        // WASTED (a predator can't ingest an unbounded meal). This restores the natural
+        // saturation the instant capacity-clamp gave — without it a lossless buffer just
+        // banks the would-be-wasted excess and slow-releases it, so each kill funds MORE
+        // offspring => a BIGGER boom (measured: the maxIntake=3 backfire, CLAUDE.md).
+        const cap = this.capacity;
+        const sum = this.digestBuffer + carcass;
+        this.digestBuffer = sum < cap ? sum : cap;
+      } else this.energy += carcass;
       world.predationsThisTick++;
+      // Functional-response handling time (default 0 => no write, bit-exact): after a
+      // kill the predator is occupied for handlingTicks before it can attack again.
+      if (CONFIG.creature.handlingTicks > 0) this.handleCooldown = CONFIG.creature.handlingTicks;
     }
   }
 
@@ -386,10 +427,22 @@ class Creature {
   // --- live ------------------------------------------------------------------
   metabolize() {
     this.energy -= this._metab;
+    // Corrected satiation: release buffered carcass meat into usable energy at the
+    // capped rate, BEFORE the capacity clamp (so released energy can't bank past
+    // capacity — no over-cap storage exploit). Default off (maxIntakePerTick 0 =>
+    // digestBuffer is always 0 => this block never runs, bit-exact). The cap is what
+    // turns a carcass windfall into a slow drip, braking the predator superboom.
+    const mi = CONFIG.creature.maxIntakePerTick;
+    if (mi > 0 && this.digestBuffer > 0) {
+      const r = this.digestBuffer < mi ? this.digestBuffer : mi;
+      this.energy += r;
+      this.digestBuffer -= r;
+    }
     if (this.energy > this.capacity) this.energy = this.capacity;
     this.age++;
     if (this.lastHurt > 0) this.lastHurt--;
     if (this.lastAttack > 0) this.lastAttack--;
+    if (this.handleCooldown > 0) this.handleCooldown--; // handling-time refractory (default off)
     if (this.energy <= 0) {
       this.alive = false;
       if (!this.cause) this.cause = "starved";
@@ -440,7 +493,7 @@ class Creature {
 
   // --- persistence -----------------------------------------------------------
   toJSON() {
-    return {
+    const j = {
       x: this.x,
       y: this.y,
       h: this.heading,
@@ -460,6 +513,14 @@ class Creature {
       bh: Array.from(this.brain.h),
       g: this.genome.toJSON(),
     };
+    // Handling-time cooldown is dynamic per-creature state, but serialized ONLY when
+    // the feature is on — so the default save format (and the determinism hash) stays
+    // byte-for-byte unchanged. When on, it's restored for exact save/load.
+    if (CONFIG.creature.handlingTicks > 0) j.hc = this.handleCooldown;
+    // Digestion buffer: dynamic per-creature state, serialized ONLY when the feature is
+    // on, so the default save format (and determinism hash 4244329615) stays unchanged.
+    if (CONFIG.creature.maxIntakePerTick > 0) j.db = this.digestBuffer;
+    return j;
   }
 
   static fromJSON(world, o) {
@@ -476,6 +537,8 @@ class Creature {
     });
     if (o.s != null) c.speed = o.s;
     if (o.bh) c.brain.h.set(o.bh);
+    if (o.hc != null) c.handleCooldown = o.hc;
+    if (o.db != null) c.digestBuffer = o.db;
     return c;
   }
 }

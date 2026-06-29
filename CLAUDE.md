@@ -669,6 +669,191 @@ it before declaring victory).
   and stops the hunter swarm concentrating on defenders); then re-assemble and
   verify all three at ONE param set across seeds, board-symmetrized. Kept: the
   `defense.damageReduction` lever + `game/rps-lab.js` 50/50-match capability.
+- **Phase 2.6 — the SPATIAL lever: space tames the over-exploitation collapse, but the
+  cycle still won't close; the weak leg is `grazer>defender` (2026-06-29).** Ran a
+  deep-research sweep (stand-on-giants, cited) on non-degenerate competitive-game design.
+  It converged hard — three independent 3-0-adversarially-verified primary sources (Kerr
+  2002 Nature, E. coli RPS; Reichenbach 2007, replicator dynamics; Sinervo 1996 Nature,
+  side-blotched lizards) on ONE mechanism: **a non-transitive RPS cycle is stabilized by
+  sub-critical MOBILITY / spatial locality; a WELL-MIXED world mathematically collapses it
+  to a single survivor past a sharp critical-mobility threshold.** Read against the code,
+  Vivarium already has Reichenbach's two cheap ingredients — local interaction (SpatialGrid
+  + FOV) and local dispersal (`world.spawnChild` places young adjacent to the parent) — so
+  the MISSING one is mobility: a creature wanders far over its ~4400-tick life in a 1280×800
+  torus ⇒ effectively well-mixed. New diagnostic levers in `game/rps-lab.js` (**core
+  untouched; sim.test hash still 4244329615, save→load 4244329615**): `--worldScale N`
+  (enlarge the world N-linear at CONSTANT density — founders/food/softCap ×N²) and
+  `--popScale P` (scale population only — the disentangling control). **VERIFIED (seed 7,
+  disentangled):** well-mixed coexist → over-exploitation EXTINCTION (whole world 0:0 by
+  t4500, the decade-old predator collapse); +SPACE (world 2×, same density) → prey SURVIVE
+  as a grazer↔hunter OSCILLATION; +HEADCOUNT only (small world, 4× pop) → prey EXTERMINATED
+  (hunter monoculture, dies *faster* — crowding worsens it). So **SPACE, not population
+  size, tames the hunter>grazer over-exploitation — the first STRUCTURAL (non-energetic)
+  fix for it in the project** (re-attempts I–V were all energetics). **NEGATIVE (verified):**
+  the 3-way cycle does NOT close at ×2 — the defender dies even FROZEN with every edge at its
+  Phase-2.5-calibrated value (toxin 50, dmgRed 0.8, plantPen 0.4), because `grazer>defender`
+  is WEAK shared-resource competition (both eat plants), not a strong cyclic edge (exactly
+  Phase 2.5's own diagnosis). **False positive caught (the discipline working):** an UNfrozen
+  strong-defender run returned `coexist:true`, but the bytes showed a defended-OMNIVORE
+  monoculture (90%) with drifted traits (diet 0.05→0.56) — the loose 5% floor + clan tags
+  lied; always `--freezeTraits` for edge tests, read the dynamics not the RESULT line.
+  **Honest limits:** single seed; measured POPULATION survival, NOT the spatial signature
+  (clan clustering / spiral waves) — the mechanism is inferred, [moving, unverified] could be
+  aspatial dilution rather than Reichenbach structure. **Next (a slow wake-thread, in order):**
+  (1) multi-seed the space>headcount disentangling (11,19,23,42); (2) make `grazer>defender`
+  a STRONG edge via `food.types=2` (grazer & defender eat DIFFERENT plants — Phase 2.5's own
+  proposed fix), then re-test the 3-way under space; (3) log per-clan x/y to confirm spatial
+  clustering; (4) scale 3 (~15-20 min/run) if needed. The giants took us to the edge of the
+  map (space IS the mechanism, now confirmed on our engine); the weak-leg fix is the part
+  that's ours to invent.
+  - **CORRECTION (same session, 2026-06-29) — the "weak leg is `grazer>defender`" claim above
+    is WRONG; pushing it refuted it.** Tested the grazer→defender invasion under space + its
+    disentangling control. A 5%/10-founder grazer FAILS to invade a defender majority (well-
+    mixed, reproducing Phase 2), but a 40-founder grazer INVADES to 100% in BOTH a small AND a
+    2× world. So the flip is FOUNDER COUNT (10 fails / 40 succeeds), NOT space — world size is
+    irrelevant at 40 founders. Consequences: (1) `grazer>defender` is NOT weak — it is STRONG
+    (the grazer displaces the defender to 100% once established); the 5%-invasion "failure" was
+    FOUNDER STOCHASTICITY (a small cluster's fixation probability), not edge weakness or space-
+    broken incumbency. **So do NOT build `food.types=2` to "strengthen" it — it's already
+    strong.** (2) Methodological: the **5% invasion-matrix test is FOUNDER-CONFOUNDED in this
+    engine** — a ~10-individual invader stochastically vanishes regardless of edge direction,
+    so Phase-2-style 5% invasion verdicts are unreliable; use ≥40 founders or 50/50 matches
+    (Phase 2.5 was right to switch). **Real 3-way blocker, re-identified:** the defender is
+    squeezed from BOTH sides — grazers out-compete it for plants (grazer>defender is strong)
+    AND grazers FUEL a hunter superboom that overwhelms it (defender>hunter holds 1v1 but
+    breaks when grazers pump hunter numbers). The cycle is gated on the hunter NOT superbooming
+    — the recurring extreme-hunter over-exploitation problem. What STANDS: space tames the
+    hunter>grazer over-exploitation (that control held headcount constant); it just doesn't
+    govern the grazer>defender invasion (founder-limited) nor close the 3-way (hunter
+    superboom). Session tally: 2 false positives + this self-correction, all caught by running
+    the bytes — the verify discipline doing its job. **Honest next leads (still a slow thread):**
+    tame the hunter superboom in the 3-body (less-extreme hunter energetics — viable because
+    grazers feed it — or a satiation cap so it can't over-crop), then re-test the 3-way under
+    space; and the edges must be BALANCED (too-strong grazer>defender crushes the defender
+    before it can express defender>hunter).
+  - **The superboom resists every CHEAP lever — thoroughly mapped, not broken (same session,
+    2026-06-29).** Chased the re-identified 3-way blocker (the grazer-fuelled hunter superboom that
+    kills the defender). (a) Built `creature.handlingTicks` — a Holling handling time: after a KILL
+    the predator is occupied N ticks and can't attack, meant to cap the predation rate; default 0,
+    **bit-exact, sim.test hash 4244329615 verified** (stays in the core as a documented negative
+    knob). It BACKFIRES: clean same-param A/B (scale 2, frozen, toxin50/dmgRed0.8/plantPen0.4)
+    handling 0 → hunter peak 828 (grazer-hunter oscillation survives) vs handling 50 → 1724 then
+    TOTAL extinction; confirmed at scale 1 (96 vs 200). Why: gating attacks during the post-kill
+    rest lets a hunter digest its big meal and reproduce WITHOUT the energy drain of hunting ⇒ MORE
+    efficient ⇒ BIGGER boom — it removed a brake, not added one. (b) Leaned into the natural brake
+    `retaliation` (added `--retaliation` to rps-lab, default unchanged): it's a CLIFF not a dial — at
+    2.0 (~5×) hunters still boom to a softCap monoculture, at 4.0 hunters collapse mid-hunt (can't
+    afford the per-bite cost before landing a kill); the defender dies at t1500 either way. **The
+    mechanistic map (the night's real yield): the superboom is CARCASS-DRIVEN — abundant prey ⇒ each
+    kill is a huge payoff (~11.6× carcass) ⇒ explosive hunter reproduction.** That is why every cheap
+    lever fails: lowering energetics paradoxically superbooms harder then crashes; retaliation taxes
+    the BITES (the path) not the CARCASS (the payoff); handling's forced rest only makes
+    carcass→offspring conversion MORE efficient. To brake it you must cap the carcass-income RATE or
+    reproduction itself (a true saturation), or supply strong spatial refugia (×2 isn't enough).
+    **Clean next lead (next-session, core work): a CORRECTED satiation — deliver carcass energy over
+    N ticks / cap energy-intake-per-tick, WITHOUT freeing the hunter from hunting costs (the exact
+    failure mode of naive handling).** Net: the superboom resisted energetics + space(×2) + handling +
+    retaliation — the decade-old over-exploitation wall, now mapped to a sharp cause (carcass-driven
+    reproduction) + a specific fix to try. Session discipline: ~15 runs, 2 bit-exact core builds, 4
+    near-false-positives caught by running/cross-checking the bytes (the 5%-invasion founder confound;
+    two `coexist:true` defended-omnivore-monoculture artifacts; a cross-scale handling misread).
+  - **The CORRECTED satiation was built — and it BACKFIRES too; the negative sharpens into a general
+    principle + the cycle's true structural blocker (2026-06-29).** Built the lead the last bullet
+    named: `creature.maxIntakePerTick` (default 0 ⇒ OFF/instant, **bit-exact, sim.test hash 4244329615,
+    save→load 4244329615** — a per-creature `digestBuffer`, serialized only when on). A kill's carcass
+    routes into a finite GUT (capped at capacity, overflow WASTED) that releases at maxIntake/tick, and
+    while digesting the predator is SATED and can't attack — a textbook Holling response (hunt→sated→
+    digest→hungry→hunt), meant to cap the KILL rate without handling's free-rest flaw. **It fails the
+    SAME way handling did, twice over.** v1 (lossless buffer): grazer-extinct, hunter boom BIGGER than
+    baseline (379 vs 140) — the lossless buffer banks the energy the instant capacity-clamp used to
+    WASTE ⇒ each kill funds ~4× more offspring. v2 (finite gut + satiation gate): grazer-extinct in
+    EVERY maxIntake∈{2,5,10,20}, hunter boom up to 644 — gating attacks during digestion is *itself*
+    the free-efficient-rest backfire (no retaliation/toxin paid while the gut net-positively feeds
+    reproduction). **GENERAL PRINCIPLE (now the real yield, tested two independent ways): you cannot
+    brake a carcass-driven boom by manipulating how the carcass is ABSORBED — any scheme not strictly
+    LOSSIER than the instant capacity-clamp helps the predator (battery / waste-cut / rest-discount),
+    and a scheme that IS lossier just == lower energetics == the 0/5 no-guild regime.** Intake-metering
+    is a dead end; `maxIntakePerTick` stays as a documented NEGATIVE knob beside `handlingTicks`. **Then
+    the decisive pivot — pairwise edge tests at scale 1 (the cheap diagnostic), which expose that the
+    3-way is blocked by the EDGES themselves, not the over-exploitation:** (a) *moderate energetics*
+    (carcass 4, a goldilocks band: carcass 2/3 ⇒ hunter too weak/collapse, 5 ⇒ over-exploit, 8 ⇒ super-
+    boom) gives a 2-way grazer+hunter coexistence but **SEED-FRAGILE (1/3: seed 7 oscillates, 11/19 still
+    collapse)** — moderate energetics *reduces* the over-exploitation tendency but doesn't robustly cure
+    it (re-confirms: space, not energetics, is the robust 2-way lever). (b) **`grazer>defender` is pure
+    competitive EXCLUSION at ALL plantPen (0.4/0.25/0.1 all ⇒ defender extinct by t1500-3000), grazer+
+    defender alone** — a defended grazer shares the plant resource, so Gause excludes the slightly-worse
+    one regardless; this is STRUCTURAL, the cycle's hardest blocker. (c) **`defender>hunter` MUTUALLY
+    ANNIHILATES at moderate energetics** (120 def + 50 hunt ⇒ 0:0 by t1500); it only held (311:0) at
+    EXTREME energetics (Phase 2.5). ⇒ **The fatal ENERGETICS CONFLICT, now pinned: `defender>hunter`
+    needs a STRONG (extreme) hunter; a tame `hunter>grazer` needs a WEAK hunter — no single energetics
+    satisfies both,** and `grazer>defender` is structural exclusion on top. The 3-way at scale 1 dies
+    accordingly (defender gone by t1500 every seed). Theory's only escape (Kerr 2002 / Reichenbach 2007,
+    the verified deep-research anchor) is SPACE below the critical-mobility threshold turning the
+    grazer~defender competition into spatial coexistence — but ×2 is insufficient (this session + the
+    prior), and ×3 is 9× population (~1 h/run), off-budget here. **Honest status: the corrected-satiation
+    lead is CLOSED (negative, with a reusable principle); the cycle's blocker is re-identified as
+    competitive exclusion + the energetics conflict, not over-exploitation.**
+  - **THE MILESTONE (verified, honest): MODERATE energetics × ×2 space makes the cycle TURN — a 5-period
+    oscillation, the closest Vivarium has ever come — but it is UNSTABLE (0/3 robust; 2026-06-29).** The
+    consolidated hypothesis (combine the two partial levers: moderate energetics so there's no superboom
+    + space for refugia) was tested at scale 2 (full density), carcass 4, strong defender (toxin 50,
+    dmgRed 0.8, plantPen 0.4, defenderDiet 0.05), freezeTraits. seed 7 @ 6000t read coexist:true and
+    *looked* like the cycle closing — **but the verify discipline caught it (5th near-false-positive this
+    session): extended to 18000t, the defender oscillates through ~5 periods (480/46/233/37/259/147/336/
+    123/44/397/51) — all three coexisting for ~15000 ticks, a project FIRST — then goes EXTINCT at
+    t16500; the coexist:true was an artifact of the final-quarter mean catching the t13500 peak (397)
+    right before the crash. Read the bytes, not the RESULT line.** Multi-seed = 0/3, three DIFFERENT
+    failure modes (the signature of an UNSTABLE cycle, not a stable limit cycle): seed 7 → long
+    oscillation then defender-extinct; seed 11 → grazer over-exploited by t3000 → hunter superboom to
+    softCap → eats the defenders → total collapse 0:0; seed 19 → grazer over-exploited → defender
+    monoculture. The common breaker is EARLY hunter→grazer over-exploitation (seeds 11/19) crashing the
+    grazer before the cycle can turn; only seed 7's spatial luck avoided it. This is exactly
+    Reichenbach's SUPERCRITICAL-mobility regime — the cycle exists and turns but spirals/collapses to a
+    seed-dependent single survivor in finite time; ×2 is still above the critical threshold. **Net: space
+    DRAMATICALLY extends coexistence (scale1 ~1500t → scale2 ~15000t for the lucky seed, ~10×) and the
+    cycle visibly TURNS for the first time — the lever is real and pointed right — but ×2 does not
+    stabilize it.** Honest caveat worth keeping: a `match` judges over a few-thousand-tick tail, and the
+    cycle holds ~15000t on seed 7 — so RPS dynamics could be PvP-usable on a good seed even unstabilized,
+    but seed 11/19 collapse inside a match window, so it is NOT match-safe across seeds yet.
+  - **Next real leads (in order):** (1) **more space — ×3/×4 (below critical mobility)**, the theory-
+    backed fix that directly targets the observed early-over-exploitation failure; cost is the wall: 9×/
+    16× population, ~30–90 min/run on this 1-core box, and cheap-space-via-low-density is OUT (quarter
+    density starves the grazer base — bootstrap collapse in 3 s, measured). (2) **edge-balancing at ×2**
+    (cheap, ~5–9 min/run): the ×2 seed-7 cycle is LOPSIDED (hunter 50–80%, defender a <15% minority that
+    dies at a stochastic dip) — tuning plantPen/dmgRed to seat the defender nearer ⅓ might stabilize it
+    without ×3, but it's seed-fragile and may only slow the spiral. (3) a structurally different
+    `grazer>defender` that isn't shared-resource competition. Core untouched, hash **4244329615**;
+    `maxIntakePerTick` + `handlingTicks` ship OFF (documented negatives).
+  - **×3 BIG-SPACE tested (lead #1 above) — it CLEANLY SPLITS the two failure modes and pins the true
+    blocker: the DEFENDER has no niche, and that is NOT spatial (2026-06-29).** Ran ×3 (worldScale 3, 9×
+    area, founders 1080/450/1080, softCap 6840, ~20 min/run) on seed 11 (the ×2 total-collapse seed):
+    - **MODERATE energetics × ×3:** grazer+hunter now ROBUSTLY COEXIST (vs ×2's total 0:0 collapse) —
+      **space genuinely fixes the hunter>grazer OVER-EXPLOITATION** (the grazer recovers via spatial
+      refugia; confirmed again in the 3-way). **BUT the defender still dies by t3000, same as scale 1** —
+      so space does NOT cure the grazer>defender COMPETITIVE EXCLUSION. The two failures have *different*
+      cures: over-exploitation is space-curable; competitive exclusion is not.
+    - **EXTREME energetics × ×3** (the "self-consistent cell" hypothesis: extreme makes defender>hunter
+      work + extreme hunters crash the grazer=defender's competitor early): **REFUTED — the defender dies
+      even FASTER** (t1500: 3925 hunters vs the defender's 1080→2). The extreme hunter superboom simply
+      SLAUGHTERS the defenders; armor (dmgRed 0.8 ⇒ 26% damage taken) is meaningless against ~4000
+      hunters — number overwhelms toxin. ×3 does not prevent the *initial* boom (only the subsequent
+      collapse), and the defender dies in that boom.
+    **THE STRUCTURAL CONCLUSION (now robust across the whole energetics×space grid): the defender ALWAYS
+    dies (bar seed-7's lucky ×2 transient) because it is DOUBLY squeezed and has no refuge from EITHER
+    axis — it loses the plant-competition to grazers (grazer>defender, Gause, every plantPen) AND is
+    slaughtered in the hunter boom (its armor can't offset a superboom's sheer numbers). Neither space
+    nor energetics fixes this; it's the defender ARCHETYPE that has no stable niche.** A defended grazer
+    is just a worse grazer that happens to be toxic, and toxicity doesn't buy enough survival to offset
+    the competitive cost. ⇒ The real (future, structural) fix is NOT more space or tuning but to give the
+    defender a niche it can actually hold — e.g. its OWN food type (`food.types=2`, defender eats plant B,
+    so grazers can't exclude it) PAIRED WITH a *non-competition* grazer>defender edge (the current edge IS
+    the competition, so removing the competition removes the edge — this needs a genuinely new mechanism,
+    not a knob). Until the defender has a niche, the cycle cannot close, at any space/energetics. The
+    grid is now thoroughly mapped (moderate×{1,2,3}, extreme×{2,3}); ×4 would not change a space-invariant
+    failure (the defender dies in the initial boom + competition, which more space doesn't touch). Net
+    session yield: the over-exploitation half of the wall is BREACHED by space (grazer+hunter coexist at
+    ×3 — a real first), the defender-niche half is the remaining keystone. Core untouched, hash
+    **4244329615**.
 - **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
   draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
   meta becomes RPS instead of a coin-flip. Symmetrize board position (per the

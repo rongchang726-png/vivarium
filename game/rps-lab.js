@@ -63,6 +63,25 @@ const SEED = int(args.seed, 7);
 const TICKS = int(args.ticks, 18000);
 const MODE = str(args.mode, "coexist");
 const MINSHARE = num(args.minShare, 0.05); // coexistence floor (fraction of total)
+// Spatial-mobility experiment (Reichenbach 2007 arXiv:0709.0217 / Kerr 2002 Nature):
+// a non-transitive RPS cycle is stabilized by sub-critical MOBILITY, and a well-mixed
+// world collapses it (sharp critical-mobility threshold). Vivarium already has local
+// interaction (SpatialGrid + FOV) and local dispersal (world.spawnChild places young
+// adjacent to the parent), so the MISSING ingredient is mobility: a creature wanders
+// far over its ~4400-tick life in a 1280x800 torus => effectively well-mixed.
+// --worldScale N enlarges the world N-fold (linear) at CONSTANT density (founders,
+// food, softCap all scale by area N*N), dropping relative mobility below the threshold
+// without changing per-tick speed. WSCALE=1 is bit-identical to the prior behaviour.
+const WSCALE = num(args.worldScale, 1);
+const AREA = WSCALE * WSCALE;
+// --popScale P scales ONLY the population (founders/food/softCap) by P, WITHOUT
+// enlarging the world — the disentangling control for the spatial experiment. The
+// big-world treatment (--worldScale 2) raises BOTH space and headcount (x4); to show an
+// effect is SPACE and not just MORE INDIVIDUALS (less stochastic extinction), compare it
+// against --worldScale 1 --popScale 4 (same headcount, small well-mixed world). DENS
+// folds both: density-linked quantities scale by AREA*P; world size scales by WSCALE only.
+const PSCALE = num(args.popScale, 1);
+const DENS = AREA * PSCALE;
 
 // --- world levers -----------------------------------------------------------
 const DEFENSE = args.defense == null ? 1 : int(args.defense, 1); // RPS needs it ON
@@ -79,7 +98,10 @@ const CARN_CARCASS = num(args.carnCarcass, 4);
 const CARN_METAB = num(args.carnMetab, 0.6);
 const PR = num(args.pr, 0.8);
 const BITE = num(args.bite, 35);
+const RETAL = num(args.retaliation, 0.42); // defender bites back ∝ its area * this; the natural predation brake (default = config default)
 const PLANT_SUPP = num(args.plantSupp, 0.7); // default: grazers graze freely (diet~0)
+const HANDLING = num(args.handling, 0); // functional-response handling time: ticks a predator is occupied after a kill (caps predation rate)
+const MAXINTAKE = num(args.maxIntake, 0); // corrected satiation: cap carcass energy absorbed/tick (meters the superboom-driving kill windfall). 0 = OFF/instant.
 
 // --- archetypes (diet/defense/radius), from roundA mapped to Vivarium ---------
 const GRAZER = { diet: num(args.grazerDiet, 0.05), defense: 0.0, radius: 3.3 };
@@ -99,7 +121,10 @@ api.setParam("creature.carnCarcassBonus", CARN_CARCASS);
 api.setParam("creature.carnMetabolismDiscount", CARN_METAB);
 api.setParam("creature.pursuitReward", PR);
 api.setParam("creature.biteDamage", BITE);
+api.setParam("creature.retaliation", RETAL);
 api.setParam("creature.plantSuppression", PLANT_SUPP);
+api.setParam("creature.handlingTicks", HANDLING);
+api.setParam("creature.maxIntakePerTick", MAXINTAKE);
 // freqDependence stays 0: clan must remain behaviour-neutral so the RPS dynamics
 // are clean (the arena's anti-snowball homeostasis would mask them).
 // Optional: freeze the evolving traits (defense/diet/forage drift) so the seeded
@@ -118,30 +143,46 @@ if (FREEZE) {
   api.setParam("mutation.forageStd", 0);
 }
 
+// Enlarge the world at constant density (MUST precede newArenaWorld, since World reads
+// CONFIG.world.{width,height} at construction). Scaling food + softCap by area keeps
+// per-cell carrying capacity fixed, so this isolates the size:mobility ratio — not a
+// starvation (food too sparse) or crowding (softCap-throttled) artifact.
+if (WSCALE !== 1) {
+  api.setParam("world.width", Math.round(api.CONFIG.world.width * WSCALE));
+  api.setParam("world.height", Math.round(api.CONFIG.world.height * WSCALE));
+}
+if (DENS !== 1) {
+  api.setParam("food.startCount", Math.round(api.CONFIG.food.startCount * DENS));
+  api.setParam("food.max", Math.round(api.CONFIG.food.max * DENS));
+  api.setParam("food.spawnPerTick", api.CONFIG.food.spawnPerTick * DENS);
+  api.setParam("pop.softCap", Math.round(api.CONFIG.pop.softCap * DENS));
+}
+
 const w = api.newArenaWorld(SEED); // noGenesis: no wildlife clan -1 to confound
 
 // founder counts
 let nG = int(args.nG, 120), nH = int(args.nH, 50), nD = int(args.nD, 120);
+if (DENS !== 1) { nG = Math.round(nG * DENS); nH = Math.round(nH * DENS); nD = Math.round(nD * DENS); }
 if (MODE === "invade") {
   const R = str(args.resident, "grazer"), M = str(args.mutant, "hunter");
   // 95% resident / 5% mutant of a ~200 founding pool, seeded as their own clans.
-  const total = int(args.pool, 200);
+  const total = Math.round(int(args.pool, 200) * DENS);
   const nMut = Math.max(1, Math.round(total * 0.05));
   const nRes = total - nMut;
   seedArch(R, nRes);
   seedArch(M, nMut);
-  console.log("=== rps-lab INVADE === seed=" + SEED + " resident=" + R + "(" + nRes + ") mutant=" + M + "(" + nMut + ")");
+  console.log("=== rps-lab INVADE === seed=" + SEED + " worldScale=" + WSCALE + " resident=" + R + "(" + nRes + ") mutant=" + M + "(" + nMut + ")");
   console.log("    defense=" + DEFENSE + " toxin=" + TOXIN + " meatConv=" + MEATCONV + " plantPen=" + PLANTPEN +
-    " | preyVuln=" + PREY_VULN + " carcass=" + CARCASS + " carnCarcass=" + CARN_CARCASS + " carnMetab=" + CARN_METAB + " pr=" + PR + " bite=" + BITE);
+    " | preyVuln=" + PREY_VULN + " carcass=" + CARCASS + " carnCarcass=" + CARN_CARCASS + " carnMetab=" + CARN_METAB + " pr=" + PR + " bite=" + BITE + " | retal=" + RETAL + " handling=" + HANDLING + " maxIntake=" + MAXINTAKE);
   runInvade(R, M, nRes, nMut);
 } else {
   seedArch("grazer", nG);
   seedArch("hunter", nH);
   seedArch("defender", nD);
-  console.log("=== rps-lab COEXIST === seed=" + SEED + " ticks=" + TICKS +
+  console.log("=== rps-lab COEXIST === seed=" + SEED + " ticks=" + TICKS + " worldScale=" + WSCALE + " popScale=" + PSCALE +
     " | grazer=" + nG + " hunter=" + nH + " defender=" + nD);
   console.log("    defense=" + DEFENSE + " toxin=" + TOXIN + " meatConv=" + MEATCONV + " plantPen=" + PLANTPEN +
-    " | preyVuln=" + PREY_VULN + " carcass=" + CARCASS + " carnCarcass=" + CARN_CARCASS + " carnMetab=" + CARN_METAB + " pr=" + PR + " bite=" + BITE);
+    " | preyVuln=" + PREY_VULN + " carcass=" + CARCASS + " carnCarcass=" + CARN_CARCASS + " carnMetab=" + CARN_METAB + " pr=" + PR + " bite=" + BITE + " | retal=" + RETAL + " handling=" + HANDLING + " maxIntake=" + MAXINTAKE);
   runCoexist();
 }
 
@@ -192,7 +233,7 @@ function runCoexist() {
   console.log("final-quarter mean shares: grazer=" + (mG * 100).toFixed(0) + "% hunter=" +
     (mH * 100).toFixed(0) + "% defender=" + (mD * 100).toFixed(0) + "%  (floor " + (MINSHARE * 100).toFixed(0) + "%)");
   console.log("RESULT " + JSON.stringify({
-    mode: "coexist", seed: SEED,
+    mode: "coexist", seed: SEED, worldScale: WSCALE, popScale: PSCALE,
     shareGrazer: +(mG).toFixed(3), shareHunter: +(mH).toFixed(3), shareDefender: +(mD).toFixed(3),
     minShare: +(minShare).toFixed(3), coexist,
   }));

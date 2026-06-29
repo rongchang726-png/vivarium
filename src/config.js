@@ -157,6 +157,48 @@ const CONFIG = {
     //   "slow when hungry" v1 collapsed the prey). Range [0,1]; 0 => unchanged, bit-exact.
     preyVulnerability: 0,
 
+    // Functional-response handling time (Holling / Rosenzweig-MacArthur). Default 0
+    // => OFF, bit-exact (no cooldown is ever set, the attack gate never blocks, no
+    // RNG is drawn). When > 0, a creature that lands a KILL is "occupied handling" it
+    // and cannot attack again for this many ticks — capping the predation RATE so a
+    // hunter can't eat unboundedly fast when prey are dense. The textbook fix for
+    // predator over-exploitation (the superboom->crash that collapses the RPS cycle):
+    // a saturating intake rate gives prey time to breed, turning boom-bust into a
+    // stable predator-prey balance. The per-creature cooldown is serialized ONLY when
+    // this is > 0, so the default save format (and determinism hash) is untouched.
+    // NOTE: handlingTicks BACKFIRES (CLAUDE.md Phase 2.6) — gating attacks during the
+    // post-kill rest lets the hunter digest its big carcass in peace (no hunting cost),
+    // making carcass->offspring conversion MORE efficient => a BIGGER boom. Kept as a
+    // documented negative knob; the working lever is maxIntakePerTick below.
+    handlingTicks: 0,
+
+    // Corrected satiation — meter the carcass INTAKE RATE (default 0 => OFF, instant,
+    // bit-exact: no buffer is ever written, the _attack routing takes the same
+    // `this.energy +=` branch as before, no RNG drawn). The diagnosed root of the
+    // predator SUPERBOOM (CLAUDE.md Phase 2.6) is CARCASS-driven: a dense prey base =>
+    // each kill is a huge lump-sum payoff (~11.6x effective) => one kill instantly tops
+    // a hunter to capacity => instant reproduction => explosive growth => prey exhausted
+    // => collapse (the wall that breaks the RPS cycle). handlingTicks failed because it
+    // freed the hunter from hunting costs during the rest; this fixes it the RIGHT way:
+    // when > 0, a KILL's carcass energy goes into a per-creature DIGESTION BUFFER — a
+    // finite GUT capped at the creature's capacity, so carcass beyond that is WASTED
+    // (the natural saturation; a lossless buffer instead banks the would-be-wasted excess
+    // and BACKFIRES into a bigger boom — measured). The buffer releases into usable energy
+    // at this many units/tick (metabolize), and while it is non-empty the predator is
+    // SATED and does NOT attack (the satiation gate in act()), so it stops killing until
+    // it has digested. Together: a true Holling functional response — hunt -> sated ->
+    // digest (no hunting, meal-scaled) -> hungry -> hunt — that caps the KILL rate (the
+    // thing that actually depletes prey: a fed hunter otherwise keeps biting) and gives
+    // prey periodic refuge, turning the carcass-driven boom-bust into a stable cycle.
+    // Crucially the hunter still PAYS all hunting costs (move/metab/retaliation/toxin stay
+    // immediate) and gets the carcass only metered + overflow-wasted, so it can't
+    // out-breed the way handlingTicks' free rest did; the per-bite meat `take` stays
+    // immediate too, so combat balance — the hunter>grazer and defender>hunter edges — is
+    // UNCHANGED; only the post-kill windfall is metered. Plants are never buffered, so
+    // herbivores (diet~0) are untouched. The buffer is serialized ONLY when this is > 0,
+    // so the default save format and determinism hash 4244329615 stay byte-for-byte.
+    maxIntakePerTick: 0,
+
     // Digestion efficiency by diet. diet 0 = pure herbivore, 1 = pure carnivore.
     // Plants feed you ∝ (1 - diet); meat feeds you ∝ diet. Omnivores get a
     // little of both but excel at neither.
