@@ -894,6 +894,19 @@ it before declaring victory).
     of. Bytes: `tmp_rps_s7_2clan_mod_{wellmixed,space}.txt` + extreme refs
     `tmp_rps_s7_2clan_{wellmixed,space}.txt`. No core touched (no run touches it); hash unchanged.
     [self-wake 2026-07-01 02:33]
+  - **HANDOFF — richness arc → RPS (2026-07-01): the defender's "own niche" tool the structural conclusion
+    (858–868) called for now EXISTS.** Richness BUILDs 6.2–6.4 (docs/REDESIGN.md) proved SPACE is this world's
+    keystone (enough space ⇒ stable, EMERGENT multi-niche coexistence — 3 seeds) and BUILT it: `food.types=3` ⇒ 3
+    large coherent biome regions, one food each (`src/biome.js`, equal-area quantile bands, bit-exact/default-
+    dormant, hash 4244329615; bed `game/three-peoples.js`). That is exactly the "defender eats plant B so grazers
+    can't exclude it" the notes said was missing. **NEXT RPS PROBE (the fresh thread the user greenlit):** seed the
+    triad with the DEFENDER on its own spatial food type, enough space (over-exploitation needs ×3 not ×2 per the
+    07-01 self-wake — expensive), and test whether the defender finally HOLDS a niche. EYES-OPEN on the two hard
+    parts: (a) if grazer & defender eat DIFFERENT foods there's no competition, so the grazer>defender EDGE
+    vanishes and must be REINVENTED as a non-competition mechanism (864–868); (b) the hunter superboom is the
+    other wall (the decade predator problem). NOT a quick win — but the defender-niche half finally has a real
+    tool. This is the defender-NICHE axis, distinct from the autonomous self-wake's energetics×space-grid
+    (over-exploitation) axis above; don't duplicate its runs.
 - **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
   draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
   meta becomes RPS instead of a coin-flip. Symmetrize board position (per the
