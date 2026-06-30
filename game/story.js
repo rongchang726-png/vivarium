@@ -86,7 +86,27 @@ function describeDelta(you, base) {
   if (Math.abs(dd) > 0.05) parts.push("a diet shift of " + (dd > 0 ? "+" : "") + dd.toFixed(2) + " toward " + (dd > 0 ? "the hunt" : "the plants"));
   return parts.length ? parts.join(", ") : "a difference too small to matter";
 }
+function pctOf(x) { return Math.round((x || 0) * 100) + "%"; }
+
+// The served single-lever counterfactual. Crucially it measures the FORK (the outcome a
+// richness world is ABOUT — its narrative climax), not only population — so the measured edge
+// and the story AGREE (BUILD 4's fix, carried into this served tier; the CLI ranked-ledger had
+// it, the served single-cf did not, and dogfooding caught the mismatch). The pop/diet delta is
+// kept as secondary context.
 function buildCf(knob, you, baseline, youSum, baseSum, naive) {
+  const youFork = youSum.forkFrac || 0, baseFork = baseSum.forkFrac || 0;
+  const youForked = (youSum.forkSamples || 0) > 0 && youFork >= 0.05; // the fork actually formed in YOUR world
+  let forkLine = null, forkKilled = false;
+  if (youForked) {
+    if (baseFork < 0.01) {
+      forkLine = "Without it, the two foraging peoples never split apart — with your recipe they each held over a third of the world for " + pctOf(youFork) + " of the run; reverted, " + pctOf(baseFork) + ".";
+      forkKilled = true;
+    } else if (baseFork < youFork * 0.5) {
+      forkLine = "The split into two foraging peoples barely held without it (sustained " + pctOf(baseFork) + " of the run vs your " + pctOf(youFork) + ").";
+    } else {
+      forkLine = "Two foraging peoples sustained either way (" + pctOf(baseFork) + " of the run vs your " + pctOf(youFork) + ") — this lever was not what split them.";
+    }
+  }
   return {
     knob, you, baseline,
     bothCollapsed: youSum.collapsed && baseSum.collapsed,
@@ -94,6 +114,8 @@ function buildCf(knob, you, baseline, youSum, baseSum, naive) {
     youPop: youSum.pop, basePop: baseSum.pop,
     delta: describeDelta(youSum, baseSum),
     naive: naive || undefined,
+    forkLine, forkKilled,
+    youFork: +youFork.toFixed(3), baseFork: +baseFork.toFixed(3),
   };
 }
 
@@ -150,7 +172,12 @@ function buildStory(opts, onProgress) {
     },
     seed, ticks, recipe: recipe.knobs,
     counterfactual: meta.counterfactual
-      ? { knob: meta.counterfactual.knob, you: meta.counterfactual.you, baseline: meta.counterfactual.baseline }
+      ? {
+          knob: meta.counterfactual.knob, you: meta.counterfactual.you, baseline: meta.counterfactual.baseline,
+          // the MEASURED edge, structured (not just prose): the fork the story is about + the pop context
+          youFork: meta.counterfactual.youFork, baseFork: meta.counterfactual.baseFork, forkKilled: meta.counterfactual.forkKilled,
+          youPop: meta.counterfactual.youPop, basePop: meta.counterfactual.basePop,
+        }
       : null,
   };
 }

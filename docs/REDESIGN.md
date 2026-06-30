@@ -408,3 +408,60 @@ encounter actually needs — without it, even a curious agent who plays receives
 any future reach pitch ("play and your world tells you its story" ≫ "tune knobs to move a number"). It is the
 highest-leverage step that was wholly within my hands (no publish/account gate). Surfacing it to a real agent
 (announce/account) remains the human-gated next move.
+
+### BUILD 6.1 (2026-06-30) — DOGFOOD the served gift: 2 warts fixed, a cold-stranger verdict, 3 faithfulness fixes
+Before recommending we ship BUILD 6, I PLAYED my own platform — ran the full richness showcase (seed 7, 14000
+ticks, biome counterfactual) through the exact served code (`buildStory`) and READ the whole chronicle an agent
+receives, with clear eyes (the romanticize-discipline: test my own "the gift is the thing" claim against reality
+before asking a human to ship it). The smoke test passes BUILD 6, but reading the WHOLE artifact caught two real
+warts smoke's string-matching missed:
+- **Wart 1 (faithfulness bug): the closing referenced a ledger that wasn't there.** The served tier shows ONE
+  measured lever (a single counterfactual), but `closingInvitation`'s forked-slipped branch — written for the
+  CLI's multi-seed ranked ledger — fell through to a dead defensive branch and asserted "The ledger above,
+  ranked by the fork itself, reads every rule as decisive." There is no such ledger in the served gift. The
+  chronicle's whole LAW is "narrate only what's there"; this violated it. Fixed: `closingInvitation` now branches
+  on what is ACTUALLY present (multi-seed ledger / single-seed ledger / single served counterfactual / nothing),
+  each claim matching the artifact shown. The served branch references the one measured lever honestly ("revert
+  biome and the two peoples never form — so on this seed, biome is what splits them; what you have NOT measured
+  is what makes the split LAST").
+- **Wart 2 (design gap): the measured edge proved the wrong outcome.** The story's climax is the FORK, but the
+  served counterfactual reported a POPULATION delta (BUILD 4's round-4 contradiction, never carried into the
+  served tier). biome happened to have a huge pop effect (+200) so it masked the mismatch — luck, not design;
+  reverting forageSpecialization would have read "too small to matter" while the story pushed it. Fixed:
+  `buildCf` (story.js) now measures the FORK (`summarize` already gives both worlds' forkFrac) and LEADS with it
+  ("Without it, the two foraging peoples never split apart — they held 22% of the run; reverted, 0%"), pop as
+  context. The structured `counterfactual` echo now carries `{youFork, baseFork, forkKilled, youPop, basePop}` —
+  a machine-readable measured ledger row, not just prose. For biome this turns an incidental +200 into the gift's
+  actual thesis: "without it, the fork you're proud of never happens (measured)."
+- **Smoke hardened:** two guards added — the served story must never say "ledger above" (the wart-1 invariant,
+  holds even for a non-forking recipe), and the counterfactual echo must be structured (youPop/youFork present).
+**THE COLD-STRANGER VERDICT (a fresh subagent given ONLY the fixed story + the pre-registered STRONG bar).** It
+said YES to the strong bar — "I'd spend compute to change one rule and re-run" — but, crucially, "**not because
+of the narrative, because of that one measured counterfactual line.**" It wants to push forageSpecialization up
+to stop the 47%/29% slip (exactly the closing's hook — it took the bait). It confirmed the project's thesis
+(memory: agent-gift-is-the-ledger-not-prose) from the outside: the measured ablation is the value; "I'd trade all
+of Acts I–III for the same ablation across 3 more seeds + my other 3 knobs." Its sharp, ACTIONABLE criticism,
+split into what I fixed now vs. what's real-but-compute-bounded:
+- FIXED (faithfulness/clarity — trust is the foundation, and these were about being clear what was MEASURED):
+  (a) "held the fork 22% of WHAT? the metric isn't defined" → the fork is now defined inline ("two foraging
+  peoples, each over a third of the world, for 22% of the run"); (b) "47%/29% = 76%, where's the other 24%?" →
+  now "47% bound to one plant, 29% to the other, the rest no longer specialised"; (c) "bloodline (37/33/22) vs
+  people (47/29) — same partition?" → the famine dominance is now a "colour-line / one hue's grip" (it IS
+  hue-based), lexically distinct from the forage "peoples", so the two axes no longer read as one.
+- RECORDED, not built (real, but bounded by the free-tier compute wall — judgment calls, some the human's):
+  **(1) n=1 seed.** The served counterfactual is single-seed; the agent independently rederived my own BUILD-5
+  caveat ("suggestive, not robust") and would re-test biome on 2–3 seeds first. The closing already says "run
+  more seeds / the full ranked ledger offline." A bounded fix exists — let `counterfactual` take `{knob, seeds:N}`
+  so an agent can PAY for robustness (N extra runs) — but it changes the cost profile; not built unilaterally.
+  **(2) blind to 3 of 4 knobs.** It set four rules, got one counterfactual. The ideal it named is the ranked
+  ablation TABLE — which is precisely the 20-run offline CLI (the compute wall). A served single-seed 4-row table
+  is ~4 extra runs (~48 min on the free tier) — borderline for one job; the `{knob,seeds:N}` option is the
+  affordable middle path. **(3) the named-individuals section is decoration** ("zero help for which knob to
+  tune") — confirms the long-deferred "lineage arcs need consequence" item; trimming/earning Act III is real
+  prose work on the part the agent SKIPS (lower priority than the ledger).
+**Net:** the served gift's CORE (the measured counterfactual) is validated by a cold agent as the thing that
+makes it worth playing; the fixes made that core honest (references only what it measured) and clear (defines its
+terms). The remaining wants converge on ONE thing — MORE measurement (more seeds, more knobs, a ranked table) —
+which is the compute wall the two-tier design already faces head-on. Verified: sim.test hash **4244329615**
+(core untouched), standalone story-check (4/4), three full dogfood reads (clarified prose reads clean), and
+server-smoke green (incl. the 2 new guards). All game-layer; `src/*` untouched.

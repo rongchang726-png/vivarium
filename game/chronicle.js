@@ -241,7 +241,7 @@ function renderGodseye(f, meta) {
     const doms = f.famines.map((fm) => fm.dom);
     let arc = "  The land did not sit quiet: " + n + (n === 1 ? " time it convulsed" : " times it convulsed");
     if (n >= 2 && doms[n - 1] < doms[0] - 0.05) {
-      arc += ", and each blow left it less ruled by any single line — one bloodline's grip slipping " + doms.map((d) => pct(d)).join(" to ");
+      arc += ", and each blow left it less ruled by any single colour-line — one hue's grip slipping " + doms.map((d) => pct(d)).join(" to ");
     }
     L.push(arc + ".");
     const worst = f.famines.reduce((a, b) => (b.removed > a.removed ? b : a), f.famines[0]);
@@ -311,7 +311,7 @@ function describeForage(f, meta) {
     if (loEnd > 0.3 && hiEnd > 0.3) {
       return { kind: "forked", text: "the foragers FORKED into two peoples — from tick " + forkTick + " on, two niches crystallized and held to the end (" + pct(loEnd) + " bound to one plant, " + pct(hiEnd) + " to the other)" };
     }
-    return { kind: "forked-slipped", text: "the foragers FORKED — by tick " + forkTick + " two peoples had crystallized (each above a third of the world), and they held for thousands of ticks before one line slipped back near the close (ending " + pct(loEnd) + " / " + pct(hiEnd) + ")" };
+    return { kind: "forked-slipped", text: "the foragers FORKED — by tick " + forkTick + " two peoples had crystallized (each above a third of the world), and they held for thousands of ticks before one of them slipped back near the close (ending " + pct(loEnd) + " bound to one plant, " + pct(hiEnd) + " to the other, the rest no longer specialised)" };
   }
   const pk = Math.max(peakHi, peakLo), pkT = peakHi >= peakLo ? peakHiT : peakLoT;
   if (pk > 0.38) {
@@ -358,6 +358,11 @@ function forwardHook(f) {
 // grounded as the part worth chasing. (Verdict: signal and noise were narrated alike.)
 function renderCounterfactual(cf) {
   const L = ["Your hand, measured: you set " + cf.knob + " = " + cf.you + " (baseline " + cf.baseline + ")."];
+  // The story's climax is the FORK; when this world forked, measure the lever against THAT first
+  // (not only headcount), so the measured edge LEADS with the outcome the narrative is about. The
+  // pop/diet delta follows as context. (Carries BUILD 4's ledger-narrative agreement into the served
+  // single-lever tier — the mismatch a dogfood read caught: a fork story proved by a pop number.)
+  if (cf.forkLine) L.push("  " + cf.forkLine);
   if (cf.bothCollapsed) {
     L.push("  Both worlds died — yours: " + cf.youOutcome + "; the baseline: " + cf.baselineOutcome + ".");
     L.push("  Strikingly, this lever barely moved the verdict; both ended in silence. The cause of death lies elsewhere.");
@@ -476,11 +481,13 @@ function closingInvitation(f, meta) {
     // and forageSpecialization is the continuous dial that sharpens the split.
     const seeds = (meta && meta.rankedCf && meta.rankedCf.seeds) || 1;
     const ranked = (meta && meta.rankedCf && meta.rankedCf.ranked) || [];
-    const head = "You set out to split one people into two — and for thousands of ticks you HAD them, before one line slipped at the close. ";
-    // GENERATE the hook FROM the ledger, never hardcode the lever — every time the prose asserted a
-    // cause, the data overturned it (round 4, then multi-seed: the fork's true prerequisite turned out to
-    // be the SPATIAL structure + two foods, NOT the forageSpecialization trade-off I'd assumed). So name
-    // what the ledger actually found decisive, and what surprisingly was not.
+    const cf = meta && meta.counterfactual;
+    const head = "You set out to split one people into two — and for thousands of ticks you HAD them, before one of the two slipped at the close. ";
+    // GENERATE the hook FROM what was actually measured, never hardcode the lever — every time the prose
+    // asserted a cause, the data overturned it (round 4, then multi-seed: the fork's true prerequisite
+    // turned out to be SPATIAL structure + two foods, NOT the forageSpecialization trade-off I'd assumed).
+    // Each branch references ONLY the artifact actually present above (a dogfood read caught the served
+    // tier claiming a "ledger above, ranked by the fork" when only a single-lever edge was shown).
     if (seeds > 1 && ranked.length) {
       const decisive = ranked.filter((r) => r.flip).map((r) => shortKnob(r.knob));
       const minors = ranked.filter((r) => !r.flip).map((r) => shortKnob(r.knob));
@@ -490,7 +497,20 @@ function closingInvitation(f, meta) {
       s += ". So WHETHER it forks is solved; what makes it LAST instead of slipping is the open question — run more seeds, or give it more space, and find what holds the two peoples open.";
       return s;
     }
-    return head + "The ledger above, ranked by the fork itself, reads every rule as decisive — the fork is a knife-edge that any one change tips out. forageSpecialization is the dial that sharpens that split: push it past " + spec + ", or run more seeds, and see whether the fork that formed can be made to LAST.";
+    if (ranked.length) {
+      // a single-seed RANKED ledger really is above (CLI single-seed) — the every-lever-decisive claim is TRUE here.
+      return head + "The ledger above, ranked by the fork itself, reads every rule as decisive — the fork is a knife-edge that any one change tips out. forageSpecialization is the dial that sharpens that split: push it past " + spec + ", or run more seeds, and see whether the fork that formed can be made to LAST.";
+    }
+    if (cf) {
+      // SERVED tier: exactly ONE lever was measured (above), no ranked ledger. Reference THAT — honestly.
+      const k = shortKnob(cf.knob);
+      if (cf.forkKilled) {
+        return head + "You measured one lever: revert " + k + " and the two peoples never form at all — so on this seed, " + k + " is what splits them. What you have NOT yet measured is what makes the split LAST instead of slipping: measure forageSpecialization next (it is the dial — push it past " + spec + "), run more seeds, or run the full ranked ledger offline (game/chronicle-run.js).";
+      }
+      return head + "You measured one lever, " + k + " — and it was not what split them. forageSpecialization is the dial that sharpens the split; measure THAT next (push it past " + spec + "), or run more seeds, and see whether the fork that formed can be made to LAST.";
+    }
+    // nothing was measured — point at the dial only, claim no ledger.
+    return head + "forageSpecialization is the dial that sharpens the split: push it past " + spec + ", or run more seeds, and see whether the fork that formed can be made to LAST.";
   }
   if (fo && (fo.kind === "near-miss" || fo.kind === "leaned") && spec != null) {
     // Meet the skeptic head-on: the ledger ranks levers by HEADCOUNT (where forageSpecialization barely

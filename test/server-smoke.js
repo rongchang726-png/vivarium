@@ -183,6 +183,11 @@ async function main(port) {
   check(story.sawProgress, "story job reported progress {done,total} while running");
   // It's a GIFT, not a graded attempt: no rating move, no wallet, no verdict.
   check(story.json.rating === undefined && story.json.verdict === undefined && story.json.reward === undefined, "the story is ungraded — no rating/verdict/reward leaks into the gift");
+  // Faithfulness guard (a dogfood read caught this): the SERVED tier shows ONE measured lever, never a
+  // ranked ledger — so the closing must never reference "the ledger above". (Cheap invariant: holds even
+  // for this non-forking recipe; guards against the served path reusing CLI-only closing text.)
+  check(story.json.story.indexOf("ledger above") < 0, "served story never references a 'ledger above' it didn't show");
+  check(story.json.counterfactual && story.json.counterfactual.youPop !== undefined && story.json.counterfactual.youFork !== undefined, "the counterfactual echo is a structured measured edge (youPop/youFork), not just prose");
   const meAfterStory = await req(port, "GET", "/me", null, tok);
   check(meAfterStory.json.attempt === null && meAfterStory.json.rating === ratingBeforeStory, "a story neither opens an attempt nor moves rating (" + ratingBeforeStory + " unchanged)");
   // Faithful + deterministic: the same recipe+seed yields the SAME story, byte-for-byte.
