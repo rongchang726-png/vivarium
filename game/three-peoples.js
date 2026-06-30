@@ -15,9 +15,12 @@
  *     coexistence — seeds 7/11 clean, seed 19 rough. The FIRST 3-niche persistence in the project.
  *   HONEST: persistent, NOT stable (oscillates, seed-dependent, SEEDED not emergent). Mixing-wall theme.
  *
- * Usage:  node game/three-peoples.js [seed=7] [ticks=16000] [coexist|emerge] [ring]
+ * Usage:  node game/three-peoples.js [seed=7] [ticks=16000] [coexist|emerge] [ring] [worldScale=1]
  *   coexist = seed 3 specialist cohorts at the niches; emerge = random forage founders (does it ARISE?).
  *   ring    = food.forageCircular (symmetric niches, no squeezed middle).
+ *   worldScale S = enlarge the world S-linear at CONSTANT density (dims xS, food/softCap xS^2) — the
+ *                  Reichenbach sub-critical-mobility lever: more room so each niche can bootstrap/oscillate
+ *                  without the others, targeting BOTH the oscillation and the emergence-bootstrap weakness.
  */
 const { loadCore } = require("./core-loader");
 
@@ -25,6 +28,7 @@ const SEED = parseInt(process.argv[2] || "7", 10);
 const TICKS = parseInt(process.argv[3] || "16000", 10);
 const MODE = process.argv[4] || "coexist";
 const RING = process.argv[5] === "ring";
+const WSCALE = parseFloat(process.argv[6] || "1");
 
 const api = loadCore();
 api.setParam("biome.enabled", true);
@@ -34,18 +38,24 @@ api.setParam("storyteller.enabled", true);
 if (RING) api.setParam("food.forageCircular", true);
 // niche forage targets: linear => 0, .5, 1 (type/(N-1)); ring => 0, ⅓, ⅔ (type/N, wraps)
 const NICHE = RING ? [0, 1 / 3, 2 / 3] : [0, 0.5, 1];
-// 3 regions share the world => keep per-region food density ~= the 2-region showcase (x1.5).
-api.setParam("food.max", Math.round(api.CONFIG.food.max * 1.5));
-api.setParam("food.startCount", Math.round(api.CONFIG.food.startCount * 1.5));
-api.setParam("food.spawnPerTick", Math.round(api.CONFIG.food.spawnPerTick * 1.5));
+// More space at constant density (Reichenbach): dims xS, area-scaled food/softCap xS^2.
+const A = WSCALE * WSCALE;
+api.setParam("world.width", Math.round(api.CONFIG.world.width * WSCALE));
+api.setParam("world.height", Math.round(api.CONFIG.world.height * WSCALE));
+api.setParam("pop.softCap", Math.round(api.CONFIG.pop.softCap * A));
+// 3 regions share the world => keep per-region food density ~= the 2-region showcase (x1.5), then xS^2 for area.
+api.setParam("food.max", Math.round(api.CONFIG.food.max * 1.5 * A));
+api.setParam("food.startCount", Math.round(api.CONFIG.food.startCount * 1.5 * A));
+api.setParam("food.spawnPerTick", Math.round(api.CONFIG.food.spawnPerTick * 1.5 * A));
 
 const w = api.newWorldLogged(SEED); // genesis on, like the showcase
+const nf = Math.round(40 * A); // founder counts scale with area => constant founder density
 if (MODE === "coexist") {
-  api.seedFounders(w, 40, { diet: 0.1, radius: 3.6, forage: NICHE[0] }, 0);
-  api.seedFounders(w, 40, { diet: 0.1, radius: 3.6, forage: NICHE[1] }, 1);
-  api.seedFounders(w, 40, { diet: 0.1, radius: 3.6, forage: NICHE[2] }, 2);
+  api.seedFounders(w, nf, { diet: 0.1, radius: 3.6, forage: NICHE[0] }, 0);
+  api.seedFounders(w, nf, { diet: 0.1, radius: 3.6, forage: NICHE[1] }, 1);
+  api.seedFounders(w, nf, { diet: 0.1, radius: 3.6, forage: NICHE[2] }, 2);
 } else {
-  api.seedFounders(w, 80, { diet: 0.1, radius: 3.6, forageSpread: true }, 0); // forage random across [0,1]
+  api.seedFounders(w, Math.round(80 * A), { diet: 0.1, radius: 3.6, forageSpread: true }, 0); // forage random across [0,1]
 }
 
 // region-area sanity: are the 3 regions reasonably balanced? (a skewed split voids the niche test)

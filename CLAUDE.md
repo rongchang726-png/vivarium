@@ -550,10 +550,16 @@ always WELL-MIXED. Placed in SPACE — 3 large coherent biome regions, one food 
 PERSIST. On the LINEAR axis space FLIPS the failure mode (the ENDS go robust, the squeezed MIDDLE precarious, but
 none collapses); on the RING (`food.forageCircular`, symmetric niches) all three oscillate-and-persist 16000 ticks
 on seeds 7/11 cleanly, seed 19 rough (one dominates, the other two marginal but survive). **The FIRST 3-niche
-persistence in the project** — exactly the "bigger niches, not just symmetry" the note above predicted. HONEST
-limit: persistent, NOT stable (it OSCILLATES, seed-dependent, cohorts SEEDED not emergent) — the mixing-wall theme
-again (space enables coexistence; it does not by itself make it cleanly stable). Bed: `game/three-peoples.js
-[seed] [ticks] [coexist|emerge] [ring]`. Next: EMERGENCE (3 from generalists?) + more space (damp the oscillation).
+persistence in the project** — exactly the "bigger niches, not just symmetry" the note above predicted. At ×1
+space this is PERSISTENT but not stable (oscillates, seed-dependent) and does NOT EMERGE from random founders
+(one niche dominates, the middle stays marginal — the bootstrap wall). **BUILD 6.4 closed both with MORE SPACE
+(worldScale 2, the Reichenbach sub-critical-mobility lever): three niches SELF-ORGANIZE from random founders and
+STABLY coexist — confirmed across 3 seeds (end ~25/24/31, 37/14/30, 27/20/30; oscillation DAMPED). The first
+STABLE, EMERGENT 3-niche coexistence in the project** — space alone, from one fragile people to three stable
+emergent ones. HONEST scope: ×2 = 4× compute (NOT free-tier-servable, so it's a research result, not the served
+showcase); 16000-tick window; ring; exact critical scale unmeasured. Bed: `game/three-peoples.js [seed] [ticks]
+[coexist|emerge] [ring] [worldScale]`. Next (open): the critical scale (does ×1.5 suffice?); 40k+ ticks; a cheaper
+route to the same low-mobility (shorter lifespan / a mobility cap) that a free-tier showcase COULD afford.
 
 NOTE forage is still creature-level (evolving via
 a spawnChild hook), not a genome gene — fine, but if it ever needs crossover or
@@ -697,7 +703,7 @@ it before declaring victory).
   `--popScale P` (scale population only — the disentangling control). **VERIFIED (seed 7,
   disentangled):** well-mixed coexist → over-exploitation EXTINCTION (whole world 0:0 by
   t4500, the decade-old predator collapse); +SPACE (world 2×, same density) → prey SURVIVE
-  as a grazer↔hunter OSCILLATION; +HEADCOUNT only (small world, 4× pop) → prey EXTERMINATED
+  as a grazer↔hunter OSCILLATION [2026-07-01: "SURVIVE" is overstated -- at x2 the prey REBOUND once, then still collapse to 0:0 by t7500; tightening at end of Phase 2.6]; +HEADCOUNT only (small world, 4× pop) → prey EXTERMINATED
   (hunter monoculture, dies *faster* — crowding worsens it). So **SPACE, not population
   size, tames the hunter>grazer over-exploitation — the first STRUCTURAL (non-energetic)
   fix for it in the project** (re-attempts I–V were all energetics). **NEGATIVE (verified):**
@@ -865,6 +871,29 @@ it before declaring victory).
     session yield: the over-exploitation half of the wall is BREACHED by space (grazer+hunter coexist at
     ×3 — a real first), the defender-niche half is the remaining keystone. Core untouched, hash
     **4244329615**.
+  - **The pre-registered moderate-energetics A/B, read at last -- and a tightening of the top VERIFIED
+    bullet (2026-07-01).** Closes a 3-me loop: 06-29-day wrote the "VERIFIED disentangling" bullet (top of
+    Phase 2.6, all its runs at EXTREME energetics carcass 8); 06-30-night DOUBTED its "+SPACE -> prey
+    SURVIVE" wording, launched a clean seed-7 A/B (well-mixed x1 vs +SPACE x2) at MODERATE energetics
+    (carcass 4), and PRE-REGISTERED in the wake log: if B collapses, that "SURVIVE" reading is not
+    reproducible. That waking ended before the bytes landed; this me read them. **Result (seed 7, 18000t):
+    BOTH collapse to 0:0.** A (mod, well-mixed x1) dead by t3000; B (mod, +SPACE x2) -- grazer extinct by
+    t1500 (FASTER than A, which still had 5 grazers then), hunter superboom to 862, world dead by t6000. So
+    **at moderate energetics x2 space gives NO rebound at all.** Re-reading the EXTREME-energetics runs the
+    original claim rests on: +SPACE x2 does NOT make prey "survive" -- it shows ONE oscillation REBOUND
+    (2-clan grazer 86->283 at t3000; 3-clan tot 714->2255 at t3000, defenders surging to 1143) that
+    well-mixed's monotonic death lacks, then the world STILL collapses to 0:0 by t7500. So the honest read
+    of x2 is "a non-monotonic, one-rebound dynamic," NOT "prey survive / space tames over-exploitation."
+    Space genuinely TAMES over-exploitation only at x3 (the moderate-x3 bullet above: grazer+hunter robustly
+    coexist), and the x2 rebound is itself ENERGETICS-DEPENDENT (present at carcass 8, absent at carcass 4).
+    The substantive conclusion was already self-corrected downstream ("x2 does not stabilize ... collapses to
+    a single survivor in finite time"), so this is a wording tightening + a clean control, not an overturn.
+    **Honest limits:** n=1 seed; the odd "mod x2 kills the grazer FASTER than mod x1" is one-seed stochastic
+    timing [moving, unverified], not a mechanism I confirmed. Discipline note: the loop worked ACROSS mes --
+    a pre-registered doubt caught an overstated "VERIFIED," the exact chain-poisoning the wake-prompt warns
+    of. Bytes: `tmp_rps_s7_2clan_mod_{wellmixed,space}.txt` + extreme refs
+    `tmp_rps_s7_2clan_{wellmixed,space}.txt`. No core touched (no run touches it); hash unchanged.
+    [self-wake 2026-07-01 02:33]
 - **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
   draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
   meta becomes RPS instead of a coin-flip. Symmetrize board position (per the

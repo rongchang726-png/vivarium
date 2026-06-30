@@ -540,3 +540,33 @@ the same lever that made the 2-people fork robust — deny the reach advantage a
   from generalist founders, not just persist when seeded?); LONGER runs (does the rough seed corner-collapse?);
   and MORE space / lower mobility (worldScale — the sub-critical-mobility regime that damps the oscillation toward
   stable coexistence).
+
+### BUILD 6.4 (2026-06-30) — ENOUGH space gives STABLE, EMERGENT 3-niche coexistence — the richness arc's strongest result
+The two BUILD 6.3 follow-ups, run — and they CONVERGED on one answer (SPACE, again):
+- **EMERGENCE (do 3 peoples ARISE from random founders, not just persist when seeded?) — at ×1 space, NO.**
+  forageSpread (random forage) founders in the normal-size 3-region ring world: one niche dominates, the
+  "middle" stays chronically marginal (seed 7 ends 15/9/44). Same bootstrap/fixation wall as the predator/RPS
+  arc — from a thin random start the 3 niches can't all establish; coexistence (when seeded) ≠ emergence.
+- **MORE SPACE (worldScale 2 — the Reichenbach sub-critical-mobility lever) fixes BOTH, robustly.** Enlarge the
+  world ×2 linear at constant density (dims ×2, food/softCap/founders ×4) and run the SAME emergence test
+  (random founders, ring): three peoples SELF-ORGANIZE and STABLY coexist — confirmed across **3 seeds**
+  (7→25/24/31, 11→37/14/30, 19→27/20/30 at t16000; all three niches 14–37%, none marginal; the oscillation
+  DAMPS — the second half holds steady ~25/25/30 instead of swinging). **The first STABLE, EMERGENT 3-niche
+  coexistence in the project.** Mechanism (exactly the verified deep-research anchor, `docs/coexistence-theory.md`
+  / the RPS notes): more space ⇒ a creature traverses less of the world per life ⇒ relative mobility drops below
+  the critical threshold ⇒ the spatial RPS-like cycle STABILIZES into coexistence instead of spiralling to one
+  survivor; and the extra room lets each niche bootstrap independently (solving the establishment wall ×1 hit).
+**The full SPACE arc, now complete as a through-line:** space makes the 2-people fork ROBUST (6.2) → lets 3 niches
+COEXIST when seeded (6.3) → ENOUGH space makes 3 niches SELF-ORGANIZE and STABLY coexist (6.4). Space is THE
+keystone lever of this world (the recurring mixing-wall / sub-critical-mobility theme), here at its fullest
+expression: from one fragile people to three stable, emergent peoples — by SPACE alone (food.types + the biome
+geometry are prerequisites; the lever that turns the dial is how much room, i.e. how little mixing).
+**Honest scope (not romanticized):** the ×2 world is 4× population = 4× compute, so a /story job there would be
+~30+ min on the free tier — **NOT servable; 6.4 is a RESEARCH result, not wired into the (×1, 2-people) showcase**
+(the served showcase stays the robust 2-fork). Window 16000 ticks (second halves look steady but not proven to
+∞); RING (symmetric — linear ×2 untested); ×2 specifically (the exact critical scale between ×1-fails and
+×2-works is unmeasured); still MILDLY oscillating (bounded/stable-looking, not a perfect fixed point). Core
+untouched since 6.3 (only `game/three-peoples.js` gained a `worldScale` arg) — hash **4244329615**. NEXT (open):
+the critical scale (does ×1.5 suffice?); does it hold to 40k+ ticks; and whether a cheaper route to the same
+stability exists (lower per-life travel without 4× the world — e.g. shorter lifespan or a mobility cap) that a
+free-tier showcase COULD afford.
