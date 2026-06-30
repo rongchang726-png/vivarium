@@ -41,18 +41,26 @@
 const BIOME_REGIONS = [
   { name: "plain",  foodType: 0, densityMult: 1.00, moveMult: 0.90, fovMult: 1.20 }, // open grass: cheap fast travel, far sight
   { name: "forest", foodType: 1, densityMult: 1.00, moveMult: 1.10, fovMult: 0.82 }, // dense wood: costly slow travel, short sight
+  { name: "meadow", foodType: 2, densityMult: 1.00, moveMult: 1.00, fovMult: 1.00 }, // the middle niche: neutral physics, its OWN food (only used at food.types>=3 — BUILD 6.3)
 ];
+// How many regions to actually use = how many food niches there are to place in space.
+// food.types=2 => plain+forest (the 2-region default, UNCHANGED); 3 => +meadow. The point of
+// the 3rd region (BUILD 6.3): the well-mixed 3-type fork collapses because the MIDDLE specialist
+// reaches all foods (reach advantage); SPATIAL separation into 3 large regions denies that reach,
+// the same mixing-wall lever that made the 2-people fork robust (BUILD 6.2). Capped at the table size.
+function biomeRegionCount() { return Math.max(1, Math.min(BIOME_REGIONS.length, (CONFIG.food && CONFIG.food.types) || 1)); }
 
 class BiomeField {
   constructor(seed) {
     const C = CONFIG.biome;
     this.contrast = C.contrast;
+    this.nRegions = biomeRegionCount(); // 2 (plain/forest, default) or 3 (+meadow, food.types>=3)
     this.W = CONFIG.world.width;
     this.H = CONFIG.world.height;
     // Densest region's multiplier (rejection baseline): the richest region spawns food at
     // full rate, sparser regions are thinned toward it (densityRejectAt). Precomputed once.
     let mx = 0;
-    for (let i = 0; i < BIOME_REGIONS.length; i++) if (BIOME_REGIONS[i].densityMult > mx) mx = BIOME_REGIONS[i].densityMult;
+    for (let i = 0; i < this.nRegions; i++) if (BIOME_REGIONS[i].densityMult > mx) mx = BIOME_REGIONS[i].densityMult;
     this.maxDensity = this._mult(mx); // _mult uses this.contrast (already set) — flat==1 at contrast 0
     // SEPARATE rng — derived from the world seed but never the world's own stream.
     this.rng = new RNG((seed ^ 0x9e3779b9) >>> 0);
@@ -63,6 +71,22 @@ class BiomeField {
     this.cell = C.cellPx;
     this.cols = Math.max(1, Math.ceil(this.W / this.cell));
     this.rows = Math.max(1, Math.ceil(this.H / this.cell));
+    // For 3+ regions, EQUAL-AREA band thresholds. The field is non-uniform, so FIXED thresholds skew the
+    // regions badly (±0.33 measured 10/80/10 instead of thirds — the middle niche won on territory, not
+    // merit, voiding the niche test). Sample the combined field v=a+0.25b over the grid and take the (k/N)
+    // QUANTILES, so every region gets ~1/N of the world (a fair test of whether 3 niches can hold). 2-region
+    // (default) keeps the simple median split (v<0) and never enters this block.
+    this.bandT = null;
+    if (this.nRegions >= 3) {
+      const vs = [];
+      for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) {
+        const x = (c + 0.5) * this.cell, y = (r + 0.5) * this.cell;
+        vs.push(this._sample(this._a, x, y) + 0.25 * this._sample(this._b, x, y));
+      }
+      vs.sort((p, q) => p - q);
+      this.bandT = [];
+      for (let k = 1; k < this.nRegions; k++) this.bandT.push(vs[Math.floor((vs.length * k) / this.nRegions)]);
+    }
     this.grid = new Int8Array(this.cols * this.rows);
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
@@ -97,7 +121,13 @@ class BiomeField {
   // Split into 2 LARGE coherent regions. Combine both noise fields so the border meanders
   // organically (not a straight cut); the threshold at 0 gives two ~equal-area regions.
   _classify(a, b) {
-    return (a + 0.25 * b) < 0 ? 0 : 1; // 0 = plain, 1 = forest
+    const v = a + 0.25 * b; // combined field => organic, meandering borders
+    if (this.nRegions <= 1) return 0;
+    if (this.nRegions === 2) return v < 0 ? 0 : 1; // UNCHANGED 2-region split (plain / forest)
+    // 3+ regions: EQUAL-AREA bands via the empirical quantiles in this.bandT (so each region ~1/N).
+    let reg = 0;
+    while (reg < this.bandT.length && v >= this.bandT[reg]) reg++;
+    return reg;
   }
 
   regionAt(x, y) {

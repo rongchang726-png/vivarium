@@ -506,3 +506,37 @@ WORLD); the instrument (multi-seed served ledger) and the deep frontier (RPS/pre
 trade-off. NEXT substance leads the finding opens: does WORLD SIZE (worldScale, the Reichenbach lever) extend it
 further; does the mixing threshold (raise maxWavenumber, watch it collapse to one) make a clean PvP-relevant dial;
 and the still-unsolved 3-peoples (3 food types) + the RPS/predator depth.
+
+### BUILD 6.3 (2026-06-30) — SPACE unlocks a THIRD people: the first 3-niche persistence in the project (oscillating, not yet stable)
+Substance step 2, taking the BUILD 6.2 lever (SPACE) at the project's standing hard-negative: **3 food types
+never give 3 species** (CLAUDE.md branching notes — the middle specialist on a linear forage axis reaches all
+foods, a reach advantage that collapses the population to ONE niche; the ring tried WELL-MIXED also collapsed).
+The untried angle: that negative was always WELL-MIXED. Does SPACE — 3 large coherent regions, one food each,
+the same lever that made the 2-people fork robust — deny the reach advantage and hold 3 peoples?
+- **Built the 3-region biome** (`src/biome.js`): a 3rd archetype (meadow, foodType 2) + a region count that
+  tracks `food.types` (2 => plain/forest, UNCHANGED default; 3 => +meadow). **Bit-exact: biome default-off and
+  the 3-region path is dormant unless food.types>=3 + biome.enabled, so the 2-region showcase and the default
+  world are untouched — sim.test hash 4244329615, ALL CHECKS PASSED.**
+- **The calibration bug the bytes caught (the discipline working):** my first 3-way split used FIXED thresholds
+  (±0.33 on the noise field) — which gave regions of **10% / 80% / 10%**, not thirds (the field concentrates near
+  0). The middle niche then "won" on TERRITORY, not merit — a FALSE negative that looked exactly like the
+  well-mixed collapse. Caught by printing the region areas. Fix: **equal-area thresholds from the empirical
+  QUANTILES** of the field sampled over the grid → balanced 33/33/33, a fair test.
+- **The result (seed 7/11/19, 3 seeded specialist cohorts, 16000 ticks, balanced regions):**
+  - *Linear axis (niches at forage 0 / .5 / 1):* SPACE **flips the failure mode** — the ENDS become robust and
+    the MIDDLE becomes the precarious one (it borders both ends and is squeezed from two sides). All 3 persist,
+    oscillating, none collapses (vs well-mixed: middle dominates, ends die).
+  - *Ring axis (`food.forageCircular`, niches symmetric at 0 / ⅓ / ⅔ — no squeezed middle):* **persistent,
+    oscillating 3-way coexistence.** Seeds 7 & 11 clean (all three trade dominance, end ~29/21/30–39, no permanent
+    loser); seed 19 ROUGHER (type0 dominates most of the run, the other two marginal at 1–10%, with a late
+    recovery to 36/14/25). All three survive all 16000 ticks on all three seeds.
+  **This is the FIRST 3-niche persistence in the project** — the well-mixed 3-type case ALWAYS collapsed to one
+  (a decade-stated negative); SPACE makes three peoples coexist. **Honest limits (not romanticized):** it is
+  PERSISTENT but not STABLE — it oscillates (a spatial RPS-like cycle), it is seed-dependent in strength (clean on
+  2/3, rough on 1/3), the cohorts were SEEDED not emergent, and the window is 16000 ticks (a rougher seed could
+  still corner-collapse later). It confirms the mixing-wall / supercritical-mobility theme (space ENABLES
+  coexistence; it does not by itself make it cleanly stable — the same lesson as the 2-people fork and the RPS
+  arc). Kept: the 3-region biome (bit-exact, default-dormant). NEXT to firm it up: EMERGENCE (do 3 peoples ARISE
+  from generalist founders, not just persist when seeded?); LONGER runs (does the rough seed corner-collapse?);
+  and MORE space / lower mobility (worldScale — the sub-critical-mobility regime that damps the oscillation toward
+  stable coexistence).

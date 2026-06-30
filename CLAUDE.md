@@ -544,6 +544,17 @@ just symmetry. Summary: 2-way branching
 works (forage 0.5 is a valley); 3-way does NOT on a linear axis (0.5 is a peak
 with a reach advantage). Bed: `game/branching.js [ticks] [spec] [types] [spread]`.
 
+**SPACE QUALIFIES this negative (2026-06-30, richness BUILD 6.3 — docs/REDESIGN.md).** The N-way failure above was
+always WELL-MIXED. Placed in SPACE — 3 large coherent biome regions, one food type each (`food.types=3` builds a
+3rd region; `src/biome.js`, bit-exact/default-dormant; equal-area regions via field quantiles) — three niches
+PERSIST. On the LINEAR axis space FLIPS the failure mode (the ENDS go robust, the squeezed MIDDLE precarious, but
+none collapses); on the RING (`food.forageCircular`, symmetric niches) all three oscillate-and-persist 16000 ticks
+on seeds 7/11 cleanly, seed 19 rough (one dominates, the other two marginal but survive). **The FIRST 3-niche
+persistence in the project** — exactly the "bigger niches, not just symmetry" the note above predicted. HONEST
+limit: persistent, NOT stable (it OSCILLATES, seed-dependent, cohorts SEEDED not emergent) — the mixing-wall theme
+again (space enables coexistence; it does not by itself make it cleanly stable). Bed: `game/three-peoples.js
+[seed] [ticks] [coexist|emerge] [ring]`. Next: EMERGENCE (3 from generalists?) + more space (damp the oscillation).
+
 NOTE forage is still creature-level (evolving via
 a spawnChild hook), not a genome gene — fine, but if it ever needs crossover or
 genetic-distance speciation metrics, promote it into `genome.genes`.
