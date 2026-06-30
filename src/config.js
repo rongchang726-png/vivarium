@@ -47,15 +47,18 @@ const CONFIG = {
   // guarded, a SEPARATE rng is used (never world.rng), nothing is serialized => the default world
   // is bit-exact (hash 4244329615). When on, seeded PERIODIC noise fields classify the torus into 2
   // LARGE regions (open PLAIN / dense FOREST), each conferring a fitness vector (food type / density
-  // / move / FOV). Calibration verdict (see REDESIGN.md): the only LIVE ecotype axis is forage, and
-  // it yields a MILD cline not hard speciation (mixing wall), so pair biome.enabled with food.types=2
-  // + forageSpecialization≈1.2; terrain ships as the SPATIAL SUBSTRATE that BUILD 2 disturbance turns
-  // into divergence. `contrast` scales the physics multipliers (0 => flat == off).
+  // / move / FOV). Calibration verdict (see REDESIGN.md): the only LIVE ecotype axis is forage, and the
+  // MIXING WALL governs whether it forks — at maxWavenumber 2 (smaller regions, more border-crossing) the
+  // niche-fork is a 2/4-seed knife-edge that slips at the close; at maxWavenumber 1 (the largest, least-
+  // mixed regions) it is a ROBUST 4/4 lasting split (measured, BUILD 6.2). So pair biome.enabled with
+  // food.types=2 + forageSpecialization≈1.2 — NOT higher (1.5 bootstrap-collapses the generalist founders).
+  // `contrast` scales the physics multipliers (0 => flat == off).
   biome: {
     enabled: false,
     cellPx: 40,        // coarse region-lookup grid resolution (world units per cell)
     components: 6,     // sinusoid terms per noise field
-    maxWavenumber: 2,  // integer wavenumbers in [1,maxWavenumber] => few LARGE coherent regions
+    maxWavenumber: 1,  // 1 => the LARGEST, least-mixed 2 regions. BUILD 6.2: maxWave 1 makes the fork robust
+                       //      (4/4 seeds) + lasting; 2 leaves it a 2/4 knife-edge. Higher => smaller regions, more mixing.
     contrast: 1.0,     // strength of the per-region physics multipliers (0 => flat)
   },
 

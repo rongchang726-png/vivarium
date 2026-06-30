@@ -465,3 +465,44 @@ terms). The remaining wants converge on ONE thing — MORE measurement (more see
 which is the compute wall the two-tier design already faces head-on. Verified: sim.test hash **4244329615**
 (core untouched), standalone story-check (4/4), three full dogfood reads (clarified prose reads clean), and
 server-smoke green (incl. the 2 new guards). All game-layer; `src/*` untouched.
+
+### BUILD 6.2 (2026-06-30) — SUBSTANCE, not packaging: SPACE makes the niche-fork robust (2/4 knife-edge → 4/4 lasting)
+After shipping + announcing BUILD 6, my human reframed the work: "好的包装 ≠ 完成的作品 — the SUBSTANCE (本体) is
+still demo-grade; polishing the WORK is the focus, and it's a matter of SEQUENCE not trade-off." So the first
+substance pass attacked the open question the gift itself poses (and the cold-stranger's pull pointed at):
+**what makes the niche-fork LAST?** BUILD 5 found the fork is a 2/4-seed knife-edge that slips at the close; the
+cold-stranger wanted to push `forageSpecialization`, BUILD 5's lead was SPACE. Both were tested for FORMING, never
+for LASTING. A cheap config-knob sweep (`fork-durability.js`, the existing `summarize.forkFrac` instrument)
+settled it — measured, on the 4 ledger seeds [7,11,19,23], at 14000 ticks:
+| lever (showcase recipe + …) | seed 7 | seed 11 | seed 19 | seed 23 |
+|---|---|---|---|---|
+| **baseline** (maxWavenumber 2) | fork 22% end 47/29 | fork **0%** (never) | fork 22% end 45/50 | fork **1%** (barely) |
+| **bigRegions** (maxWavenumber **1**) | fork **50%** end 51/49 | fork **56%** end 53/47 | fork 38% end 48/52 | fork **61%** end 47/52 |
+| deepValley (forageSpec 1.5) | **COLLAPSED** pop 23 | — | — | — |
+| noStoryteller | fork 0% end 14/24 (worse) | — | — | — |
+**The finding (robust across all 4 seeds): SPACE is the lever.** `biome.maxWavenumber 1` — the LARGEST, least-mixed
+2 regions (vs 2 = smaller regions, more border-crossing) — turns the fork from a 2/4 knife-edge that slips into a
+**4/4 robust, LASTING** split (every seed ends ~50/50, peak 100%, no slip; pops healthy). This is the project's
+recurring **mixing wall** (well-mixed homogenizes; space sustains diversity — `docs/coexistence-theory.md`) showing
+up cleanly in the richness fork, and it confirms BUILD 5's lead for LASTING, not just forming. Two secondary,
+measured results: **`forageSpecialization 1.5` BOOTSTRAP-COLLAPSES** the world (pop 23 — the cold-stranger's
+trade-off instinct, and my own shipped hook, were measured WRONG); **the storyteller HELPS** the fork (removing it
+made it worse — famines periodically break the dominant lineage, an NFDS-like minority refuge; drama and the fork
+are ALIGNED, not in tension).
+Changes (substance + the faithfulness correction it forced):
+- **`config.js`: `biome.maxWavenumber` default 2 → 1** — the measured-better calibration. Hash-SAFE (biome is
+  default-OFF, no code path runs; **sim.test 4244329615, ALL CHECKS PASSED**). The showcase world now reliably
+  forks-and-lasts: dogfood seed 7 went forkFrac 0.22→**0.50**, end 47/29 (slipped)→**51/49 (held)**, peakSplit
+  0.91→**1.0**, and the story now renders the "**FORKED into two peoples … held to the end**" arc (the held
+  branch), not "formed then slipped". The WORLD the gift narrates is genuinely richer.
+- **`chronicle.js`: the closing hook corrected.** It pointed agents at "push forageSpecialization past 1.2" — now
+  MEASURED to collapse the world. Every such hook (5 branches) now points at the real lever: "what holds two
+  peoples apart is SPACE — a LOWER biome.maxWavenumber … (pushing forageSpecialization harder backfires — it
+  bootstrap-collapses the generalist founders)." Verified on a slip-forcing run (maxWavenumber 2): the hook renders
+  the space lever, contains no "push forageSpecialization", and names biome.maxWavenumber.
+Verified: sim.test hash **4244329615** (core untouched at default), dogfood (showcase forks-and-holds), slip-hook
+check (corrected hook renders), server-smoke green. Sequence note (per my human): this is step 1 (deepen the
+WORLD); the instrument (multi-seed served ledger) and the deep frontier (RPS/predators) follow — order, not
+trade-off. NEXT substance leads the finding opens: does WORLD SIZE (worldScale, the Reichenbach lever) extend it
+further; does the mixing threshold (raise maxWavenumber, watch it collapse to one) make a clean PvP-relevant dial;
+and the still-unsolved 3-peoples (3 food types) + the RPS/predator depth.

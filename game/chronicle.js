@@ -463,60 +463,53 @@ function loopInvitation(f, rcf) {
   return forwardHook(f);
 }
 
-// The closing hook: name the SPECIFIC knob to turn next, grounded in what the run measured. When the
-// agent's forage experiment only LEANED (didn't fork), point straight at forageSpecialization and a
-// direction — the cold-stranger's exact ask ("tell me which knob, and which way"). Otherwise fall back
-// to the ranked-counterfactual loop-invitation (which names the lever that moved this world most).
+// The closing hook: name the SPECIFIC next experiment, grounded in what the run measured. The MEASURED
+// finding (BUILD 6.2) replaced the earlier guess: what holds two peoples apart is SPACE — fewer, larger,
+// less-mixed biome regions (a lower biome.maxWavenumber) — NOT the forage trade-off (pushing
+// forageSpecialization harder bootstrap-collapses the world). So a slipped/leaning fork is pointed at the
+// measured spatial lever, never at the trade-off (which backfires).
 function closingInvitation(f, meta) {
   const fo = describeForage(f, meta);
   const recipe = (meta && meta.recipe) || {};
   const spec = recipe["food.forageSpecialization"];
+  // The MEASURED lever for a LASTING fork (BUILD 6.2): region size / spatial mixing, not the trade-off.
+  const lastLever = "what holds two peoples apart is SPACE — the biome's region size. A LOWER biome.maxWavenumber (fewer, larger, less-mixed regions) makes the split robust and lasting; raise it and the regions fragment until the fork slips back into one. (Pushing forageSpecialization harder backfires — it bootstrap-collapses the generalist founders.)";
   if (fo && fo.kind === "forked") {
     return "You set out to split one people into two — and you did; the fork held to the close. Does it hold on another seed, or was this one lucky? Change the seed and run it again.";
   }
   if (fo && fo.kind === "forked-slipped") {
-    // The fork DID form (shown in Act IV) and slipped at the close. Now that the ledger above is ranked
-    // by the FORK ITSELF (BUILD 4), the hook and the table AGREE — no more "push the lever the table
-    // calls inert" (round 4's killer contradiction): the table shows which rule held the two peoples,
-    // and forageSpecialization is the continuous dial that sharpens the split.
     const seeds = (meta && meta.rankedCf && meta.rankedCf.seeds) || 1;
     const ranked = (meta && meta.rankedCf && meta.rankedCf.ranked) || [];
     const cf = meta && meta.counterfactual;
     const head = "You set out to split one people into two — and for thousands of ticks you HAD them, before one of the two slipped at the close. ";
-    // GENERATE the hook FROM what was actually measured, never hardcode the lever — every time the prose
-    // asserted a cause, the data overturned it (round 4, then multi-seed: the fork's true prerequisite
-    // turned out to be SPATIAL structure + two foods, NOT the forageSpecialization trade-off I'd assumed).
-    // Each branch references ONLY the artifact actually present above (a dogfood read caught the served
-    // tier claiming a "ledger above, ranked by the fork" when only a single-lever edge was shown).
+    // GENERATE the hook FROM what was actually measured. Each branch references ONLY the artifact present
+    // above (a dogfood read caught the served tier claiming a "ledger above" when only one edge was shown);
+    // the next-experiment advice is the MEASURED lever for lasting (space), not the old trade-off guess.
     if (seeds > 1 && ranked.length) {
       const decisive = ranked.filter((r) => r.flip).map((r) => shortKnob(r.knob));
       const minors = ranked.filter((r) => !r.flip).map((r) => shortKnob(r.knob));
       let s = head + "The ledger above (across " + seeds + " seeds) names what the fork truly NEEDS";
       if (decisive.length) s += ": " + decisive.join(" and ") + " — revert either and it never forms on any seed";
       if (minors.length) s += ". And the levers you might bet on, " + minors.join(" and ") + ", barely held it";
-      s += ". So WHETHER it forks is solved; what makes it LAST instead of slipping is the open question — run more seeds, or give it more space, and find what holds the two peoples open.";
+      s += ". And " + lastLever;
       return s;
     }
     if (ranked.length) {
-      // a single-seed RANKED ledger really is above (CLI single-seed) — the every-lever-decisive claim is TRUE here.
-      return head + "The ledger above, ranked by the fork itself, reads every rule as decisive — the fork is a knife-edge that any one change tips out. forageSpecialization is the dial that sharpens that split: push it past " + spec + ", or run more seeds, and see whether the fork that formed can be made to LAST.";
+      return head + "The ledger above, ranked by the fork itself, reads every rule as decisive — the fork is a knife-edge that any one change tips out. But " + lastLever;
     }
     if (cf) {
-      // SERVED tier: exactly ONE lever was measured (above), no ranked ledger. Reference THAT — honestly.
       const k = shortKnob(cf.knob);
       if (cf.forkKilled) {
-        return head + "You measured one lever: revert " + k + " and the two peoples never form at all — so on this seed, " + k + " is what splits them. What you have NOT yet measured is what makes the split LAST instead of slipping: measure forageSpecialization next (it is the dial — push it past " + spec + "), run more seeds, or run the full ranked ledger offline (game/chronicle-run.js).";
+        return head + "You measured one lever: revert " + k + " and the two peoples never form at all — so on this seed, " + k + " is what splits them. And " + lastLever + " Or run the full ranked ledger offline (game/chronicle-run.js).";
       }
-      return head + "You measured one lever, " + k + " — and it was not what split them. forageSpecialization is the dial that sharpens the split; measure THAT next (push it past " + spec + "), or run more seeds, and see whether the fork that formed can be made to LAST.";
+      return head + "You measured one lever, " + k + " — and it was not what split them. But " + lastLever;
     }
-    // nothing was measured — point at the dial only, claim no ledger.
-    return head + "forageSpecialization is the dial that sharpens the split: push it past " + spec + ", or run more seeds, and see whether the fork that formed can be made to LAST.";
+    return head + lastLever;
   }
   if (fo && (fo.kind === "near-miss" || fo.kind === "leaned") && spec != null) {
-    // Meet the skeptic head-on: the ledger ranks levers by HEADCOUNT (where forageSpecialization barely
-    // shows), but headcount is not the fork — it is the knob that governs the split, an axis the count
-    // cannot see. (Round 2's catch: a hook must not point where its own table says "inert" unexplained.)
-    return "You split the food in two to make two peoples — and they kept reaching for it and falling back. The ledger above ranks levers by HEADCOUNT, where forageSpecialization barely shows — but headcount is not the fork: it is the knob that governs the split, an axis the count cannot see. Push it past " + spec + " and watch the SPLIT, not the numbers — does a second people finally hold, or does this world insist on staying one?";
+    // The split LEANED but never held. The MEASURED lever is SPACE, not the trade-off (round 2 guessed
+    // forageSpecialization; BUILD 6.2 measured that it backfires and region size is what holds two peoples).
+    return "You split the food in two to make two peoples — and they kept reaching for it and falling back. The honest, measured finding: " + lastLever + " Watch the SPLIT, not the headcount — does a second people finally hold, or does this world insist on staying one?";
   }
   return loopInvitation(f, meta && meta.rankedCf);
 }
