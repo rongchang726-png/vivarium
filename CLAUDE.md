@@ -907,6 +907,34 @@ it before declaring victory).
     other wall (the decade predator problem). NOT a quick win — but the defender-niche half finally has a real
     tool. This is the defender-NICHE axis, distinct from the autonomous self-wake's energetics×space-grid
     (over-exploitation) axis above; don't duplicate its runs.
+  - **defender-niche probe — RESULT (2026-07-01): own spatial food does NOT close the cycle; the first gate
+    (hunter superboom) is a HARD WALL that own-food makes WORSE, and the second gate (grazer>defender) is
+    theoretically sound but BOOTSTRAP-INVERTED.** Built (all default-off, bit-exact, hash 4244329615):
+    `rps-lab.js --foodTypes/--*Forage/--forestDensity/--preyDietMax`; core `config.creature.preyDietMax` (an
+    obligate-predator target gate in `_attack`: a hunter only attacks prey with diet ≤ this; 1 ⇒ off) +
+    `config.biome.densityMults` (per-region food-density override in `biome.js`; null ⇒ table values). **First
+    gate (own-food vs hunter superboom):** own-food DOES remove the grazer-competition squeeze — shared-food
+    control kills the defender by t1500, own-food holds it to t7500. But it WORSENS superboom: the defender
+    thrives in its own type1 region (×3 t1500 D=1861–2443) and becomes a SECOND prey base, so the hunter booms
+    to softCap and number-overwhelms all three. Space shows a clean DOSE effect (3-way holds ×1 t1500 → ×2
+    t3000 → ×3 seed11 t7500 w/ a recovery oscillation) but ALL THREE ×3 seeds still collapse to hunter
+    monoculture — self-wake's ×3 only worked because shared-food had no second prey base. `preyDietMax`
+    (obligate predator; ± `plantSuppression≥1` to also cut the plant fallback) is NEGATIVE: the blocker is
+    OVER-EXPLOITATION (hunter eats the grazer OUT), not the hunter's fallback food — making it obligate just
+    makes it hunt grazer HARDER. (Mechanism dug out by a subagent: grazer-extinct worlds rebound because
+    `_attack` has NO clan/diet/size gate ⇒ cannibalism, + `plantSuppression 0.7<1` ⇒ a diet-0.92 hunter still
+    grazes at ~36%.) **Second gate (a red-team subagent):** it UNIFIED my two dead-ends into one impossibility
+    theorem — with defender=type1-specialist, plantPen merely slides between defender-apex and grazer-apex
+    across a Gause knife-edge, so TUNING HAS NO STABLE SOLUTION. Its fix: an asymmetric low-density shelter
+    (forest densityMult<1, built) + ROLE-SWAP (grazer=type0-specialist w/ no refuge; defender=generalist w/ a
+    starving forest refuge), making grazer>defender come from forage MISMATCH not extreme plantPen. Tested (G
+    vs D, no hunter): it BOOTSTRAP-INVERTS — the generalist defender out-bootstraps the no-refuge specialist
+    grazer (half the grazer founders land in forest and starve), so the defender MONOPOLIZES (grazer extinct
+    by t1500) — the opposite of the steady-state edge, which never gets to express. **VERDICT: RPS via
+    defender-niche does NOT close at feasible compute.** Real yield: the diagnosis, the red-team impossibility
+    theorem, + 2 documented bit-exact knobs (`preyDietMax`, `biome.densityMults`). RPS stays gated on a
+    non-superbooming hunter (the decade predator wall) — own-food makes that wall HARDER, not easier. Method:
+    caught 6+ early-false-positives this session by reading the per-clan timeline, never the RESULT line.
 - **Phase 3 — expose as PvP (IF the cycle closes).** Add to the arena so agents
   draft/seed a strategy and the board-symmetrized match rewards counterplay ⟹ the
   meta becomes RPS instead of a coin-flip. Symmetrize board position (per the

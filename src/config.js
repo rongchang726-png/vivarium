@@ -60,6 +60,12 @@ const CONFIG = {
     maxWavenumber: 1,  // 1 => the LARGEST, least-mixed 2 regions. BUILD 6.2: maxWave 1 makes the fork robust
                        //      (4/4 seeds) + lasting; 2 leaves it a 2/4 knife-edge. Higher => smaller regions, more mixing.
     contrast: 1.0,     // strength of the per-region physics multipliers (0 => flat)
+    // Optional per-region food-density override (RPS mechanism A, red-team design). null => use the
+    // BIOME_REGIONS table values (all 1.00) => bit-exact. An array like [1, 0.4, 1] thins one region's
+    // food so it's a REFUGE that's safe but can't self-sustain its occupant — the asymmetric low-density
+    // shelter that lets a generalist defender survive-but-not-dominate (rebuilds grazer>defender without
+    // extreme plantPen). Only read on the biome path (default OFF), so the default world is untouched.
+    densityMults: null,
   },
 
   // Designed disturbance / storyteller (richness phase, BUILD 2; src/storyteller.js + docs/REDESIGN.md).
@@ -246,6 +252,20 @@ const CONFIG = {
     // herbivores (diet~0) are untouched. The buffer is serialized ONLY when this is > 0,
     // so the default save format and determinism hash 4244329615 stay byte-for-byte.
     maxIntakePerTick: 0,
+
+    // Trophic-exclusion / obligate-predator lever (default 1 => OFF, bit-exact). The target
+    // picker (creature._attack) takes the nearest creature with NO clan/diet/size gate, so a
+    // hunter eats fellow hunters (cannibalism) and — with plantSuppression<1 — also grazes:
+    // a REDUNDANT food supply that lets a propped-up hunter swarm OUTLIVE its prey's
+    // extinction (no functional-response crash), so the carnivore SUPERBOOM never self-limits
+    // and overwhelms the defender (an RPS-cycle blocker; CLAUDE.md). preyDietMax caps the prey
+    // a hunter will TARGET by the prey's diet: it only attacks creatures with diet <=
+    // preyDietMax. 1 => attack anything (diet in [0,1], so `diet > 1` is never true) =>
+    // bit-exact. ~0.5 => an OBLIGATE predator that won't eat same-trophic hunters, forcing the
+    // swarm to depend on real low-diet prey and CRASH when it over-exploits — restoring the
+    // predator-prey oscillation a stable hunter>grazer edge needs. Pair with
+    // plantSuppression>=1 / food.toxin>0 to also cut the plant-fallback supply line.
+    preyDietMax: 1,
 
     // Digestion efficiency by diet. diet 0 = pure herbivore, 1 = pure carnivore.
     // Plants feed you ∝ (1 - diet); meat feeds you ∝ diet. Omnivores get a

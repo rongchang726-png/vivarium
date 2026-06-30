@@ -102,12 +102,33 @@ const RETAL = num(args.retaliation, 0.42); // defender bites back ∝ its area *
 const PLANT_SUPP = num(args.plantSupp, 0.7); // default: grazers graze freely (diet~0)
 const HANDLING = num(args.handling, 0); // functional-response handling time: ticks a predator is occupied after a kill (caps predation rate)
 const MAXINTAKE = num(args.maxIntake, 0); // corrected satiation: cap carcass energy absorbed/tick (meters the superboom-driving kill windfall). 0 = OFF/instant.
+const PREYDIETMAX = num(args.preyDietMax, 1); // obligate-predator gate: hunters only target prey with diet <= this (1=off/eat-anything; ~0.5=no cannibalism => prey-dependent, crashes on over-exploit)
+const FORESTDENSITY = num(args.forestDensity, null); // RPS mechanism A (red-team): type1/forest food-density mult — low (~0.4) makes type1 a refuge that can't self-sustain a generalist defender => rebuilds grazer>defender without extreme plantPen
 
 // --- archetypes (diet/defense/radius), from roundA mapped to Vivarium ---------
 const GRAZER = { diet: num(args.grazerDiet, 0.05), defense: 0.0, radius: 3.3 };
 const HUNTER = { diet: num(args.hunterDiet, 0.92), defense: 0.1, radius: 6.5 };
 const DEFENDER = { diet: num(args.defenderDiet, 0.18), defense: num(args.defenderDef, 0.92), radius: 3.6 };
 const ARCH = { grazer: GRAZER, hunter: HUNTER, defender: DEFENDER };
+
+// --- food-niche levers (BUILD: the defender's-own-food RPS probe) -------------
+// The structural blocker (CLAUDE.md RPS): the defender ALWAYS dies, doubly squeezed —
+// grazers out-compete it for the SHARED plant (grazer>defender = Gause exclusion) AND
+// the grazer-fuelled hunter boom slaughters it. food.types>1 + biome gives the defender
+// its OWN spatial food type (the fix the structural conclusion named: "defender eats
+// plant B so grazers can't exclude it"), removing the grazer-competition squeeze so we
+// can test whether it then survives the hunter. EYES-OPEN: separate foods DISSOLVE the
+// grazer>defender edge (it IS the shared-plant competition), so this tests SURVIVAL /
+// a stable food web, NOT a closed non-transitive cycle — the edge must be reinvented as
+// a non-competition mechanism (a later probe). foodTypes=1 (default) => the old shared-
+// food behaviour, bit-for-bit (forage is set but the multi-food path stays closed).
+const FOODTYPES = int(args.foodTypes, 1);
+const FORAGESPEC = num(args.forageSpec, 1.2); // convex (>1) => strict specialists, no reach-advantage generalist
+// per-archetype forage (which food type it digests). With foodTypes=2: grazer→type0,
+// defender→type1 (its own food); hunter is a predator (forage irrelevant to meat).
+const GRAZER_FORAGE = num(args.grazerForage, 0);
+const DEFENDER_FORAGE = num(args.defenderForage, FOODTYPES > 1 ? 1 : 0.5);
+const HUNTER_FORAGE = num(args.hunterForage, 0.5);
 
 const api = loadCore();
 api.setParam("defense.enabled", !!DEFENSE);
@@ -125,6 +146,16 @@ api.setParam("creature.retaliation", RETAL);
 api.setParam("creature.plantSuppression", PLANT_SUPP);
 api.setParam("creature.handlingTicks", HANDLING);
 api.setParam("creature.maxIntakePerTick", MAXINTAKE);
+api.setParam("creature.preyDietMax", PREYDIETMAX);
+// Food niche: give each archetype its own food type, spatially separated by the biome.
+// Must precede newArenaWorld (World reads CONFIG.biome.enabled + food.types at construction).
+// foodTypes=1 (default) leaves food.types=1 and biome OFF => the old shared-plant world.
+if (FOODTYPES > 1) {
+  api.setParam("food.types", FOODTYPES);
+  api.setParam("food.forageSpecialization", FORAGESPEC);
+  api.setParam("biome.enabled", true); // spatial separation of the food types => a real refuge (Reichenbach)
+  if (FORESTDENSITY != null) api.setParam("biome.densityMults", [1.0, FORESTDENSITY, 1.0]); // mechanism A: low forest(type1) density => asymmetric shelter that can't self-sustain the defender
+}
 // freqDependence stays 0: clan must remain behaviour-neutral so the RPS dynamics
 // are clean (the arena's anti-snowball homeostasis would mask them).
 // Optional: freeze the evolving traits (defense/diet/forage drift) so the seeded
@@ -151,10 +182,16 @@ if (WSCALE !== 1) {
   api.setParam("world.width", Math.round(api.CONFIG.world.width * WSCALE));
   api.setParam("world.height", Math.round(api.CONFIG.world.height * WSCALE));
 }
+// Food density scales by area*pop (DENS) AND by the number of food types: N separated
+// types each need ~baseline density, else effective per-type food halves and both
+// specialists bootstrap-collapse (the --food2 lesson). softCap/founders use DENS only.
+const FOODMULT = DENS * (FOODTYPES > 1 ? FOODTYPES : 1);
+if (FOODMULT !== 1) {
+  api.setParam("food.startCount", Math.round(api.CONFIG.food.startCount * FOODMULT));
+  api.setParam("food.max", Math.round(api.CONFIG.food.max * FOODMULT));
+  api.setParam("food.spawnPerTick", api.CONFIG.food.spawnPerTick * FOODMULT);
+}
 if (DENS !== 1) {
-  api.setParam("food.startCount", Math.round(api.CONFIG.food.startCount * DENS));
-  api.setParam("food.max", Math.round(api.CONFIG.food.max * DENS));
-  api.setParam("food.spawnPerTick", api.CONFIG.food.spawnPerTick * DENS);
   api.setParam("pop.softCap", Math.round(api.CONFIG.pop.softCap * DENS));
 }
 
@@ -180,7 +217,8 @@ if (MODE === "invade") {
   seedArch("hunter", nH);
   seedArch("defender", nD);
   console.log("=== rps-lab COEXIST === seed=" + SEED + " ticks=" + TICKS + " worldScale=" + WSCALE + " popScale=" + PSCALE +
-    " | grazer=" + nG + " hunter=" + nH + " defender=" + nD);
+    " | grazer=" + nG + " hunter=" + nH + " defender=" + nD +
+    " | foodTypes=" + FOODTYPES + (FOODTYPES > 1 ? " (G→type0 D→type1, biome-separated, spec=" + FORAGESPEC + ")" : ""));
   console.log("    defense=" + DEFENSE + " toxin=" + TOXIN + " meatConv=" + MEATCONV + " plantPen=" + PLANTPEN +
     " | preyVuln=" + PREY_VULN + " carcass=" + CARCASS + " carnCarcass=" + CARN_CARCASS + " carnMetab=" + CARN_METAB + " pr=" + PR + " bite=" + BITE + " | retal=" + RETAL + " handling=" + HANDLING + " maxIntake=" + MAXINTAKE);
   runCoexist();
@@ -188,9 +226,10 @@ if (MODE === "invade") {
 
 // clan map: grazer=0, hunter=1, defender=2
 function clanOf(name) { return name === "grazer" ? 0 : name === "hunter" ? 1 : 2; }
+function forageOf(name) { return name === "grazer" ? GRAZER_FORAGE : name === "hunter" ? HUNTER_FORAGE : DEFENDER_FORAGE; }
 function seedArch(name, count) {
   const a = ARCH[name];
-  api.seedFounders(w, count, { diet: a.diet, radius: a.radius, defense: a.defense }, clanOf(name));
+  api.seedFounders(w, count, { diet: a.diet, radius: a.radius, defense: a.defense, forage: forageOf(name) }, clanOf(name));
 }
 
 function fmtClan(label, c, tot) {

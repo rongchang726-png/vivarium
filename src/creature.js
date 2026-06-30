@@ -304,6 +304,10 @@ class Creature {
       bestD2 = Infinity;
     world.creatureGrid.query(this.x, this.y, reach, (c) => {
       if (c === this || !c.alive) return;
+      // Obligate-predator gate (preyDietMax default 1 => `diet > 1` never true => bit-exact):
+      // skip same-trophic-level prey so a hunter can't cannibalize fellow hunters — cuts the
+      // superboom's redundant food supply (CLAUDE.md RPS). See config.creature.preyDietMax.
+      if (c.diet > CONFIG.creature.preyDietMax) return;
       const dx = c.x - this.x,
         dy = c.y - this.y;
       const d2 = dx * dx + dy * dy;

@@ -55,12 +55,13 @@ class BiomeField {
     const C = CONFIG.biome;
     this.contrast = C.contrast;
     this.nRegions = biomeRegionCount(); // 2 (plain/forest, default) or 3 (+meadow, food.types>=3)
+    this.densityMults = C.densityMults || null; // optional per-region food-density override (RPS mechanism A); null => table values (bit-exact)
     this.W = CONFIG.world.width;
     this.H = CONFIG.world.height;
     // Densest region's multiplier (rejection baseline): the richest region spawns food at
     // full rate, sparser regions are thinned toward it (densityRejectAt). Precomputed once.
     let mx = 0;
-    for (let i = 0; i < this.nRegions; i++) if (BIOME_REGIONS[i].densityMult > mx) mx = BIOME_REGIONS[i].densityMult;
+    for (let i = 0; i < this.nRegions; i++) { const dm = this._densityMultOf(i); if (dm > mx) mx = dm; }
     this.maxDensity = this._mult(mx); // _mult uses this.contrast (already set) — flat==1 at contrast 0
     // SEPARATE rng — derived from the world seed but never the world's own stream.
     this.rng = new RNG((seed ^ 0x9e3779b9) >>> 0);
@@ -138,9 +139,12 @@ class BiomeField {
 
   // contrast scales each multiplier away from 1 (contrast 0 => all 1 => flat == off).
   _mult(base) { return 1 + this.contrast * (base - 1); }
+  // Per-region food-density base: an optional CONFIG.biome.densityMults override, else the table value
+  // (null override => table value => bit-exact). The asymmetric-shelter lever for RPS mechanism A.
+  _densityMultOf(i) { return (this.densityMults && this.densityMults[i] != null) ? this.densityMults[i] : BIOME_REGIONS[i].densityMult; }
   moveAt(x, y) { return this._mult(BIOME_REGIONS[this.regionAt(x, y)].moveMult); }
   fovAt(x, y) { return this._mult(BIOME_REGIONS[this.regionAt(x, y)].fovMult); }
-  densityAt(x, y) { return this._mult(BIOME_REGIONS[this.regionAt(x, y)].densityMult); }
+  densityAt(x, y) { return this._mult(this._densityMultOf(this.regionAt(x, y))); }
   foodTypeAt(x, y) { return BIOME_REGIONS[this.regionAt(x, y)].foodType; }
 
   // Probability a plant spawned at (x,y) is rejected, so regional food DENSITY actually
