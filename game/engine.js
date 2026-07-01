@@ -26,10 +26,18 @@ function applyRecipe(api, challenge, recipe, seed) {
   const cfg = Object.assign({}, base, recipe.config || {});
   for (const k of Object.keys(cfg)) api.setParam(k, cfg[k]);
 
+  // Founders: the recipe's own cohorts, else the challenge's fixed cohorts (e.g.
+  // richness seeds three forage-specialist peoples the agent must keep coexisting).
+  const founders = (recipe.founders && recipe.founders.length)
+    ? recipe.founders
+    : (challenge && challenge.founders) || null;
+
   let world;
-  if (recipe.founders && recipe.founders.length) {
-    world = api.newEmptyWorld(seed);
-    for (const f of recipe.founders) api.seedFounders(world, f.count | 0, f);
+  if (founders && founders.length) {
+    // noGenesis (arena world) when the challenge wants a clean seeded ecosystem —
+    // no wildlife injection to contaminate the niche counts.
+    world = (challenge && challenge.noGenesis) ? api.newArenaWorld(seed) : api.newEmptyWorld(seed);
+    for (const f of founders) api.seedFounders(world, f.count | 0, f);
   } else {
     world = api.newWorld(seed);
   }

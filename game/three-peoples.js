@@ -29,6 +29,9 @@ const TICKS = parseInt(process.argv[3] || "16000", 10);
 const MODE = process.argv[4] || "coexist";
 const RING = process.argv[5] === "ring";
 const WSCALE = parseFloat(process.argv[6] || "1");
+const SPEEDSCALE = parseFloat(process.argv[7] || "1"); // limit mobility WITHOUT enlarging the world (free-tier route)
+const AGESCALE = parseFloat(process.argv[8] || "1");   // shorten lifespan => shorter per-life travel => lower relative mobility
+const FOODBOOST = parseFloat(process.argv[9] || "1");  // denser food to compensate low-speed forage (decouple mobility from forage)
 
 const api = loadCore();
 api.setParam("biome.enabled", true);
@@ -48,6 +51,23 @@ api.setParam("food.max", Math.round(api.CONFIG.food.max * 1.5 * A));
 api.setParam("food.startCount", Math.round(api.CONFIG.food.startCount * 1.5 * A));
 api.setParam("food.spawnPerTick", Math.round(api.CONFIG.food.spawnPerTick * 1.5 * A));
 
+// Cheaper-than-worldScale mobility levers (Reichenbach: relative mobility = per-life ballistic travel / world
+// size; lowering per-life travel matches enlarging the world, but stays x1 compute => free-tier-servable).
+if (SPEEDSCALE !== 1) {
+  api.setParam("creature.speedSmall", api.CONFIG.creature.speedSmall * SPEEDSCALE);
+  api.setParam("creature.speedBig", api.CONFIG.creature.speedBig * SPEEDSCALE);
+}
+if (AGESCALE !== 1) {
+  api.setParam("creature.maxAge", Math.round(api.CONFIG.creature.maxAge * AGESCALE));
+  api.setParam("creature.ageVariance", Math.round(api.CONFIG.creature.ageVariance * AGESCALE));
+}
+// Forage-compensation (decouple test): denser food so a low-speed forager still breaks even at x1 compute.
+if (FOODBOOST !== 1) {
+  api.setParam("food.max", Math.round(api.CONFIG.food.max * FOODBOOST));
+  api.setParam("food.startCount", Math.round(api.CONFIG.food.startCount * FOODBOOST));
+  api.setParam("food.spawnPerTick", Math.round(api.CONFIG.food.spawnPerTick * FOODBOOST));
+}
+
 const w = api.newWorldLogged(SEED); // genesis on, like the showcase
 const nf = Math.round(40 * A); // founder counts scale with area => constant founder density
 if (MODE === "coexist") {
@@ -65,7 +85,10 @@ for (let i = 0; i < bio.grid.length; i++) areas[bio.grid[i]]++;
 const tot = areas[0] + areas[1] + areas[2];
 console.log("nRegions=" + bio.nRegions + " ring=" + RING + " | region areas: t0=" + Math.round(100 * areas[0] / tot) +
   "% t1=" + Math.round(100 * areas[1] / tot) + "% t2=" + Math.round(100 * areas[2] / tot) + "%");
-console.log("mode=" + MODE + " seed=" + SEED + " ticks=" + TICKS + "\n");
+console.log("mode=" + MODE + " seed=" + SEED + " ticks=" + TICKS +
+  " | worldScale=" + WSCALE + " speedScale=" + SPEEDSCALE + " ageScale=" + AGESCALE +
+  " (maxSpeed=" + api.CONFIG.creature.speedSmall.toFixed(2) + "-" + api.CONFIG.creature.speedBig.toFixed(2) +
+  " maxAge=" + api.CONFIG.creature.maxAge + ")\n");
 
 function ringDist(a, b) { let d = Math.abs(a - b); if (RING && d > 0.5) d = 1 - d; return d; }
 function bands() {

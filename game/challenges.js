@@ -159,6 +159,57 @@ const challenges = {
     },
   },
 
+  richness: {
+    id: "richness",
+    title: "Richness  —  the three peoples",
+    brief:
+      "Three specialist peoples share one world, each living off a different plant. Left to drift, one of the three is out-competed and the world collapses to two — or one. Tune the world's economy so ALL THREE coexist and persist: a living resource-partitioned ecosystem, not a monoculture. (The world seeds the three peoples for you; you tune the rules that decide whether they can share it.)",
+    goal:
+      "Keep all three forage-peoples alive together: each holds ≥ 15% of the population ON AVERAGE across the window (coexistence oscillates, so the mean is judged, not every instant), with population ≥ 120 throughout.",
+    settleTicks: 3000,
+    goalWindow: 3000,
+    budget: 120000,
+    bounty: 250,
+    tunable: [
+      "food.forageSpecialization", "food.spawnPerTick", "food.max", "food.energy", "biome.contrast",
+    ],
+    baseConfig: {
+      "biome.enabled": true,
+      "food.types": 3,
+      "food.forageCircular": true,
+      "food.forageSpecialization": 1.2,
+      "food.max": 2250,
+      "food.spawnPerTick": 15,
+      "food.startCount": 1500,
+    },
+    noGenesis: true,
+    founders: [
+      { count: 60, diet: 0.1, radius: 3.6, forage: 0 },
+      { count: 60, diet: 0.1, radius: 3.6, forage: 1 / 3 },
+      { count: 60, diet: 0.1, radius: 3.6, forage: 2 / 3 },
+    ],
+    practiceSeeds: [1, 2, 3],
+    scoringSeeds: [701, 702, 703, 704],
+    passFraction: 0.6,
+    evaluate(samples) {
+      // Ring niches at forage 0/⅓/⅔ occupy 5-bin forageHist bins {0,4}(0 wraps) / 1 / 3.
+      // Judge the MEAN niche share over the window, not every sample: 3-niche
+      // coexistence here OSCILLATES, so a niche that dips then recovers is still
+      // healthy — only a truly squeezed-out niche has a low mean. Pop must stay alive.
+      const nf = (s, bins) => { if (!s.pop) return 0; let c = 0; for (const b of bins) c += s.forageHist[b]; return c / s.pop; };
+      const m0 = mean(samples.map((s) => nf(s, [0, 4])));
+      const m1 = mean(samples.map((s) => nf(s, [1])));
+      const m2 = mean(samples.map((s) => nf(s, [3])));
+      const minMean = Math.min(m0, m1, m2);
+      const alive = samples.every((s) => s.pop >= 120);
+      return {
+        pass: alive && minMean >= 0.15,
+        score: alive ? Math.min(1, minMean / 0.2) : 0,
+        detail: "nicheMeans=" + [m0, m1, m2].map((x) => (x * 100).toFixed(0)).join("/") + "% min=" + (minMean * 100).toFixed(1) + "%" + (alive ? "" : " DEAD"),
+      };
+    },
+  },
+
   inference: {
     id: "inference",
     title: "What Changed?  (inference)",
