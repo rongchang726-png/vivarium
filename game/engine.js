@@ -182,6 +182,119 @@ function gradeGuess(mystery, guess, tolerance) {
   };
 }
 
+// --- The Hinge: save a doomed world with ONE late, small single-knob nudge ---
+// The challenge fixes a world that reliably self-destructs (a big larder, no regrow).
+// The player submits ONLY a trigger { metric, dir, theta, knob, value }: the judge fires
+// setParam(knob,value) ONCE, the first tick `metric` crosses `theta`. A no-trigger TWIN
+// establishes this seed's collapse tick; you pass iff the twin dies, your run SURVIVES to
+// the horizon, and you fired LATE (fireTick >= alpha*collapse). Score rewards lateness —
+// anyone can save at the peak; mastery is the last moment it can still be turned.
+function hingeRun(challenge, recipe, seed, useTrigger) {
+  const api = loadCore();
+  const world = applyRecipe(api, challenge, { config: {}, founders: null }, seed); // doom baseConfig + challenge founders
+  const H = challenge.hinge;
+  const trig = useTrigger ? (recipe.trigger || null) : null;
+  let fired = false, fireTick = null, peak = 0, peakT = 0, collapseT = null, minAfterFire = Infinity, lastPop = 0;
+  for (let t = H.sampleEvery; t <= H.horizon; t += H.sampleEvery) {
+    api.step(world, H.sampleEvery);
+    const s = api.snapshot(world);
+    lastPop = s.pop;
+    if (s.pop > peak) { peak = s.pop; peakT = s.tick; }
+    if (collapseT === null && s.tick > peakT && s.pop < H.deadPop) collapseT = s.tick;
+    if (!fired && trig) {
+      const m = s[trig.metric];
+      const cross = trig.dir === "below" ? (m <= trig.theta) : (m >= trig.theta);
+      if (cross) { api.setParam(trig.knob, trig.value); fired = true; fireTick = s.tick; }
+    }
+    if (fired && s.pop < minAfterFire) minAfterFire = s.pop;
+  }
+  return { fired, fireTick, peak, peakT, collapseT, minAfterFire, finalPop: lastPop };
+}
+
+function triggerLegal(challenge, trig) {
+  const H = challenge.hinge;
+  if (!trig) return false;
+  const knobOK = H.allow && Object.prototype.hasOwnProperty.call(H.allow, trig.knob);
+  const valOK = knobOK && Number.isFinite(trig.value) && trig.value >= H.allow[trig.knob][0] && trig.value <= H.allow[trig.knob][1];
+  const metricOK = (H.metrics || []).indexOf(trig.metric) >= 0;
+  const dirOK = trig.dir === "below" || trig.dir === "above";
+  return knobOK && valOK && metricOK && dirOK && Number.isFinite(trig.theta);
+}
+
+// Run one Hinge recipe on one seed: twin (doomed baseline) vs the triggered fork.
+function runHinge(challenge, recipe, seed) {
+  const H = challenge.hinge;
+  const r3 = (x) => Math.round(x * 1000) / 1000;
+  const legal = triggerLegal(challenge, recipe.trigger);
+  const twin = hingeRun(challenge, recipe, seed, false);
+  const twinDied = twin.collapseT !== null || twin.finalPop < H.floor;
+  const tc = twin.collapseT || H.horizon;
+  const tr = legal ? hingeRun(challenge, recipe, seed, true) : null;
+  const survived = !!tr && tr.finalPop >= H.floor && tr.minAfterFire >= 1;
+  const late = tr && tr.fired ? tr.fireTick / tc : 0;
+  const lateGate = !!tr && tr.fired && tr.fireTick >= H.alpha * tc;
+  const pass = legal && twinDied && survived && lateGate;
+  const why = !legal ? "illegal trigger" : !twinDied ? "twin did NOT doom (miscalibrated seed)"
+    : !tr.fired ? "never fired" : !survived ? "fired but world still died (fatal / too late)"
+    : !lateGate ? "saved too EARLY (need fire >= alpha*collapse)" : "saved late";
+  return {
+    seed, pass, score: pass ? Math.min(1, late) : 0,
+    twinDied, fired: !!tr && tr.fired, fireTick: tr ? tr.fireTick : null, collapse: tc, late: r3(late),
+    detail: why + " tc=" + tc + (tr && tr.fired ? " fire=" + tr.fireTick + " late=" + r3(late) : "") +
+      " twinFinal=" + twin.finalPop + (tr ? " runFinal=" + tr.finalPop : ""),
+  };
+}
+
+// The judge for a Hinge challenge: pass if enough hidden seeds are saved-late.
+function scoreHinge(challenge, recipe, onProgress) {
+  const seeds = challenge.scoringSeeds;
+  const runs = [];
+  for (let i = 0; i < seeds.length; i++) {
+    runs.push(runHinge(challenge, recipe, seeds[i]));
+    if (onProgress) onProgress({ done: i + 1, total: seeds.length, unit: "seeds" });
+  }
+  const passes = runs.filter((r) => r.pass).length;
+  const need = Math.ceil(seeds.length * (challenge.passFraction || 0.6));
+  const avgScore = runs.reduce((a, r) => a + (r.score || 0), 0) / runs.length;
+  return {
+    challenge: challenge.id, title: challenge.title,
+    pass: passes >= need, passes, total: seeds.length, needed: need,
+    avgScore: Math.round(avgScore * 1000) / 1000,
+    ticksUsed: (challenge.hinge.horizon || 9000) * 2 * seeds.length,
+    runs: runs.map((r) => ({ seed: r.seed, pass: r.pass, score: Math.round((r.score || 0) * 1000) / 1000, detail: r.detail })),
+  };
+}
+
+// Practice run for a Hinge challenge: run the doomed world (optionally with the
+// player's trigger) on ONE seed and return a readable trajectory + when it fired,
+// so the agent can see the collapse and tune its theta before scoring hidden seeds.
+function hingeExperiment(challenge, recipe, ticks, seed) {
+  const api = loadCore();
+  const world = applyRecipe(api, challenge, { config: {}, founders: null }, seed);
+  const H = challenge.hinge;
+  const trig = (recipe && recipe.trigger) || null;
+  const legal = trig ? triggerLegal(challenge, trig) : true;
+  const recordEvery = Math.max(H.sampleEvery, Math.floor(ticks / 40));
+  const traj = [];
+  let fired = false, fireTick = null, done = 0, sinceRecord = 0;
+  while (done < ticks) {
+    api.step(world, H.sampleEvery);
+    done += H.sampleEvery; sinceRecord += H.sampleEvery;
+    const s = api.snapshot(world);
+    if (!fired && trig && legal) {
+      const m = s[trig.metric];
+      if (trig.dir === "below" ? m <= trig.theta : m >= trig.theta) { api.setParam(trig.knob, trig.value); fired = true; fireTick = s.tick; }
+    }
+    if (sinceRecord >= recordEvery || done >= ticks) { traj.push({ tick: s.tick, pop: s.pop, food: s.food, avgEnergy: s.avgEnergy, maxGen: s.maxGen }); sinceRecord = 0; }
+  }
+  return {
+    seed, ticks, ticksUsed: done, trigger: trig, triggerLegal: legal, fired, fireTick,
+    trajectory: traj,
+    note: trig ? "preview on THIS practice seed; `score` judges hidden seeds. Fire LATE — you must fire after alpha*collapse, and later scores higher."
+      : "no trigger: this is the DOOMED baseline — watch WHEN it collapses, then design a trigger that fires late but in time.",
+  };
+}
+
 // --- PvP: two clans, one shared evolving world -----------------------------
 const ARENA = {
   perClanCap: 120, // max founders a clan may field (anti-cheese)
@@ -262,4 +375,4 @@ function matchScore(recipeA, recipeB) {
   };
 }
 
-module.exports = { runRecipe, score, experiment, inferenceExperiment, gradeGuess, runMatch, matchScore };
+module.exports = { runRecipe, score, experiment, inferenceExperiment, gradeGuess, runHinge, scoreHinge, hingeExperiment, runMatch, matchScore };

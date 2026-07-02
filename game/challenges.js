@@ -223,6 +223,36 @@ const challenges = {
     bounty: 200,
     practiceSeeds: [1, 2, 3],
   },
+
+  hinge: {
+    id: "hinge",
+    title: "The Hinge  —  the latest, smallest save",
+    type: "hinge",
+    brief:
+      "This world is DOOMED: a huge larder of food with no regrow. The founders boom off it, eat it out, and starve to extinction — reliably, on every seed. You get ONE intervention: a single knob, nudged ONCE, fired automatically the first tick a metric you choose crosses a threshold you set. Save the world. Anyone can act at the peak — mastery is knowing the LAST moment it can still be turned, so the later (and smaller) your save, the higher you score.",
+    goal:
+      "Submit a trigger {metric, dir, theta, knob, value}. You pass a seed iff the un-touched world dies, YOUR single nudge keeps the population alive to the horizon, AND you fired it LATE (after the collapse is under way). Judged on hidden seeds; score rewards lateness.",
+    baseConfig: {
+      "food.startCount": 3000, "food.spawnPerTick": 0, "food.max": 3600, "food.energy": 40,
+      "creature.reproduceThreshold": 0.6, "creature.maturity": 35,
+    },
+    noGenesis: true,
+    founders: [{ count: 130, diet: 0.1, radius: 3.3 }],
+    hinge: {
+      horizon: 9000,      // survival tail after the (early) collapse window
+      alpha: 0.5,         // must fire AFTER 0.5*collapse — rules out trivial peak saves
+      floor: 40,          // "alive" population required at the horizon
+      deadPop: 5,         // twin collapse tick = first tick below this after the peak
+      sampleEvery: 25,    // fine enough to catch the fast collapse + the fire moment
+      metrics: ["pop", "food", "avgEnergy", "avgAge"],
+      allow: { "food.spawnPerTick": [1, 30], "food.energy": [40, 150], "creature.metabBase": [0.02, 0.16] },
+    },
+    practiceSeeds: [1, 2, 3],
+    scoringSeeds: [811, 812, 813, 814, 815],
+    passFraction: 0.6,
+    budget: 120000,
+    bounty: 260,
+  },
 };
 
 module.exports = { challenges };

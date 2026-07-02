@@ -65,6 +65,7 @@ function challengeOr(id) {
   return c;
 }
 function scoreCost(c) {
+  if (c.type === "hinge") return c.scoringSeeds.length * c.hinge.horizon * 2;
   return c.scoringSeeds.length * (c.settleTicks + c.goalWindow);
 }
 function assertTunable(challenge, config) {
@@ -97,6 +98,15 @@ try {
         budget: c.budget, bounty: c.bounty, tolerance: c.tolerance, practiceSeeds: c.practiceSeeds,
         candidates: c.candidates,
         howToPlay: "start -> experiment (compare baseline vs altered) -> guess --knob <name> --value <number>",
+      });
+    } else if (c.type === "hinge") {
+      out({
+        id: c.id, title: c.title, brief: c.brief, goal: c.goal,
+        budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c),
+        practiceSeeds: c.practiceSeeds,
+        trigger: { metric: c.hinge.metrics, dir: ["below", "above"], theta: "number", knob: Object.keys(c.hinge.allow), value: "number within the knob's [min,max]" },
+        allow: c.hinge.allow, mustFireAfter: "alpha=" + c.hinge.alpha + " of the collapse tick (later scores higher)",
+        howToPlay: "experiment --challenge hinge [--seed N] [--trigger @t.json] to watch the doom / preview a trigger; then score --challenge hinge --trigger @t.json. One knob, fired ONCE when your metric crosses theta.",
       });
     } else {
       out({
@@ -151,6 +161,17 @@ try {
       result.mode = "graded";
       result.budget = { spent: s2.spent, remaining: sess.budget - s2.spent, of: sess.budget };
       out(result);
+    } else if (c && c.type === "hinge") {
+      const trigger = readJson(args.trigger) || null;
+      const ticks = parseInt(args.ticks || "3000", 10);
+      const seed = parseInt(args.seed || c.practiceSeeds[0], 10);
+      const sess = session.getSession();
+      const graded = !!(sess && sess.challenge === c.id);
+      if (graded && ticks > sess.budget - sess.spent) throw new Error("graded attempt: this experiment costs " + ticks + " ticks but only " + (sess.budget - sess.spent) + " remain.");
+      const result = engine.hingeExperiment(c, { trigger }, ticks, seed);
+      if (graded) { const s2 = session.charge("experiment", result.ticksUsed); result.mode = "graded"; result.budget = { spent: s2.spent, remaining: sess.budget - s2.spent, of: sess.budget }; }
+      else result.mode = "practice";
+      out(result);
     } else {
       const config = buildConfig(args);
       const founders = readJson(args.founders) || null;
@@ -177,11 +198,19 @@ try {
     }
   } else if (cmd === "score") {
     const c = challengeOr(args.challenge);
-    const recipe = args.recipe ? readJson(args.recipe) : { config: buildConfig(args), founders: readJson(args.founders) || null };
-    assertTunable(c, recipe.config || {});
     const sess = session.getSession();
     const graded = !!(sess && sess.challenge === c.id);
-    const result = engine.score(c, recipe);
+    let result;
+    if (c.type === "hinge") {
+      const rr = args.recipe ? readJson(args.recipe) : null;
+      const trigger = (rr && rr.trigger) || rr || readJson(args.trigger);
+      if (!trigger || !trigger.metric) throw new Error("hinge score needs --trigger @t.json (or --recipe @r.json). Format: {metric,dir,theta,knob,value}.");
+      result = engine.scoreHinge(c, { trigger });
+    } else {
+      const recipe = args.recipe ? readJson(args.recipe) : { config: buildConfig(args), founders: readJson(args.founders) || null };
+      assertTunable(c, recipe.config || {});
+      result = engine.score(c, recipe);
+    }
     if (graded) {
       const s2 = session.charge("score", result.ticksUsed);
       const withinBudget = s2.spent <= sess.budget;

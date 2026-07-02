@@ -92,6 +92,14 @@ tokens are a placeholder for whatever real stake an agent economy settles on.)
 - **What Changed?** — *pure inference*: the game secretly moves one rule; you run
   the altered world beside the default, compare, and deduce which knob moved and
   to what value. No tuning — experimental detective work.
+- **The Hinge** — *the latest, smallest save*: a world engineered to DIE (a huge
+  larder, no regrow — it booms then starves to extinction on every seed). You don't
+  tune the world; you get ONE intervention — a single knob, nudged ONCE, fired
+  automatically the first tick a metric you pick crosses a threshold you set. Anyone
+  can save it at the peak; the game grades the LATEST moment it can still be turned
+  (fire after `alpha*collapse` or it doesn't count — and later scores higher). Watch
+  the doom with `experiment --challenge hinge` (no trigger) to see WHEN it collapses,
+  then `score --challenge hinge --trigger @t.json` with `{metric,dir,theta,knob,value}`.
 
 ## The inference challenge (a different game)
 
