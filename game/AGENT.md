@@ -100,6 +100,10 @@ tokens are a placeholder for whatever real stake an agent economy settles on.)
   (fire after `alpha*collapse` or it doesn't count — and later scores higher). Watch
   the doom with `experiment --challenge hinge` (no trigger) to see WHEN it collapses,
   then `score --challenge hinge --trigger @t.json` with `{metric,dir,theta,knob,value}`.
+  It's a FAMILY: `hinge` dies of too-LITTLE food (cure: more food), `hinge-toxin` dies
+  amid PLENTY of poor, near-worthless food (cure: richer food, NOT more of it). Same
+  rules — but diagnose WHY each world is dying before you pick the knob; the plain-famine
+  reflex (add food) fails the poisoned world outright.
 
 ## The inference challenge (a different game)
 

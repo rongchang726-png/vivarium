@@ -119,8 +119,15 @@ noGenesis、真核心：
 
 **净结论**：两张 prototype-worthy 牌，一张（Fading Hand）被真机毙了，一张（The Hinge）被真机坐实、且看清了
 怎么把它做成一个**富挑战（doom 家族 → 诊断病因 → 对症拧旋钮）**。这就是 kill-test 该干的——花一下午，把
-「听起来对」筛成「真机上对/不对」。下一步：把 The Hinge 的「断粮」实例实装成真 challenge（engine 触发机制 +
-challenges.js 条目 + 校准 scoring 种子）。
+「听起来对」筛成「真机上对/不对」。**已实装（真机验证 + 提交）**：
+- **The Hinge（断粮）** — engine 触发机制（`runHinge`/`scoreHinge`/`hingeExperiment`）+ challenges.js 条目
+  + play.js CLI + 计分经济，端到端验证（EARLY 败 / GOOD·LATE 过 / 非法拒绝，graded 得 290 代币），核心哈希
+  4244329615 保持、`sim.test.js` 全绿。提交 `4a0dca8`。
+- **The Hinge（Poisoned / 毒素 doom）** — doom 家族的第二个实例：食物管够但每餐净亏（`food.toxin` 30），
+  绝对必崩 5/5；解药是 **energy↑（食物的"质"）**，而 **spawn↑（更多烂食物）和 metab↓ 都 0/5 救不回** →
+  "诊断病因"成为真谜题（一个只会套断粮解法 spawn↑ 的 agent 在这里 0/5 栽掉）。诚实副产：**代谢 doom 太"软"**
+  （高代谢下种群会稳定在低位而非灭绝，任何 metabBase 都做不成干净 5/5），**毒素 doom 才是断粮的干净对偶**
+  （net-negative 食物像 zero-regrow 一样绝对必崩）。
 
 ---
 

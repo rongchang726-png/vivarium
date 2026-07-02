@@ -253,6 +253,32 @@ const challenges = {
     budget: 120000,
     bounty: 260,
   },
+
+  "hinge-toxin": {
+    id: "hinge-toxin",
+    title: "The Hinge (Poisoned)  —  save a world dying amid plenty",
+    type: "hinge",
+    brief:
+      "Another doomed world — but this one has PLENTY of food. The plants are just poor: a heavy toxin cost eats most of each meal's energy, so the booming founders slowly starve surrounded by food they can't live on. Same rules as The Hinge — ONE knob, nudged ONCE, fired the first tick a metric you pick crosses your threshold, as LATE as you dare. But adding MORE food won't save them here. Diagnose WHY it's dying before you choose your lever: is it too little food, or food too poor to live on?",
+    goal:
+      "One late single-knob save on the hidden seeds, exactly like The Hinge — but the cure is different from the plain-famine version. Watch the doom, work out what actually kills them, and fire the right knob late.",
+    baseConfig: {
+      "food.startCount": 1000, "food.spawnPerTick": 10, "food.max": 1500, "food.energy": 40, "food.toxin": 30,
+      "creature.reproduceThreshold": 0.6, "creature.maturity": 35,
+    },
+    noGenesis: true,
+    founders: [{ count: 130, diet: 0.1, radius: 3.3 }],
+    hinge: {
+      horizon: 9000, alpha: 0.5, floor: 40, deadPop: 5, sampleEvery: 25,
+      metrics: ["pop", "food", "avgEnergy", "avgAge"],
+      allow: { "food.spawnPerTick": [1, 30], "food.energy": [40, 150], "creature.metabBase": [0.02, 0.16] },
+    },
+    practiceSeeds: [1, 2, 3],
+    scoringSeeds: [821, 822, 823, 824, 825],
+    passFraction: 0.6,
+    budget: 120000,
+    bounty: 300,
+  },
 };
 
 module.exports = { challenges };
