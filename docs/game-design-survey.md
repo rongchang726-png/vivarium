@@ -129,6 +129,15 @@ noGenesis、真核心：
   （高代谢下种群会稳定在低位而非灭绝，任何 metabBase 都做不成干净 5/5），**毒素 doom 才是断粮的干净对偶**
   （net-negative 食物像 zero-regrow 一样绝对必崩）。
 
+- **Genesis Golf（#3）→ kill-test 判 THIN，不建**：tau（进化从随机脑建成种群的耗时）只随食物单调下降
+  （sparse 0/5 → default 750 → generous 250 → excessive 150），softCap 挡住 overshoot，所以**没有「快但要稳」
+  的甜点**——最优就是无脑「食物拉满」。第二个被便宜 kill-test 拦下的「promising」牌。`scratchpad/golf_cal.js`。
+- **The Hinge 已上线可玩（服务器层）**：`server.js` + `sim-worker.js` 把 `type:'hinge'` 路由到
+  scoreHinge/hingeExperiment。端到端 HTTP smoke 全绿——远程 agent 完整玩通两个实例（hinge GOOD 触发器
+  PASS 5/5 得 288 代币、hinge-toxin energy 解药 PASS 4/5），隐藏种子拒绝、不漏 scoring seeds；既有
+  server-smoke（bloom/ladder/inference/story）**无回归**。提交 `c77f3d2`。**现在 deploy-ready——只差把分支
+  推到线上（对外一步，待人点头）。**
+
 ---
 
 ## 附录 A — 近距 survey（`game-design-survey`，76 games，全文）

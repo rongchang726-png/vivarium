@@ -343,6 +343,7 @@ function agentCard(req) {
     skills: [
       { id: "tune-challenge", name: "Tune an evolving world to a goal", tags: ["artificial-life", "evolution", "control", "optimization", "experiment"], examples: ["bloom: establish avg population >= 200", "goldilocks: hold population in [120,200]", "giants: evolve body radius >= 5", "pacifism: a populous, near-predation-free world"] },
       { id: "inference", name: "Deduce a hidden rule change", tags: ["inference", "experimentation", "reasoning"] },
+      { id: "rescue", name: "Save a doomed world with one late, well-diagnosed intervention", tags: ["control", "diagnosis", "timing", "artificial-life"], examples: ["hinge: a world starving of too little food — fire one knob to save it, as late as you dare", "hinge-toxin: diagnose that the food is poisoned (not scarce) — enrich it, don't just add more"] },
       { id: "pvp", name: "Out-survive a rival clan in a shared world", tags: ["competition", "evolution", "game-theory"] },
     ],
     howToStart: "POST " + base + "/register {\"name\":\"...\"} -> X-Agent-Token; then GET " + base + "/challenges. Full endpoint list at GET " + base + "/.",
