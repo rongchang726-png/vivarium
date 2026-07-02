@@ -39,11 +39,17 @@ parentPort.on("message", (m) => {
     // Emit progress to the parent so a long job reads as alive, not hung.
     const onProgress = (p) => parentPort.postMessage({ jobId, progress: p });
     if (op === "experiment") {
-      result = engine.experiment(resolveChallenge(payload), payload.config, payload.founders, payload.ticks, payload.seed, onProgress);
+      const ch = resolveChallenge(payload);
+      result = ch && ch.type === "hinge"
+        ? engine.hingeExperiment(ch, { trigger: payload.trigger || null }, payload.ticks, payload.seed)
+        : engine.experiment(ch, payload.config, payload.founders, payload.ticks, payload.seed, onProgress);
     } else if (op === "inferenceExperiment") {
       result = engine.inferenceExperiment(payload.mystery, payload.ticks, payload.seed);
     } else if (op === "score") {
-      result = engine.score(resolveChallenge(payload), payload.recipe, onProgress);
+      const ch = resolveChallenge(payload);
+      result = ch && ch.type === "hinge"
+        ? engine.scoreHinge(ch, payload.recipe, onProgress)
+        : engine.score(ch, payload.recipe, onProgress);
     } else if (op === "match") {
       result = engine.matchScore(payload.a, payload.b);
     } else if (op === "story") {

@@ -197,6 +197,7 @@ function jobView(job) {
 
 // --- small helpers (transport-agnostic mirrors of play.js) -----------------
 function scoreCost(c) {
+  if (c.type === "hinge") return c.scoringSeeds.length * c.hinge.horizon * 2;
   return c.scoringSeeds.length * (c.settleTicks + c.goalWindow);
 }
 function assertTunable(challenge, config) {
@@ -227,7 +228,9 @@ const PUZZLE = {
   bloom: { difficulty: 1180, discrimination: 0.85 },
   goldilocks: { difficulty: 1370, discrimination: 0.95 },
   pacifism: { difficulty: 1490, discrimination: 1.05 },
+  hinge: { difficulty: 1560, discrimination: 1.05 },
   giants: { difficulty: 1630, discrimination: 1.10 },
+  "hinge-toxin": { difficulty: 1700, discrimination: 1.10 },
   foodweb: { difficulty: 1760, discrimination: 1.15 },
   inference: { difficulty: 1900, discrimination: 1.25 },
 };
@@ -299,6 +302,15 @@ function publicShow(c) {
       budget: c.budget, bounty: c.bounty, tolerance: c.tolerance, practiceSeeds: c.practiceSeeds, candidates: c.candidates,
       difficulty: "optional 0-1 on /attempts; scales the factor's subtlety, tolerance, budget & bounty (defaults to your rating frontier)",
       howToPlay: "POST /attempts {challenge:'inference', difficulty?} -> POST /experiment (job: baseline vs altered) -> POST /guess {knob,value}",
+    };
+  }
+  if (c.type === "hinge") {
+    return {
+      id: c.id, title: c.title, brief: c.brief, goal: c.goal, type: "hinge",
+      budget: c.budget, bounty: c.bounty, scoreCost: scoreCost(c), practiceSeeds: c.practiceSeeds,
+      trigger: { metric: c.hinge.metrics, dir: ["below", "above"], theta: "number", knob: Object.keys(c.hinge.allow), value: "number within the knob's [min,max]" },
+      allow: c.hinge.allow, mustFireAfter: "alpha=" + c.hinge.alpha + " of the collapse tick (later scores higher)",
+      howToPlay: "POST /attempts {challenge:'" + c.id + "'} -> POST /experiment {ticks,seed} to watch the doom (or preview {trigger}) on a practice seed -> POST /score {trigger:{metric,dir,theta,knob,value}}. One knob, fired ONCE when the metric crosses theta, as LATE as you dare.",
     };
   }
   return {
@@ -559,6 +571,27 @@ const handlers = {
       return acceptedView(job);
     }
 
+    if (c && c.type === "hinge") {
+      const ticks = clampTicks(body.ticks, 3000);
+      const seed = resolveSeed(c, body.seed);
+      const trigger = body.trigger || null;
+      const graded = isOpenAttemptOn(a, c);
+      if (graded) {
+        const remaining = a.attempt.budget - a.attempt.spent;
+        if (ticks > remaining) throw httpError(402, "graded attempt: this experiment costs " + ticks + " ticks but only " + remaining + " remain.");
+      }
+      ensureNoInflight(a);
+      const job = enqueueJob("experiment", { challengeId: c.id, trigger, ticks, seed }, (j) => {
+        if (j.status === "done") {
+          if (graded && a.attempt) { charge(a, "experiment", j.result.ticksUsed); j.result.mode = "graded"; j.result.budget = budgetView(a); }
+          else j.result.mode = "practice";
+        }
+        a.jobId = null;
+      });
+      a.jobId = job.id;
+      return acceptedView(job);
+    }
+
     // tuning OR ladder: the target is a fixed challenge (body.challenge) or a
     // procedural ladder instance (body.ladder). Both share every field /experiment uses.
     const target = body.ladder ? ladderOr(body.ladder) : c;
@@ -592,8 +625,15 @@ const handlers = {
     body = body || {};
     const c = targetOf(body); // a fixed challenge or a procedural ladder instance
     if (c.type === "inference") throw httpError(400, "inference is judged by /guess, not /score.");
-    const recipe = body.recipe || { config: body.config || {}, founders: body.founders || null };
-    assertTunable(c, recipe.config || {});
+    let recipe;
+    if (c.type === "hinge") {
+      const trigger = body.trigger || (body.recipe && body.recipe.trigger);
+      if (!trigger || !trigger.metric) throw httpError(400, "hinge /score needs a trigger {metric,dir,theta,knob,value} — GET /challenges/" + c.id + " for the format.");
+      recipe = { trigger };
+    } else {
+      recipe = body.recipe || { config: body.config || {}, founders: body.founders || null };
+      assertTunable(c, recipe.config || {});
+    }
     ensureNoInflight(a);
     const graded = isOpenAttemptOn(a, c);
     const walletKey = c.ref || c.id;             // ladder instances bank per-ref
